@@ -1,22 +1,25 @@
 {
-  "name": "hostel-hub-backend",
+  "name": "backend",
   "version": "1.0.0",
-  "description": "Hostel management system backend API",
-  "main": "dist/server.js",
-  "scripts": {
-    "dev": "nodemon src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js"
-  },
-  "keywords": [
-    "hostel",
-    "management",
-    "api"
-  ],
-  "author": "",
+  "description": "hostel management system",
   "license": "ISC",
-  "type": "module",
+  "author": "",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "build": "rimraf dist && tsc",
+    "prestart": "npm run build",
+    "start": "node ./dist/server.js",
+    "predev": "npm run build",
+    "dev": "concurrently \"tsc -w\" \"nodemon ./dist/server.js\""
+  },
   "dependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/nodemailer": "^7.0.4",
+    "@types/qrcode": "^1.5.6",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -26,18 +29,12 @@
     "mongoose": "^9.0.1",
     "nodemailer": "^7.0.11",
     "qrcode": "^1.5.4",
-    "zod": "^4.2.0"
+    "zod": "^4.2.1"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^25.0.2",
-    "@types/nodemailer": "^6.4.14",
-    "@types/qrcode": "^1.5.6",
+    "concurrently": "^9.2.1",
     "nodemon": "^3.1.11",
-    "ts-node": "^10.9.2",
+    "rimraf": "^6.1.2",
     "typescript": "^5.9.3"
   }
 }
