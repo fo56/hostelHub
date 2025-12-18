@@ -11,7 +11,8 @@ const dishSchema = new mongoose.Schema({
   status: { type: String, enum: ['UNDER_REVIEW', 'ACTIVE', 'INACTIVE'], default: 'UNDER_REVIEW' },
   suggestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  createdAt: { type: Date, default: Date.now }
-});
+},
+  { timestamps: true }
+);
 
 export const Dish = mongoose.model('Dish', dishSchema);
