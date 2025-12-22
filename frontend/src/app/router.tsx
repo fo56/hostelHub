@@ -1,7 +1,11 @@
 import type { ReactNode } from 'react'
 
-// Login Page
+// Login Pages
 import Login from '../pages/login/login'
+import QRLogin from '../pages/login/QRLogin'
+import LoginLink from '../pages/login/LoginLink'
+import SetPassword from '../pages/login/SetPassword'
+import AdminRegister from '../pages/admin/Register'
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/Dashboard'
@@ -24,11 +28,31 @@ export interface Route {
 }
 
 export const routes: Route[] = [
-  // Login Route
+  // Auth Routes
   {
-    path: '/login/login.tsx',
+    path: '/login',
     element: <Login />,
     name: 'Login',
+  },
+  {
+    path: '/qr-login',
+    element: <QRLogin />,
+    name: 'QR Login',
+  },
+  {
+    path: '/login-link',
+    element: <LoginLink />,
+    name: 'Login Link',
+  },
+  {
+    path: '/set-password/:userId',
+    element: <SetPassword />,
+    name: 'Set Password',
+  },
+  {
+    path: '/admin/register',
+    element: <AdminRegister />,
+    name: 'Admin Register',
   },
 
   // Admin Routes

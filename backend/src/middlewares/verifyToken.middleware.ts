@@ -2,9 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 interface JwtPayload {
-  _id: string;
+  userId: string;
   role: 'STUDENT' | 'ADMIN' | 'WORKER';
   hostelId: string;
+  email: string;
 }
 
 export const verifyToken = (
@@ -27,13 +28,13 @@ export const verifyToken = (
     ) as JwtPayload;
 
     req.user = {
-      _id: decoded._id as any,
+      _id: decoded.userId as any,
       role: decoded.role,
       hostelId: decoded.hostelId as any
     };
 
     next();
-  } catch {
+  } catch (error) {
     return res.status(401).json({ message: 'Invalid or expired token' });
   }
 };

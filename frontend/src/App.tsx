@@ -8,7 +8,7 @@ function App() {
         {routes.map((route) => (
           <Route key={route.path} path={route.path} element={route.element} />
         ))}
-        <Route path="/" element={<Navigate to="/login/login.tsx" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   )

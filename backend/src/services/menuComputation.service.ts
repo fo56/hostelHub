@@ -1,5 +1,5 @@
 import {Dish} from '../models/Dish';
-import {MenuRecommendation} from '../models/MenuRecommendation';
+import MenuRecommendation from '../models/MenuRecommendation';
 import { Types } from 'mongoose';
 
 export const computeMenuRecommendations = async () => {
