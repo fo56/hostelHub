@@ -378,3 +378,4 @@ export const regenerateLoginToken = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+

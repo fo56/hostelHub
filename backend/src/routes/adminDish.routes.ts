@@ -12,7 +12,7 @@ const router = express.Router();
 
 // GET /api/admin/dishes?status=UNDER_REVIEW
 router.get(
-  '/dishes',
+  '/',
   verifyToken,
   requireRole('ADMIN'),
   fetchDishes
@@ -20,7 +20,7 @@ router.get(
 
 // POST /api/admin/dishes/:id/approve
 router.post(
-  '/dishes/:id/approve',
+  '/:id/approve',
   verifyToken,
   requireRole('ADMIN'),
   approveDish
@@ -28,7 +28,7 @@ router.post(
 
 // POST /api/admin/dishes/:id/reject
 router.post(
-  '/dishes/:id/reject',
+  '/:id/reject',
   verifyToken,
   requireRole('ADMIN'),
   rejectDish

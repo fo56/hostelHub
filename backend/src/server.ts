@@ -7,11 +7,16 @@ import adminDishRoutes from './routes/adminDish.routes';
 import dishRoutes from './routes/dish.routes';
 import adminMenuRoutes from './routes/adminMenu.routes';
 import adminUserRoutes from './routes/adminUser.routes';
-dotenv.config();
-// Middleware
+import mealReviewRoutes from './routes/mealReview.routes';
+import adminReviewRoutes from './routes/adminReview.routes';
+import userRoutes from './routes/user.routes';
+
 import { verifyToken } from './middlewares/verifyToken.middleware';
 import { requireRole } from './middlewares/requireRole.middleware';
+import { errorHandler } from './middlewares/errorHandler';
 
+
+dotenv.config();
 const PORT = process.env.PORT || 8000;
 
 const app: Express = express();
@@ -25,12 +30,18 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', verifyToken, adminDishRoutes);
+app.use('/api/admin/menu', verifyToken, require('./routes/adminMenu.routes').default);
 app.use('/api/admin/users', adminUserRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/admin/dishes', verifyToken, adminDishRoutes);
 app.use('/api/dishes', dishRoutes);
 app.use('/api/menu-votes', verifyToken, require('./routes/menuVote.routes').default);
-app.use('/api/admin/menu', verifyToken, require('./routes/adminMenu.routes').default);
+app.use('/api/student/menu', require('./routes/studentMenu.routes').default);
+app.use('/api/users', userRoutes);
+app.use('/api/reviews', require('./routes/mealReview.routes').default);
+app.use('/api/admin/reviews', require('./routes/adminReview.routes').default);
+app.use(errorHandler);
+
 // Connect DB before starting server
 const connectWithTimeout = async () => {
   const timeout = new Promise((_, reject) => 

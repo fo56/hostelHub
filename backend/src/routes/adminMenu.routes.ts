@@ -5,14 +5,14 @@ import { verifyToken } from '../middlewares/verifyToken.middleware';
 import { requireRole } from '../middlewares/requireRole.middleware';
 
 import {
-  openVotingWindow,closeVotingWindow, getVotingStatus
+  openVotingWindow,closeVotingWindow, getVotingStatus, generateFinalMenu, getMenuPreview, publishMenu
 } from '../controllers/adminMenu.controller';
 
 const router = express.Router();
 
 // Admin opens voting for a week (time-bound)
 router.post(
-  '/menu/voting/open',
+  '/voting/open',
   verifyToken,
   requireRole('ADMIN'),
   openVotingWindow
@@ -20,7 +20,7 @@ router.post(
 
 // Admin manually closes voting
 router.post(
-  '/menu/voting/close',
+  '/voting/close',
   verifyToken,
   requireRole('ADMIN'),
   closeVotingWindow
@@ -28,10 +28,32 @@ router.post(
 
 // admin checks if voting is open or closed
 router.get(
-  '/menu/voting/status',
+  '/voting/status',
   verifyToken,
   requireRole('ADMIN'),
   getVotingStatus
+);
+
+router.post(
+  '/generate',
+  verifyToken,
+  requireRole('ADMIN'),
+  generateFinalMenu
+);
+// GET preview
+router.get(
+  '/preview',
+  verifyToken,
+  requireRole('ADMIN'),
+  getMenuPreview
+);
+
+// POST publish
+router.post(
+  '/publish',
+  verifyToken,
+  requireRole('ADMIN'),
+  publishMenu
 );
 
 export default router;
