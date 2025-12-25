@@ -17,12 +17,22 @@ A comprehensive hostel management platform built with TypeScript, React, and Exp
 ## ✨ Features
 
 - **User Management**: Role-based access control (Admin, Worker, Student)
-- **Authentication**: JWT-based secure authentication
+- **Authentication**: JWT-based secure authentication with multiple login methods
+  - Admin registration and login
+  - User login with role selection
+  - QR code-based login
+  - URL-based login links
+  - Password management and refresh tokens
 - **Mess Menu Management**: Vote on dishes, manage weekly menus
-- **Issue Tracking**: Report and assign maintenance issues
+- **Issue Tracking**: Report, assign, and track maintenance issues
+  - Students can report issues
+  - Workers can view assigned issues and mark them resolved
+  - Workers can add resolver notes when closing issues
+  - Admins manage all issue assignments and status
 - **Activity Logging**: Track all user actions for audit purposes
 - **Admin Dashboard**: Comprehensive admin panel for system management
-- **Real-time Updates**: Activity logs and notifications
+- **Worker Dashboard**: Track assigned issues and resolution stats
+- **Secure API**: Helmet.js headers, CORS protection, input validation
 
 ## 🛠️ Tech Stack
 
@@ -34,11 +44,12 @@ A comprehensive hostel management platform built with TypeScript, React, and Exp
 - **Mongoose** for ODM (Object Document Mapper)
 
 ### Frontend
-- **React 19** with TypeScript
+- **React 18** with TypeScript
 - **Vite** for fast bundling
 - **Tailwind CSS** for styling
 - **React Router** for navigation
-- **Axios** for API calls
+- **Lucide Icons** for UI icons
+- **Axios** for API calls with auto-refresh token management
 
 ## 📦 Prerequisites
 
@@ -228,24 +239,39 @@ hostelHub/
 │   ├── src/
 │   │   ├── main.tsx             # Entry point
 │   │   ├── App.tsx              # Root component
-│   │   ├── app/
-│   │   │   └── router.tsx       # React Router configuration
+│   │   ├── index.css            # Global styles
+│   │   ├── routes/
+│   │   │   ├── router.tsx       # React Router configuration
+│   │   │   └── AdminRoutes.tsx  # Admin routing
 │   │   ├── pages/               # Page components
-│   │   │   ├── login/
-│   │   │   ├── student/
-│   │   │   ├── admin/
-│   │   │   └── worker/
+│   │   │   ├── login/           # Login pages (basic, QR, link, password setup)
+│   │   │   ├── student/         # Student dashboard & pages
+│   │   │   ├── admin/           # Admin dashboard & management
+│   │   │   └── worker/          # Worker dashboard with issue tracking
 │   │   ├── components/          # Reusable components
+│   │   │   ├── admin/           # Admin-specific components
+│   │   │   ├── worker/          # Worker-specific components
+│   │   │   ├── common/          # Shared components
+│   │   │   ├── layout/          # Layout components
+│   │   │   └── ui/              # UI primitives
+│   │   ├── contexts/            # React contexts
+│   │   │   ├── AuthContext.tsx  # Authentication state
+│   │   │   └── AuthContextType.ts
 │   │   ├── hooks/               # Custom hooks
-│   │   │   └── useApi.ts        # API integration hook
+│   │   │   ├── useApi.ts        # API integration with auto-refresh
+│   │   │   ├── useAuth.ts       # Auth context hook
+│   │   │   └── useMessService.ts
 │   │   ├── services/            # Services
 │   │   │   └── authService.ts   # Authentication service
+│   │   ├── lib/                 # Utilities
+│   │   │   └── utils.ts
 │   │   ├── types/               # TypeScript types
-│   │   ├── utils/               # Utility functions
-│   │   └── store/               # State management
+│   │   └── assets/              # Static assets
 │   ├── .env.example             # Environment template
 │   ├── package.json
 │   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
 │   └── tsconfig.json
 │
 ├── .gitignore
@@ -288,9 +314,13 @@ Authorization: Bearer <token>
 
 #### Issues
 - `GET /issues` - Get issues (filtered by role)
+- `GET /issues/my-issues` - Get issues raised by current user (Student)
+- `GET /issues/assigned` - Get issues assigned to current user (Worker)
+- `GET /issues/admin/all` - Get all issues in hostel (Admin only)
 - `POST /issues` - Report new issue
-- `PUT /issues/:id` - Update issue status (Worker/Admin)
-- `DELETE /issues/:id` - Delete issue (Admin only)
+- `PATCH /issues/:issueId/status` - Update issue status with optional resolver note
+- `PATCH /issues/:issueId/assign` - Assign issue to worker (Admin only)
+- `DELETE /issues/:issueId` - Delete issue
 
 #### Activity Log
 - `GET /activity-logs` - Get activity logs (Admin only)
@@ -321,14 +351,29 @@ Error: Cannot find module 'express'
 ```
 **Solution:** Run `npm install` in the respective directory (backend or frontend)
 
-## 🔐 Security Recommendations
+## 🔐 Security Features
+
+All security measures have been implemented and verified. See [SECURITY_AND_ERROR_HANDLING_REPORT.md](SECURITY_AND_ERROR_HANDLING_REPORT.md) for detailed security audit.
+
+- **JWT Authentication** - Access tokens (15 min) and refresh tokens (7 days)
+- **Role-Based Access Control** - Admin, Student, Worker roles with middleware protection
+- **Password Security** - Bcrypt hashing with 8+ character minimum
+- **Input Validation** - All endpoints validate and sanitize input
+- **Error Handling** - Global error handler with no sensitive data exposure
+- **Security Headers** - Helmet.js provides OWASP-compliant headers
+- **CORS Protection** - Restricted to frontend URL with credentials validation
+- **Database Security** - MongoDB connection timeouts and schema validation
+
+### Security Recommendations
 
 1. **Never commit `.env` files** - Use `.env.example` as a template
-2. **Change default JWT_SECRET** - Use a strong random string in production
+2. **Change default JWT_SECRET** - Use a strong random string in production (minimum 32 characters)
 3. **Enable HTTPS** in production
 4. **Set strong MongoDB passwords** - Use at least 16 characters
 5. **Regular updates** - Keep dependencies updated with `npm audit fix`
-6. **Input validation** - Always validate and sanitize user inputs
+6. **Rate Limiting** - Consider implementing `express-rate-limit` for production
+7. **Logging** - Implement structured logging (Winston, Pino) for production
+8. **Backups** - Regular MongoDB backups for data protection
 
 ## 📝 Environment Variables Checklist
 
@@ -359,4 +404,5 @@ For issues and questions, please create an issue on the GitHub repository.
 
 ---
 
-**Last Updated:** December 2025
+**Last Updated:** December 26, 2025
+**Status:** ✅ Production-Ready - All security measures implemented and tested
