@@ -6,6 +6,9 @@ package-lock.json
 .env
 .env.local
 
+
 # Build outputs (generated files with npm run build)
 dist/
 build/
+
+.DS_Store

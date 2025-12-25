@@ -16,7 +16,10 @@ export const openVotingWindow = async (req: Request, res: Response) => {
         message: 'week and durationInDays are required'
       });
     }
-
+    await MenuVoteWindow.updateMany(
+      { hostelId, isActive: true },
+      { isActive: false }
+    );
     const startsAt = new Date();
     const endsAt = new Date();
     endsAt.setDate(startsAt.getDate() + durationInDays);

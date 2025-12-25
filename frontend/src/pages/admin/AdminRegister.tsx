@@ -75,7 +75,7 @@ export default function AdminRegister() {
       });
 
       // Redirect to admin dashboard
-      navigate('/admin/dashboard');
+      navigate('/admin');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
       setStep(1); // Go back to first step on error

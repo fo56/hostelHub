@@ -1,15 +1,10 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { routes } from './app/router'
+import { BrowserRouter as Router } from 'react-router-dom'
+import AppRoutes from './routes/router'
 
 function App() {
   return (
     <Router>
-      <Routes>
-        {routes.map((route) => (
-          <Route key={route.path} path={route.path} element={route.element} />
-        ))}
-        <Route path="/" element={<Navigate to="/login" replace />} />
-      </Routes>
+      <AppRoutes />
     </Router>
   )
 }
