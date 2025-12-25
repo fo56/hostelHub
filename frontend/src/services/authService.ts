@@ -1,5 +1,61 @@
 const API_URL = 'http://localhost:8000/api/auth';
 
+// Type for PasswordCredential from Credential Management API
+declare global {
+  interface PasswordCredential {
+    id: string;
+    password: string;
+    name?: string;
+    iconURL?: string;
+  }
+}
+
+// Helper to save credentials if browser supports it
+const saveCredentials = async (email: string, password: string) => {
+  if (navigator.credentials) {
+    try {
+      const PasswordCredentialType = (window as any).PasswordCredential;
+      if (PasswordCredentialType) {
+        const credential = new PasswordCredentialType({
+          id: email,
+          password: password,
+          name: email,
+          iconURL: '/logo.png'
+        });
+        await navigator.credentials.store(credential);
+      }
+    } catch (err) {
+      // Silently fail if credential storage is not available
+      console.debug('Could not save credentials:', err);
+    }
+  }
+};
+
+// Helper to get saved credentials
+const getCredentials = async (): Promise<{ email: string; password: string } | null> => {
+  if (navigator.credentials) {
+    try {
+      const PasswordCredentialType = (window as any).PasswordCredential;
+      if (PasswordCredentialType) {
+        const credential = await navigator.credentials.get({
+          password: true,
+          mediation: 'optional'
+        } as any) as any;
+        
+        if (credential && credential.id && credential.password) {
+          return {
+            email: credential.id,
+            password: credential.password
+          };
+        }
+      }
+    } catch (err) {
+      console.debug('Could not retrieve credentials:', err);
+    }
+  }
+  return null;
+};
+
 export interface AdminRegisterRequest {
   hostelName: string;
   adminName: string;
@@ -68,16 +124,22 @@ class AuthService {
     const response = await fetch(`${API_URL}/login-admin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ email, password }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || error.error || 'Login failed');
+      const errorMessage = error.message || error.error || 'Login failed';
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
     this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
+    
+    // Save credentials for autofill
+    await saveCredentials(email, password);
+    
     return result;
   }
 
@@ -86,16 +148,22 @@ class AuthService {
     const response = await fetch(`${API_URL}/login-user`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ email, password, role }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || error.error || 'Login failed');
+      const errorMessage = error.message || error.error || 'Login failed';
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
     this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
+    
+    // Save credentials for autofill
+    await saveCredentials(email, password);
+    
     return result;
   }
 
@@ -223,6 +291,10 @@ class AuthService {
 
   isAuthenticated(): boolean {
     return !!this.getAccessToken();
+  }
+
+  async getSavedCredentials(): Promise<{ email: string; password: string } | null> {
+    return getCredentials();
   }
 
   getAuthHeader(): Record<string, string> {

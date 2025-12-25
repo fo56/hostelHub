@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import type { UserRole } from '@/contexts/AuthContextType'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Users, GraduationCap, Wrench, Eye, EyeOff } from 'lucide-react'
+import { Users, GraduationCap, Wrench, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 import { authService } from '@/services/authService'
 
 export default function Login() {
@@ -20,6 +20,25 @@ export default function Login() {
   const [qrLoading, setQrLoading] = useState(false)
   const [adminLoading, setAdminLoading] = useState(false)
   const [loginMode, setLoginMode] = useState<'email' | 'qr'>('email')
+  const [credentialsSaved, setCredentialsSaved] = useState(false)
+
+  // Load saved credentials on mount
+  useEffect(() => {
+    const loadSavedCredentials = async () => {
+      try {
+        const savedCreds = await authService.getSavedCredentials()
+        if (savedCreds) {
+          setEmail(savedCreds.email)
+          setPassword(savedCreds.password)
+          setCredentialsSaved(true)
+        }
+      } catch (err) {
+        console.debug('No saved credentials found')
+      }
+    }
+    
+    loadSavedCredentials()
+  }, [])
 
   const roles: { id: UserRole; label: string; icon: typeof Users }[] = [
     { id: 'admin', label: 'Admin', icon: Users },
@@ -31,9 +50,15 @@ export default function Login() {
     e.preventDefault()
     setError('')
     if (!email.trim() || !password.trim()) {
-      setError('Please enter email and password')
+      setError('Please enter both email and password')
       return
     }
+    
+    if (!email.includes('@')) {
+      setError('Please enter a valid email address')
+      return
+    }
+
     setAdminLoading(true)
     try {
       if (selectedRole === 'admin') {
@@ -44,7 +69,17 @@ export default function Login() {
       navigate(`/${selectedRole}/dashboard`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed'
-      setError(errorMessage)
+      
+      // Provide specific error messages
+      if (errorMessage.includes('Invalid email or password')) {
+        setError('Invalid email or password. Please check and try again.')
+      } else if (errorMessage.includes('not found')) {
+        setError('User account not found. Please contact your administrator.')
+      } else if (errorMessage.includes('timeout')) {
+        setError('Connection timeout. Please check your internet connection.')
+      } else {
+        setError(errorMessage || 'An error occurred during login. Please try again.')
+      }
     } finally {
       setAdminLoading(false)
     }
@@ -62,12 +97,14 @@ export default function Login() {
       const response = await fetch('http://localhost:8000/api/auth/login-qr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ qrToken }),
       })
       const data = await response.json()
       
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'QR login failed')
+        const errorMsg = data.message || data.error || 'QR login failed'
+        throw new Error(errorMsg)
       }
       
       if (data.setPasswordURL) {
@@ -84,11 +121,20 @@ export default function Login() {
       navigate(`/${data.user.role.toLowerCase()}/dashboard`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'QR login failed'
-      setError(errorMessage)
+      
+      if (errorMessage.includes('Invalid') || errorMessage.includes('not found')) {
+        setError('Invalid QR code. Please ask your administrator for a new one.')
+      } else if (errorMessage.includes('already set')) {
+        setError('This account has already been initialized. Please log in with your password.')
+      } else {
+        setError(errorMessage || 'An error occurred. Please try again.')
+      }
     } finally {
       setQrLoading(false)
     }
   }
+
+  const errorDisplay = error || authError;
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-8">
@@ -127,10 +173,23 @@ export default function Login() {
           </div>
         </div>
 
-        {(error || authError) && (
-          <div className="p-4 border-2 border-red-300 rounded-lg bg-red-50">
-            <p className="text-sm text-red-900 font-medium">Error:</p>
-            <p className="text-sm text-red-800 mt-1">{error || authError}</p>
+        {credentialsSaved && !error && (
+          <div className="p-4 border-2 border-green-300 rounded-lg bg-green-50 flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-green-900 font-medium">Saved credentials detected</p>
+              <p className="text-xs text-green-800 mt-1">Your login information has been auto-filled</p>
+            </div>
+          </div>
+        )}
+
+        {errorDisplay && (
+          <div className="p-4 border-2 border-red-300 rounded-lg bg-red-50 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-red-900 font-medium">Login failed</p>
+              <p className="text-sm text-red-800 mt-1">{errorDisplay}</p>
+            </div>
           </div>
         )}
 
@@ -144,6 +203,7 @@ export default function Login() {
                 placeholder="you@hostel.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={adminLoading}
               />
             </div>
             <div className="space-y-1">
@@ -155,11 +215,13 @@ export default function Login() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  disabled={adminLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="px-3 border-2 border-black/20 rounded-lg hover:bg-black/5 transition-colors"
+                  disabled={adminLoading}
+                  className="px-3 border-2 border-black/20 rounded-lg hover:bg-black/5 transition-colors disabled:opacity-50"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -204,6 +266,7 @@ export default function Login() {
                     placeholder="your.email@hostel.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={adminLoading}
                   />
                 </div>
                 <div className="space-y-1">
@@ -215,11 +278,13 @@ export default function Login() {
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      disabled={adminLoading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="px-3 border-2 border-black/20 rounded-lg hover:bg-black/5 transition-colors"
+                      disabled={adminLoading}
+                      className="px-3 border-2 border-black/20 rounded-lg hover:bg-black/5 transition-colors disabled:opacity-50"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -239,6 +304,7 @@ export default function Login() {
                     placeholder="Paste your QR token or scan"
                     value={qrToken}
                     onChange={(e) => setQrToken(e.target.value)}
+                    disabled={qrLoading}
                     autoFocus
                   />
                 </div>
@@ -258,7 +324,7 @@ export default function Login() {
           First time?{' '}
           <button 
             onClick={() => navigate('/admin/register')}
-            className="font-medium underline"
+            className="font-medium underline hover:text-black"
           >
             Register Hostel
           </button>
