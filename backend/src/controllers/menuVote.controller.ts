@@ -1,12 +1,19 @@
-import { Request, Response } from 'express'; import { MenuVote } from '../models/MenuVote'; import { Dish } from '../models/Dish'; import mongoose from 'mongoose';
+import { Request, Response } from 'express';
+import { MenuVote } from '../models/MenuVote';
+import { Dish } from '../models/Dish';
+import mongoose from 'mongoose';
+
 export const submitMenuVotes = async (req: Request, res: Response) => {
   try {
-    const { week, votes } = req.body;
+    const { votes } = req.body;
     const { _id: userId, hostelId } = req.user!;
 
-    if (!week || !votes) {
-      return res.status(400).json({ message: 'Invalid payload' });
+    const window = (req as any).votingWindow;
+    if (!window) {
+      return res.status(403).json({ message: 'Voting closed' });
     }
+
+    const week = window.week; // ✅ ADMIN WEEK
 
     const meals = ['Breakfast', 'Lunch', 'Dinner'];
 
@@ -26,7 +33,7 @@ export const submitMenuVotes = async (req: Request, res: Response) => {
     }
 
     const bulkVotes = [];
-    const allDishIds = [];
+    const allDishIds: mongoose.Types.ObjectId[] = [];
 
     for (const meal of meals) {
       for (const dishId of votes[meal]) {
@@ -36,7 +43,7 @@ export const submitMenuVotes = async (req: Request, res: Response) => {
           dishId,
           week
         });
-        allDishIds.push(dishId);
+        allDishIds.push(new mongoose.Types.ObjectId(dishId));
       }
     }
 

@@ -1,5 +1,4 @@
 import { Request, Response } from 'express'
-import '../types/express'
 import { Dish } from '../models/Dish'
 
 /**

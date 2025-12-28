@@ -1,28 +1,36 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../../hooks/useApi'
 
+type Meal = 'Breakfast' | 'Lunch' | 'Dinner'
+
 interface Dish {
   _id: string
   name: string
-  mealType: 'Breakfast' | 'Lunch' | 'Dinner'
+  mealType: Meal
   healthScore: number
 }
 
-type Meal = 'Breakfast' | 'Lunch' | 'Dinner'
+interface VotingWindow {
+  isOpen: boolean
+  week: number
+  startsAt?: string
+  endsAt?: string
+}
 
 export default function StudentVoting() {
   const { request } = useApi()
 
-  // Grouped dishes
+  // Backend-provided grouped dishes
   const [dishes, setDishes] = useState<Record<Meal, Dish[]>>({
     Breakfast: [],
     Lunch: [],
     Dinner: []
   })
 
-  const [votingWindow, setVotingWindow] = useState<any>(null)
+  const [votingWindow, setVotingWindow] = useState<VotingWindow | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Selected dish IDs
   const [selections, setSelections] = useState<Record<Meal, string[]>>({
     Breakfast: [],
     Lunch: [],
@@ -33,6 +41,7 @@ export default function StudentVoting() {
   const [message, setMessage] =
     useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
+  // INIT
   useEffect(() => {
     const init = async () => {
       try {
@@ -42,10 +51,11 @@ export default function StudentVoting() {
         ])
 
         setVotingWindow(windowRes)
+
         setDishes({
-          Breakfast: dishesRes.Breakfast || [],
-          Lunch: dishesRes.Lunch || [],
-          Dinner: dishesRes.Dinner || []
+          Breakfast: dishesRes.Breakfast ?? [],
+          Lunch: dishesRes.Lunch ?? [],
+          Dinner: dishesRes.Dinner ?? []
         })
       } catch (err) {
         console.error('Initialization failed', err)
@@ -53,16 +63,21 @@ export default function StudentVoting() {
         setLoading(false)
       }
     }
+
     init()
   }, [])
 
+  // TOGGLE DISH
   const toggleDish = (meal: Meal, dishId: string) => {
     setSelections(prev => {
       const current = prev[meal]
+
       if (current.includes(dishId)) {
         return { ...prev, [meal]: current.filter(id => id !== dishId) }
       }
+
       if (current.length >= 7) return prev
+
       return { ...prev, [meal]: [...current, dishId] }
     })
   }
@@ -72,13 +87,15 @@ export default function StudentVoting() {
     selections.Lunch.length === 7 &&
     selections.Dinner.length === 7
 
+  // SUBMIT (NO WEEK SENT — SERVER DERIVES IT)
   const handleSubmit = async () => {
-    if (!isComplete) return
+    if (!isComplete || submitting) return
+
     setSubmitting(true)
+    setMessage(null)
 
     try {
       await request('/menu-votes/vote', 'POST', {
-        week: votingWindow.week,
         votes: selections
       })
 
@@ -96,8 +113,9 @@ export default function StudentVoting() {
     }
   }
 
+  // STATES
   if (loading) {
-    return <div className="p-8 text-center">Loading Voting Window...</div>
+    return <div className="p-8 text-center">Loading voting window…</div>
   }
 
   if (!votingWindow?.isOpen) {
@@ -113,6 +131,7 @@ export default function StudentVoting() {
     )
   }
 
+  // UI
   return (
     <div className="max-w-5xl mx-auto p-4 pb-24">
       <header className="mb-8">
@@ -158,7 +177,7 @@ export default function StudentVoting() {
                 <button
                   key={dish._id}
                   onClick={() => toggleDish(meal, dish._id)}
-                  className={`w-full p-3 rounded-lg border text-left ${
+                  className={`w-full p-3 rounded-lg border text-left transition ${
                     selections[meal].includes(dish._id)
                       ? 'bg-blue-600 text-white'
                       : 'hover:border-blue-400'
@@ -175,8 +194,9 @@ export default function StudentVoting() {
         ))}
       </div>
 
+      {/* SUBMIT BAR */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
-        <div className="max-w-5xl mx-auto flex justify-between">
+        <div className="max-w-5xl mx-auto flex justify-between items-center">
           <span className="text-sm text-gray-600">
             {isComplete
               ? 'All categories ready!'
@@ -187,7 +207,7 @@ export default function StudentVoting() {
             disabled={!isComplete || submitting}
             className="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:bg-gray-300"
           >
-            {submitting ? 'Submitting...' : 'Submit All Votes'}
+            {submitting ? 'Submitting…' : 'Submit All Votes'}
           </button>
         </div>
       </div>

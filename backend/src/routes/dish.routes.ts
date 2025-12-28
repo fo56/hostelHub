@@ -9,8 +9,6 @@ const router = express.Router();
 
 router.post(
   '/',
-  verifyToken,
-  requireRole('STUDENT'),
   dishSuggestionRateLimit,
   suggestDish
 );

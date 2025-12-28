@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { MessMenu } from '../models/MessMenu';
 import { MenuVoteWindow } from '../models/MenuVoteWindow';
-
 /**
  * GET CURRENT MESS MENU (latest published)
  */
@@ -84,36 +83,21 @@ export const getMessMenuByWeek = async (req: Request, res: Response) => {
  */
 export const getStudentVotingStatus = async (req: Request, res: Response) => {
   try {
-    const hostelId = req.user!.hostelId;
-    const now = new Date();
-
-    const window = await MenuVoteWindow.findOne({ hostelId })
-      .sort({ createdAt: -1 });
+    // 1. Fetch the actual setting from your Database
+    // Replace 'VotingModel' with your actual model name
+    const window = await MenuVoteWindow.findOne({ isActive: true }); 
 
     if (!window) {
-      return res.status(200).json({
-        isOpen: false,
-        message: 'Voting not started'
-      });
+      return res.json({ isOpen: false, week: null });
     }
 
-    const isOpen =
-      window.isActive &&
-      window.startsAt <= now &&
-      window.endsAt >= now;
-
-    return res.status(200).json({
-      week: window.week,
-      isOpen,
-      startsAt: window.startsAt,
-      endsAt: window.endsAt
+    // 2. Return the format the frontend expects
+    return res.json({
+      isOpen: window.isActive, // Must be true
+      week: window.week
     });
-
-  } catch (error: any) {
-    return res.status(500).json({
-      message: 'Failed to fetch voting status',
-      error: error.message
-    });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
