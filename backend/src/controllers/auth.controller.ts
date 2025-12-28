@@ -102,17 +102,20 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
 
     const user = await User.findOne({ email, role: 'ADMIN' });
     if (!user) {
+      console.warn(`[AUTH] Login attempt failed - admin not found for email: ${email}`);
       res.status(401).json({ message: 'Invalid email or password' });
       return;
     }
 
     if (!user.passwordHash) {
+      console.warn(`[AUTH] Login attempt - admin has no password hash: ${email}`);
       res.status(401).json({ message: 'Invalid email or password' });
       return;
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
+      console.warn(`[AUTH] Login attempt failed - invalid password for admin: ${email}`);
       res.status(401).json({ message: 'Invalid email or password' });
       return;
     }
@@ -126,6 +129,8 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
 
     const refreshToken = await generateRefreshToken(user._id.toString());
 
+    console.log(`[AUTH] Admin login successful: ${email} (ID: ${user._id})`);
+
     res.json({
       message: 'Login successful',
       user: { id: user._id, name: user.name, email: user.email, role: user.role },
@@ -133,7 +138,7 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
       refreshToken
     });
   } catch (error) {
-    console.error('Admin login error:', error);
+    console.error('[AUTH] Admin login error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Login failed';
     res.status(500).json({ message: `Login failed: ${errorMessage}` });
   }
@@ -177,6 +182,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
+      console.warn(`[AUTH] Login attempt failed - invalid password for ${role}: ${email}`);
       res.status(401).json({ message: 'Invalid email or password' });
       return;
     }
@@ -190,6 +196,8 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 
     const refreshToken = await generateRefreshToken(user._id.toString());
 
+    console.log(`[AUTH] ${role} login successful: ${email} (ID: ${user._id})`);
+
     res.json({
       message: 'Login successful',
       user: { id: user._id, name: user.name, email: user.email, role: user.role },
@@ -197,7 +205,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       refreshToken
     });
   } catch (error) {
-    console.error('User login error:', error);
+    console.error('[AUTH] User login error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Login failed';
     res.status(500).json({ message: `Login failed: ${errorMessage}` });
   }

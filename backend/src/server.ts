@@ -1,6 +1,7 @@
 import express, {Express, Request, Response} from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import helmet from 'helmet';
 import { connectDB } from './config/db';
 import authRoutes from './routes/auth.routes';
 import adminDishRoutes from './routes/adminDish.routes';
@@ -10,6 +11,7 @@ import adminUserRoutes from './routes/adminUser.routes';
 import mealReviewRoutes from './routes/mealReview.routes';
 import adminReviewRoutes from './routes/adminReview.routes';
 import userRoutes from './routes/user.routes';
+import issueRoutes from './routes/issue.routes';
 
 import { verifyToken } from './middlewares/verifyToken.middleware';
 import { requireRole } from './middlewares/requireRole.middleware';
@@ -18,12 +20,30 @@ import { errorHandler } from './middlewares/errorHandler';
 
 dotenv.config();
 const PORT = process.env.PORT || 8000;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 const app: Express = express();
 
+// Security middleware
+app.use(helmet());
+app.use(cors({
+  origin: FRONTEND_URL,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400
+}));
 
-app.use(cors());
-app.use(express.json());
+// Body size limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Request timeout
+app.use((req, res, next) => {
+  req.setTimeout(30000);
+  res.setTimeout(30000);
+  next();
+});
 
 app.get('/', (req: Request, res: Response) => {
     res.status(200).json({message : "Server is running properly"});
@@ -40,6 +60,7 @@ app.use('/api/student/menu', require('./routes/studentMenu.routes').default);
 app.use('/api/users', userRoutes);
 app.use('/api/reviews', require('./routes/mealReview.routes').default);
 app.use('/api/admin/reviews', require('./routes/adminReview.routes').default);
+app.use('/api/issues', issueRoutes);
 app.use(errorHandler);
 
 // Connect DB before starting server
