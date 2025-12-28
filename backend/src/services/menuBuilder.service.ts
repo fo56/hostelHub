@@ -6,25 +6,37 @@ export const buildMessMenu = async (
   hostelId: string,
   week: number
 ) => {
-  const recommendations = await MenuRecommendation
-    .find()
-    .sort({ finalScore: -1 });
+  const MEALS = ['Breakfast', 'Lunch', 'Dinner'] as const;
 
-  if (recommendations.length === 0) {
-    throw new Error('No menu recommendations found');
+  const menu: Record<typeof MEALS[number], any[]> = {
+    Breakfast: [],
+    Lunch: [],
+    Dinner: []
+  };
+
+  // Fetch top 7 per meal
+  for (const meal of MEALS) {
+    const dishes = await MenuRecommendation.find({
+      hostelId,
+      week,
+      mealType: meal
+    })
+      .sort({ finalScore: -1 })
+      .limit(7);
+
+    if (dishes.length < 7) {
+      throw new Error('not enough meals');
+    }
+
+    menu[meal] = dishes;
   }
-
-  // Simple fair split (can evolve later)
-  const breakfast = recommendations.slice(0, 7);
-  const lunch = recommendations.slice(7, 14);
-  const dinner = recommendations.slice(14, 21);
 
   return MessMenu.create({
     hostelId,
     week,
-    breakfast,
-    lunch,
-    dinner,
+    breakfast: menu.Breakfast,
+    lunch: menu.Lunch,
+    dinner: menu.Dinner,
     generatedAt: new Date(),
     published: false
   });

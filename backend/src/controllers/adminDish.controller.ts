@@ -97,7 +97,10 @@ export const rejectDish = async (req: Request, res: Response) => {
 
     const dish = await Dish.findOneAndUpdate(
       { _id: id, status: 'UNDER_REVIEW' },
-      { status: 'INACTIVE' },
+      {
+        status: 'INACTIVE',
+        rejectionReason: reason
+      },
       { new: true }
     );
 

@@ -12,10 +12,10 @@ import mealReviewRoutes from './routes/mealReview.routes';
 import adminReviewRoutes from './routes/adminReview.routes';
 import userRoutes from './routes/user.routes';
 import issueRoutes from './routes/issue.routes';
-
 import { verifyToken } from './middlewares/verifyToken.middleware';
 import { requireRole } from './middlewares/requireRole.middleware';
 import { errorHandler } from './middlewares/errorHandler';
+import { verify } from 'node:crypto';
 
 
 dotenv.config();
@@ -50,13 +50,12 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // Routes
-app.use('/api/admin/menu', verifyToken, require('./routes/adminMenu.routes').default);
+app.use('/api/admin/menu', verifyToken, adminMenuRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin/dishes', verifyToken, adminDishRoutes);
 app.use('/api/dishes', dishRoutes);
-app.use('/api/menu-votes', verifyToken, require('./routes/menuVote.routes').default);
-app.use('/api/student/menu', require('./routes/studentMenu.routes').default);
+app.use('/api/menu-votes', verifyToken, menuVoteRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/reviews', require('./routes/mealReview.routes').default);
 app.use('/api/admin/reviews', require('./routes/adminReview.routes').default);

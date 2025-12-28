@@ -11,6 +11,12 @@ const dishSchema = new mongoose.Schema({
   status: { type: String, enum: ['UNDER_REVIEW', 'ACTIVE', 'INACTIVE'], default: 'UNDER_REVIEW' },
   suggestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  rejectionReason: { type: String },
+  weeklyVotes: {
+    type: Map,
+    of: Number,
+    default: {}
+  }
 },
   { timestamps: true }
 );

@@ -1,9 +1,10 @@
-// controllers/studentMenu.controller.ts
 import { Request, Response } from 'express';
 import { MessMenu } from '../models/MessMenu';
 import { MenuVoteWindow } from '../models/MenuVoteWindow';
 
-// GET CURRENT MESS MENU
+/**
+ * GET CURRENT MESS MENU (latest published)
+ */
 export const getCurrentMessMenu = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId;
@@ -12,8 +13,8 @@ export const getCurrentMessMenu = async (req: Request, res: Response) => {
       hostelId,
       published: true
     })
-      .sort({ generatedAt: -1 })
-      .populate('breakfast.dishId lunch.dishId dinner.dishId');
+      .sort({ week: -1 }) 
+      .populate('breakfast lunch dinner');
 
     if (!menu) {
       return res.status(404).json({
@@ -37,7 +38,9 @@ export const getCurrentMessMenu = async (req: Request, res: Response) => {
   }
 };
 
-// GET MENU FOR A SPECIFIC WEEK 
+/**
+ * GET MENU FOR A SPECIFIC WEEK
+ */
 export const getMessMenuByWeek = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId;
@@ -53,7 +56,7 @@ export const getMessMenuByWeek = async (req: Request, res: Response) => {
       hostelId,
       week,
       published: true
-    }).populate('breakfast.dishId lunch.dishId dinner.dishId');
+    }).populate('breakfast lunch dinner');
 
     if (!menu) {
       return res.status(404).json({
@@ -76,7 +79,9 @@ export const getMessMenuByWeek = async (req: Request, res: Response) => {
   }
 };
 
-// CHECK VOTING STATUS (READ-ONLY)
+/**
+ * CHECK STUDENT VOTING STATUS
+ */
 export const getStudentVotingStatus = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId;
@@ -111,7 +116,10 @@ export const getStudentVotingStatus = async (req: Request, res: Response) => {
     });
   }
 };
-// GET TODAY'S SERVED DISHES
+
+/**
+ * GET TODAY'S SERVED DISHES
+ */
 export const getServedDishesToday = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId;
@@ -120,8 +128,8 @@ export const getServedDishesToday = async (req: Request, res: Response) => {
       hostelId,
       published: true
     })
-      .sort({ createdAt: -1 })
-      .populate('breakfast.dishId lunch.dishId dinner.dishId');
+      .sort({ generatedAt: -1 }) 
+      .populate('breakfast lunch dinner');
 
     if (!menu) {
       return res.status(404).json({

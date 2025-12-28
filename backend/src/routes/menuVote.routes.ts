@@ -8,7 +8,6 @@ const router = express.Router();
 
 router.post(
   '/vote',
-  verifyToken,
   requireRole('STUDENT'),
   ensureVotingOpen,
   submitMenuVotes

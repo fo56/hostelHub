@@ -1,48 +1,61 @@
-// models/MessMenu.ts
 import mongoose from 'mongoose';
 
-const messMenuSchema = new mongoose.Schema(
-  {
-    hostelId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Hostel',
-      required: true
-    },
+const mealArrayValidator = {
+  validator: (arr: any[]) => arr.length === 7,
+  message: 'Each meal must have exactly 7 dishes'
+};
 
-    week: {
-      type: Number,
-      required: true
-    },
-
-    breakfast: [{
-      dishId: { type: mongoose.Schema.Types.ObjectId, ref: 'Dish' },
-      score: Number
-    }],
-
-    lunch: [{
-      dishId: { type: mongoose.Schema.Types.ObjectId, ref: 'Dish' },
-      score: Number
-    }],
-
-    dinner: [{
-      dishId: { type: mongoose.Schema.Types.ObjectId, ref: 'Dish' },
-      score: Number
-    }],
-
-    generatedAt: {
-      type: Date,
-      required: true
-    },
-
-    published: {
-      type: Boolean,
-      default: false
-    }
+const MessMenuSchema = new mongoose.Schema({
+  hostelId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hostel',
+    required: true
   },
-  { timestamps: true }
+
+  week: {
+    type: Number,
+    required: true
+  },
+
+  breakfast: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'MenuRecommendation',
+    required: true,
+    validate: mealArrayValidator
+  },
+
+  lunch: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'MenuRecommendation',
+    required: true,
+    validate: mealArrayValidator
+  },
+
+  dinner: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'MenuRecommendation',
+    required: true,
+    validate: mealArrayValidator
+  },
+
+  generatedAt: {
+    type: Date,
+    default: Date.now
+  },
+
+  published: {
+    type: Boolean,
+    default: false
+  }
+},
+{
+  timestamps: true
+});
+
+// Prevent duplicate menus per hostel per week
+MessMenuSchema.index(
+  { hostelId: 1, week: 1 },
+  { unique: true }
 );
 
-// one menu per hostel per week
-messMenuSchema.index({ hostelId: 1, week: 1 }, { unique: true });
-
-export const MessMenu = mongoose.model('MessMenu', messMenuSchema);
+export const MessMenu = mongoose.model('MessMenu', MessMenuSchema);

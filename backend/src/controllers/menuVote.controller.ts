@@ -1,11 +1,5 @@
-import { Request, Response } from 'express';
-import { MenuVote } from '../models/MenuVote';
-import { Dish } from '../models/Dish';
-
+import { Request, Response } from 'express'; import { MenuVote } from '../models/MenuVote'; import { Dish } from '../models/Dish'; import mongoose from 'mongoose';
 export const submitMenuVotes = async (req: Request, res: Response) => {
-  const session = await MenuVote.startSession();
-  session.startTransaction();
-
   try {
     const { week, votes } = req.body;
     const { _id: userId, hostelId } = req.user!;
@@ -14,66 +8,53 @@ export const submitMenuVotes = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Invalid payload' });
     }
 
-    // 1️⃣ Idempotency guard
-    const alreadyVoted = await MenuVote.exists(
-      { hostelId, userId, week }
-    );
+    const meals = ['Breakfast', 'Lunch', 'Dinner'];
 
+    for (const meal of meals) {
+      if (!Array.isArray(votes[meal]) || votes[meal].length !== 7) {
+        return res.status(400).json({
+          message: `Exactly 7 dishes required for ${meal}`
+        });
+      }
+    }
+
+    const alreadyVoted = await MenuVote.exists({ hostelId, userId, week });
     if (alreadyVoted) {
-      await session.abortTransaction();
       return res.status(409).json({
         message: 'You have already voted for this week'
       });
     }
 
-    // 2️⃣ Validate minimum dishes
-    for (const meal of ['Breakfast', 'Lunch', 'Dinner']) {
-      if (!votes[meal] || votes[meal].length < 7) {
-        await session.abortTransaction();
-        return res.status(400).json({
-          message: `Minimum 7 dishes required for ${meal}`
-        });
-      }
-    }
-
-    // 3️⃣ Build votes atomically
     const bulkVotes = [];
+    const allDishIds = [];
 
-    for (const [mealType, dishIds] of Object.entries(votes)) {
-      for (const dishId of dishIds as string[]) {
+    for (const meal of meals) {
+      for (const dishId of votes[meal]) {
         bulkVotes.push({
           hostelId,
           userId,
           dishId,
           week
         });
+        allDishIds.push(dishId);
       }
     }
 
-    // 4️⃣ Atomic insert
-    await MenuVote.insertMany(bulkVotes, { session });
+    await MenuVote.insertMany(bulkVotes);
 
-    await session.commitTransaction();
-    session.endSession();
+    await Dish.updateMany(
+      { _id: { $in: allDishIds }, hostelId },
+      { $inc: { [`weeklyVotes.${week}`]: 1 } }
+    );
 
     return res.status(201).json({
       message: 'Votes submitted successfully'
     });
 
   } catch (error: any) {
-    await session.abortTransaction();
-    session.endSession();
-
-    // DB-level idempotency fallback
-    if (error.code === 11000) {
-      return res.status(409).json({
-        message: 'You have already voted for this week'
-      });
-    }
-
+    console.error('MENU VOTE ERROR:', error);
     return res.status(500).json({
-      message: 'Failed to submit votes',
-      error: error.message
+      message: error.message || 'Failed to submit votes'
     });
   }
 };

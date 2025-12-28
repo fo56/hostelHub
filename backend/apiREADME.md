@@ -206,7 +206,7 @@ Authorization: Bearer <STUDENT_ACCESS_TOKEN>
 
 🍽️ Student – Dish Suggestion
 Suggest New Dish
-POST /api/dishes/suggest
+POST /api/student/suggest
 
 
 ⏱️ Rate-limited: 3 suggestions / week

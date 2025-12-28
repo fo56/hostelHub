@@ -8,7 +8,7 @@ import { suggestDish } from '../controllers/dish.controller';
 const router = express.Router();
 
 router.post(
-  '/suggest',
+  '/',
   verifyToken,
   requireRole('STUDENT'),
   dishSuggestionRateLimit,

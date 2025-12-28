@@ -2,25 +2,25 @@
 import express from 'express';
 import { verifyToken } from '../middlewares/verifyToken.middleware';
 import { requireRole } from '../middlewares/requireRole.middleware';
-
+import { getActiveDishesForVoting } from '../controllers/studentDish.controller'
 import {
   getCurrentMessMenu,
   getMessMenuByWeek,
   getStudentVotingStatus, 
   getServedDishesToday
 } from '../controllers/studentMenu.controller';
-
+import { getStudentNotifications } from '../controllers/studentNotification.controller'
 const router = express.Router();
 
 router.get(
-  '/today',
+  '/menu/today',
   verifyToken,
   requireRole('STUDENT'),
   getServedDishesToday
 );
 
 router.get(
-  '/current',
+  '/menu/current',
   verifyToken,
   requireRole('STUDENT'),
   getCurrentMessMenu
@@ -34,9 +34,22 @@ router.get(
 );
 
 router.get(
-  '/:week',
+  '/menu/:week',
   verifyToken,
   requireRole('STUDENT'),
   getMessMenuByWeek
 );
+
+router.get(
+  '/dishes/active',
+  verifyToken,
+  requireRole('STUDENT'),
+  getActiveDishesForVoting
+)
+router.get(
+  '/notifications',
+  verifyToken,
+  requireRole('STUDENT'),
+  getStudentNotifications
+)
 export default router;

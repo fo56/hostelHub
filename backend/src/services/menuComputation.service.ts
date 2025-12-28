@@ -1,69 +1,63 @@
-import {Dish} from '../models/Dish';
+import { Dish } from '../models/Dish';
 import MenuRecommendation from '../models/MenuRecommendation';
-import { Types } from 'mongoose';
 
-export const computeMenuRecommendations = async () => {
+export const computeMenuRecommendations = async (week: string) => {
   const pipeline = [
-    // Only active dishes
+    //  Only active dishes
     {
-      $match: { isActive: true }
+      $match: { status: 'ACTIVE' }
     },
 
-    // Join feedback data
+    //  Extract votes for the given week
     {
-      $lookup: {
-        from: 'dishfeedbacks',
-        localField: '_id',
-        foreignField: 'dishId',
-        as: 'feedbacks'
+      $addFields: {
+        weeklyVoteCount: {
+          $ifNull: [`$weeklyVotes.${week}`, 0]
+        }
       }
     },
 
-    // Compute aggregates
+    //  Compute max votes (for normalization)
+    {
+      $group: {
+        _id: null,
+        maxVotes: { $max: '$weeklyVoteCount' },
+        dishes: { $push: '$$ROOT' }
+      }
+    },
+
+    // Unwind back
+    {
+      $unwind: '$dishes'
+    },
+
+    {
+      $replaceRoot: {
+        newRoot: {
+          $mergeObjects: [
+            '$dishes',
+            { maxVotes: '$maxVotes' }
+          ]
+        }
+      }
+    },
+
+    // Normalize vote score
     {
       $addFields: {
-        avgRating: {
+        voteScore: {
           $cond: [
-            { $gt: [{ $size: '$feedbacks' }, 0] },
-            { $avg: '$feedbacks.rating' },
-            0
-          ]
-        },
-
-        wantAgainPercent: {
-          $cond: [
-            { $gt: [{ $size: '$feedbacks' }, 0] },
-            {
-              $multiply: [
-                {
-                  $divide: [
-                    {
-                      $size: {
-                        $filter: {
-                          input: '$feedbacks',
-                          as: 'f',
-                          cond: { $eq: ['$$f.wantAgain', true] }
-                        }
-                      }
-                    },
-                    { $size: '$feedbacks' }
-                  ]
-                },
-                100
-              ]
-            },
+            { $gt: ['$maxVotes', 0] },
+            { $divide: ['$weeklyVoteCount', '$maxVotes'] },
             0
           ]
         }
       }
     },
 
-    // Popularity + Cost efficiency
+    // Cost efficiency
     {
       $addFields: {
-        popularityScore: {
-          $add: ['$avgRating', '$wantAgainPercent']
-        },
         costEfficiency: {
           $cond: [
             { $gt: ['$priceScore', 0] },
@@ -79,7 +73,7 @@ export const computeMenuRecommendations = async () => {
       $addFields: {
         finalScore: {
           $add: [
-            { $multiply: [0.5, '$popularityScore'] },
+            { $multiply: [0.5, '$voteScore'] },
             { $multiply: [0.3, '$healthScore'] },
             { $multiply: [0.2, '$costEfficiency'] }
           ]
@@ -87,11 +81,13 @@ export const computeMenuRecommendations = async () => {
       }
     },
 
-    // Shape output for storage
+    // 8️⃣ Shape output
     {
       $project: {
         dishId: '$_id',
-        popularityScore: 1,
+        mealType: 1,
+        weeklyVoteCount: 1,
+        voteScore: 1,
         healthScore: 1,
         costEfficiency: 1,
         finalScore: 1,
@@ -102,13 +98,14 @@ export const computeMenuRecommendations = async () => {
 
   const computedResults = await Dish.aggregate(pipeline);
 
-  // Clear previous recommendations
-  await MenuRecommendation.deleteMany({});
+  // Clear previous recommendations for this week
+  await MenuRecommendation.deleteMany({ week });
 
-  // Insert fresh computation
+  // Insert new recommendations
   await MenuRecommendation.insertMany(
     computedResults.map(item => ({
       ...item,
+      week,
       computedAt: new Date()
     }))
   );
