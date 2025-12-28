@@ -7,15 +7,6 @@ import LoginLink from '../pages/login/LoginLink'
 import SetPassword from '../pages/login/SetPassword'
 import AdminRegister from '../pages/admin/AdminRegister'
 
-<<<<<<< HEAD
-=======
-// Student Pages
-import StudentDashboard from '../pages/student/Dashboard'
-import StudentMessMenu from '../pages/student/MessMenu'
-import StudentIssuesPage from '../pages/student/Issues'
-import StudentLayout from '../pages/student/StudentLayout'
-
->>>>>>> ad4abef19a47978c8a4ea8c64874d1d9740e3d3f
 // Worker Pages
 import WorkerDashboard from '../pages/worker/Dashboard'
 import WorkerLayout from '../pages/worker/WorkerLayout'
@@ -37,15 +28,7 @@ export default function AppRoutes() {
       {adminRoutes}
 
       {/* ───── STUDENT ───── */}
-<<<<<<< HEAD
       {studentRoutes}
-=======
-      <Route path="/student" element={<StudentLayout />}>
-        <Route path="dashboard" element={<StudentDashboard />} />
-        <Route path="mess-menu" element={<StudentMessMenu />} />
-        <Route path="issues" element={<StudentIssuesPage />} />
-      </Route>
->>>>>>> ad4abef19a47978c8a4ea8c64874d1d9740e3d3f
 
       {/* ───── WORKER ───── */}
       <Route path="/worker" element={<WorkerLayout />}>
