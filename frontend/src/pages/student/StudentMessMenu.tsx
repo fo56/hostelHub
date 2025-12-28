@@ -18,7 +18,7 @@ export default function AdminMessMenu() {
   const [menu, setMenu] = useState<any>(null)
 
   useEffect(() => {
-    request('/admin/menu/preview').then(setMenu)
+    request('/student/menu/current').then(setMenu)
   }, [])
 
   if (!menu) {

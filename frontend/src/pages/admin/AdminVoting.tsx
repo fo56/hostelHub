@@ -190,7 +190,7 @@ export default function AdminVoting() {
             <button 
               onClick={() => setShowConfirm(true)}
               disabled={isActivelyTicking || loading || !status}
-              className="w-full border-2 border-black text-black p-3 font-bold uppercase hover:bg-black hover:text-white disabled:border-gray-200 disabled:text-gray-400 h-[104px] mt-auto"
+              className="w-full border-2 border-black text-black p-3 font-bold uppercase hover:bg-black hover:text-white disabled:border-gray-200 disabled:text-gray-400 h-26 mt-auto"
             >
               Generate Menu
             </button>

@@ -11,21 +11,18 @@ import AdminVoting from '../pages/admin/AdminVoting'
 import AdminMessMenu from '../pages/admin/AdminMessMenu'
 import AdminReviews from '../pages/admin/AdminReviews'
 import AdminIssues from '../pages/admin/AdminIssues'
-
+import AdminDishApprovals from '../pages/admin/AdminDishApprovals'
 export const adminRoutes = (
   <Route path="/admin" element={<AdminLayout />}>
-    {/* This renders at /admin/dashboard */}
     <Route path="dashboard" element={<AdminDashboard />} /> 
-    
-    {/* These render at /admin/users, /admin/menu, etc. */}
     <Route path="users" element={<AdminUsers />} />
     <Route path="create-user" element={<AdminCreateUser />} />
     <Route path="voting" element={<AdminVoting />} />
     <Route path="menu" element={<AdminMessMenu />} />
     <Route path="reviews" element={<AdminReviews />} />
     <Route path="issues" element={<AdminIssues />} />
+    <Route path="dishes" element={<AdminDishApprovals />} />
     
-    {/* Optional: Redirect /admin to /admin/dashboard */}
     <Route index element={<Navigate to="dashboard" replace />} />
   </Route>
 )

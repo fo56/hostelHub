@@ -7,17 +7,13 @@ import LoginLink from '../pages/login/LoginLink'
 import SetPassword from '../pages/login/SetPassword'
 import AdminRegister from '../pages/admin/AdminRegister'
 
-// Student Pages
-import StudentDashboard from '../pages/student/Dashboard'
-import StudentMessMenu from '../pages/student/MessMenu'
-
 // Worker Pages
 import WorkerDashboard from '../pages/worker/Dashboard'
 import WorkerAssignedIssue from '../pages/worker/AssignedIssue'
 
 // Admin route tree
 import { adminRoutes } from './AdminRoutes'
-
+import { studentRoutes } from './StudentRoutes'
 export default function AppRoutes() {
   return (
     <Routes>
@@ -32,8 +28,7 @@ export default function AppRoutes() {
       {adminRoutes}
 
       {/* ───── STUDENT ───── */}
-      <Route path="/student/dashboard" element={<StudentDashboard />} />
-      <Route path="/student/mess-menu" element={<StudentMessMenu />} />
+      {studentRoutes}
 
       {/* ───── WORKER ───── */}
       <Route path="/worker/dashboard" element={<WorkerDashboard />} />

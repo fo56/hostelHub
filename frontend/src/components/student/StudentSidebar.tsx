@@ -1,17 +1,15 @@
 import { NavLink } from 'react-router-dom'
 
 const links = [
-  { label: 'Dashboard', to: '/admin' },
-  { label: 'Create User', to: '/admin/create-user' },
-  { label: 'Users', to: '/admin/users' },
-  { label: 'Mess Voting', to: '/admin/voting' },
-  { label: 'Mess Menu', to: '/admin/menu' },
-  { label: 'Reviews', to: '/admin/reviews' },
-  { label: 'Issues', to: '/admin/issues' },
-  { label: 'Dishes', to: '/admin/dishes' }
+  { label: 'Dashboard', to: '/student' },
+  { label: 'Mess Voting', to: '/student/voting/status' },
+  { label: 'Mess Menu', to: '/student/menu' },
+  { label: 'Reviews', to: '/student/reviews' },
+  { label: 'Suggest Dish', to: '/student/suggest-dishes' },
+  { label: 'Issues', to: '/student/issues' }
 ]
 
-export default function AdminSidebar() {
+export default function StudentSidebar() {
   return (
     <aside className="w-64 bg-white border-r">
       <div className="p-4 font-bold text-xl border-b">
