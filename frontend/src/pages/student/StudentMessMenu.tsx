@@ -13,7 +13,7 @@ const days = [
 
 const meals = ['breakfast', 'lunch', 'dinner'] as const
 
-export default function AdminMessMenu() {
+export default function StudentMessMenu() {
   const { request } = useApi()
   const [menu, setMenu] = useState<any>(null)
 
@@ -46,7 +46,8 @@ export default function AdminMessMenu() {
 
               {meals.map(meal => (
                 <td key={meal} className="border p-2 text-sm">
-                  {menu[meal]?.[index]?.name ?? '-'}
+                  {menu[meal]?.[index]?.dishId?.name ?? '-'}
+
                 </td>
               ))}
             </tr>

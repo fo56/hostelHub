@@ -13,7 +13,13 @@ export const getCurrentMessMenu = async (req: Request, res: Response) => {
       published: true
     })
       .sort({ week: -1 }) 
-      .populate('breakfast lunch dinner');
+      .populate({
+    path: 'breakfast lunch dinner',
+    populate: {
+      path: 'dishId',
+      select: 'name mealType'
+    }
+  });
 
     if (!menu) {
       return res.status(404).json({
@@ -55,7 +61,13 @@ export const getMessMenuByWeek = async (req: Request, res: Response) => {
       hostelId,
       week,
       published: true
-    }).populate('breakfast lunch dinner');
+    }).populate({
+    path: 'breakfast lunch dinner',
+    populate: {
+      path: 'dishId',
+      select: 'name mealType'
+    }
+  });
 
     if (!menu) {
       return res.status(404).json({
@@ -83,23 +95,36 @@ export const getMessMenuByWeek = async (req: Request, res: Response) => {
  */
 export const getStudentVotingStatus = async (req: Request, res: Response) => {
   try {
-    // 1. Fetch the actual setting from your Database
-    // Replace 'VotingModel' with your actual model name
-    const window = await MenuVoteWindow.findOne({ isActive: true }); 
+    const hostelId = req.user!.hostelId;
+    const now = new Date();
+
+    const window = await MenuVoteWindow.findOne({ hostelId })
+      .sort({ createdAt: -1 });
 
     if (!window) {
       return res.json({ isOpen: false, week: null });
     }
 
-    // 2. Return the format the frontend expects
+    // Auto-close expired window
+    if (window.isActive && window.endsAt < now) {
+      window.isActive = false;
+      await window.save();
+    }
+
+    const isOpen =
+      window.isActive &&
+      window.startsAt <= now &&
+      window.endsAt >= now;
+
     return res.json({
-      isOpen: window.isActive, // Must be true
+      isOpen,
       week: window.week
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({ message: 'Server Error' });
   }
 };
+
 
 /**
  * GET TODAY'S SERVED DISHES
@@ -112,8 +137,14 @@ export const getServedDishesToday = async (req: Request, res: Response) => {
       hostelId,
       published: true
     })
-      .sort({ generatedAt: -1 }) 
-      .populate('breakfast lunch dinner');
+      .sort({ week: -1 })
+      .populate({
+        path: 'breakfast lunch dinner',
+        populate: {
+          path: 'dishId',
+          select: 'name mealType'
+        }
+      });
 
     if (!menu) {
       return res.status(404).json({
@@ -121,13 +152,16 @@ export const getServedDishesToday = async (req: Request, res: Response) => {
       });
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    // JS: Sunday = 0 → convert to Monday = 0
+    const jsDay = new Date().getDay(); // 0–6
+    const dayIndex = jsDay === 0 ? 6 : jsDay - 1;
 
     return res.status(200).json({
-      date: today,
-      breakfast: menu.breakfast,
-      lunch: menu.lunch,
-      dinner: menu.dinner
+      date: new Date().toISOString().split('T')[0],
+      dayIndex,
+      breakfast: menu.breakfast[dayIndex] ?? null,
+      lunch: menu.lunch[dayIndex] ?? null,
+      dinner: menu.dinner[dayIndex] ?? null
     });
 
   } catch (error: any) {

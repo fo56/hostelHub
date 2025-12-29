@@ -2,13 +2,29 @@ import { Request, Response } from 'express';
 import { MenuVote } from '../models/MenuVote';
 import { Dish } from '../models/Dish';
 import mongoose from 'mongoose';
+import { MenuVoteWindow } from '../models/MenuVoteWindow';
 
 export const submitMenuVotes = async (req: Request, res: Response) => {
   try {
     const { votes } = req.body;
     const { _id: userId, hostelId } = req.user!;
 
-    const window = (req as any).votingWindow;
+    const window = await MenuVoteWindow.findOne({
+  hostelId,
+  isActive: true
+});
+
+if (!window) {
+  return res.status(403).json({ message: 'Voting closed' });
+}
+
+const now = new Date();
+if (window.startsAt > now || window.endsAt < now) {
+  window.isActive = false;
+  await window.save();
+  return res.status(403).json({ message: 'Voting closed' });
+}
+
     if (!window) {
       return res.status(403).json({ message: 'Voting closed' });
     }

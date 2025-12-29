@@ -1,12 +1,16 @@
 import { Dish } from '../models/Dish';
-import MenuRecommendation from '../models/MenuRecommendation';
+import { MenuRecommendation } from '../models/MenuRecommendation';
 
 export const computeMenuRecommendations = async (week: string) => {
   const pipeline = [
     //  Only active dishes
-    {
-      $match: { status: 'ACTIVE' }
-    },
+      {
+  $match: {
+    status: 'ACTIVE',
+    mealType: { $exists: true }
+  }
+},
+
 
     //  Extract votes for the given week
     {
@@ -84,22 +88,24 @@ export const computeMenuRecommendations = async (week: string) => {
     // 8️⃣ Shape output
     {
       $project: {
-        dishId: '$_id',
-        mealType: 1,
-        weeklyVoteCount: 1,
-        voteScore: 1,
-        healthScore: 1,
-        costEfficiency: 1,
-        finalScore: 1,
-        _id: 0
-      }
+  hostelId: 1,
+  week: { $literal: Number(week) },
+  dishId: '$_id',
+  mealType: 1,
+  voteScore: 1,
+  healthScore: 1,
+  costEfficiency: 1,
+  finalScore: 1,
+  _id: 0
+}
+
     }
   ];
 
   const computedResults = await Dish.aggregate(pipeline);
 
   // Clear previous recommendations for this week
-  await MenuRecommendation.deleteMany({ week });
+  await MenuRecommendation.deleteMany({ week: Number(week) });
 
   // Insert new recommendations
   await MenuRecommendation.insertMany(

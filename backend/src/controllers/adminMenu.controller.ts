@@ -199,12 +199,15 @@ export const getMenuPreview = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId;
 
-    const menu = await MessMenu.findOne({
-      hostelId,
-      published: false
-    })
-      .sort({ generatedAt: -1 })
-      .populate('breakfast lunch dinner');
+    const menu = await MessMenu.findOne({ hostelId, published: false })
+  .populate({
+    path: 'breakfast lunch dinner',
+    populate: {
+      path: 'dishId',
+      select: 'name mealType'
+    }
+  });
+
 
     if (!menu) {
       return res.status(404).json({

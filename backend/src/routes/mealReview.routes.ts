@@ -5,7 +5,7 @@ const router = express.Router();
 
 // Student submits meal review
 router.post(
-  '/',
+  '/submit',
   submitMealReview
 );
 

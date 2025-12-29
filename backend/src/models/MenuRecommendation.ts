@@ -1,25 +1,39 @@
-import { Schema, model } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
-export interface MenuRecommendation {
-  _id: string;
-  dishId: string;
-  popularityScore: number;
-  healthScore: number;
-  costEfficiency: number;
-  finalScore: number;
-  computedAt: Date;
-}
-
-const menuRecommendationSchema = new Schema<MenuRecommendation>(
-  {
-    dishId: { type: String, required: true },
-    popularityScore: { type: Number, required: true },
-    healthScore: { type: Number, required: true },
-    costEfficiency: { type: Number, required: true },
-    finalScore: { type: Number, required: true },
-    computedAt: { type: Date, default: Date.now },
+const menuRecommendationSchema = new Schema({
+  hostelId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hostel',
+    required: true
   },
-  { timestamps: true }
-);
 
-export default model<MenuRecommendation>('MenuRecommendation', menuRecommendationSchema);
+  week: {
+    type: Number,
+    required: true
+  },
+
+  mealType: {
+    type: String,
+    enum: ['Breakfast', 'Lunch', 'Dinner'],
+    required: true
+  },
+
+  dishId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Dish',
+    required: true
+  },
+
+  voteScore: Number,
+  healthScore: Number,
+  costEfficiency: Number,
+  finalScore: Number,
+
+  computedAt: { type: Date, default: Date.now }
+});
+
+
+export const MenuRecommendation = mongoose.model(
+  'MenuRecommendation',
+  menuRecommendationSchema
+);

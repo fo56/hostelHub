@@ -1,5 +1,5 @@
 // services/menuBuilder.service.ts
-import MenuRecommendation from '../models/MenuRecommendation';
+import { MenuRecommendation } from '../models/MenuRecommendation';
 import { MessMenu } from '../models/MessMenu';
 
 export const buildMessMenu = async (
@@ -29,6 +29,13 @@ export const buildMessMenu = async (
     }
 
     menu[meal] = dishes;
+  }
+
+  for (const meal of MEALS) {
+    console.log(
+      meal + ': ' +
+      (await MenuRecommendation.countDocuments({ hostelId, week, mealType: meal }))
+    );
   }
 
   return MessMenu.create({
