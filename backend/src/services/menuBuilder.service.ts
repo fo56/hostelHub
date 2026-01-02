@@ -1,50 +1,60 @@
-// services/menuBuilder.service.ts
-import { MenuRecommendation } from '../models/MenuRecommendation';
-import { MessMenu } from '../models/MessMenu';
+import { MenuRecommendation } from '../models/MenuRecommendation'
+import { MessMenu } from '../models/MessMenu'
+import { redis } from './redis.service'
+
+const BUILD_LOCK_TTL = 60
 
 export const buildMessMenu = async (
   hostelId: string,
   week: number
 ) => {
-  const MEALS = ['Breakfast', 'Lunch', 'Dinner'] as const;
+  const lockKey = `lock:menu:build:${hostelId}:${week}`
 
-  const menu: Record<typeof MEALS[number], any[]> = {
-    Breakfast: [],
-    Lunch: [],
-    Dinner: []
-  };
+  const lock = await redis.set(lockKey, 'locked', { NX: true, EX: BUILD_LOCK_TTL })
+  if (!lock) {
+    throw new Error('Menu build already in progress')
+  }
 
-  // Fetch top 7 per meal
-  for (const meal of MEALS) {
-    const dishes = await MenuRecommendation.find({
-      hostelId,
-      week,
-      mealType: meal
-    })
-      .sort({ finalScore: -1 })
-      .limit(7);
-
-    if (dishes.length < 7) {
-      throw new Error('not enough meals');
+  try {
+    // Prevent rebuilding published menu
+    const existing = await MessMenu.findOne({ hostelId, week })
+    if (existing) {
+      return existing
     }
 
-    menu[meal] = dishes;
-  }
+    const MEALS = ['Breakfast', 'Lunch', 'Dinner'] as const
+    const menu: Record<typeof MEALS[number], any[]> = {
+      Breakfast: [],
+      Lunch: [],
+      Dinner: []
+    }
 
-  for (const meal of MEALS) {
-    console.log(
-      meal + ': ' +
-      (await MenuRecommendation.countDocuments({ hostelId, week, mealType: meal }))
-    );
-  }
+    for (const meal of MEALS) {
+      const dishes = await MenuRecommendation.find({
+        hostelId,
+        week,
+        mealType: meal
+      })
+        .sort({ finalScore: -1 })
+        .limit(7)
 
-  return MessMenu.create({
-    hostelId,
-    week,
-    breakfast: menu.Breakfast,
-    lunch: menu.Lunch,
-    dinner: menu.Dinner,
-    generatedAt: new Date(),
-    published: false
-  });
-};
+      if (dishes.length < 7) {
+        throw new Error(`Not enough dishes for ${meal}`)
+      }
+
+      menu[meal] = dishes
+    }
+
+    return await MessMenu.create({
+      hostelId,
+      week,
+      breakfast: menu.Breakfast,
+      lunch: menu.Lunch,
+      dinner: menu.Dinner,
+      generatedAt: new Date(),
+      published: false
+    })
+  } finally {
+    await redis.del(lockKey)
+  }
+}

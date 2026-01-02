@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import { MenuVoteWindow } from '../models/MenuVoteWindow';
 import { MessMenu } from '../models/MessMenu';
-import { computeMenuRecommendations } from '../services/menuComputation.service';
-import { buildMessMenu } from '../services/menuBuilder.service';
+import * as ComputationService from '../services/menuComputation.service';
+import * as BuilderService from '../services/menuBuilder.service';
+import * as MenuCache from '../services/menuCache.service'
 
 /**
  * ADMIN: OPEN VOTING WINDOW
@@ -165,10 +166,10 @@ export const generateFinalMenu = async (req: Request, res: Response) => {
     }
 
     // Compute recommendations (week-aware)
-    await computeMenuRecommendations(window.week.toString());
+    await ComputationService.computeMenuRecommendations(window.week.toString());
 
     // Build menu
-    const menu = await buildMessMenu(
+    const menu = await BuilderService.buildMessMenu(
       hostelId.toString(),
       window.week
     );
@@ -237,7 +238,7 @@ export const publishMenu = async (req: Request, res: Response) => {
       { published: true },
       { new: true }
     );
-
+    await MenuCache.invalidateMenuCache(JSON.stringify(hostelId));
     if (!menu) {
       return res.status(404).json({
         message: 'No unpublished menu found'

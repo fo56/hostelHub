@@ -3,7 +3,6 @@ import express from 'express';
 import { getActiveDishesForVoting } from '../controllers/studentDish.controller'
 import {
   getCurrentMessMenu,
-  getMessMenuByWeek,
   getStudentVotingStatus, 
   getServedDishesToday
 } from '../controllers/studentMenu.controller';
@@ -25,10 +24,6 @@ router.get(
   getStudentVotingStatus
 );
 
-router.get(
-  '/menu/:week',
-  getMessMenuByWeek
-);
 
 router.get(
   '/dishes/active',

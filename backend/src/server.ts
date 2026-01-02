@@ -17,6 +17,7 @@ import studentRoutes from './routes/student.routes';
 import { verifyToken } from './middlewares/verifyToken.middleware';
 import { requireRole } from './middlewares/requireRole.middleware';
 import { errorHandler } from './middlewares/errorHandler';
+ import { connectRedis} from './services/redis.service'
 
 dotenv.config();
 
@@ -63,6 +64,7 @@ app.use(errorHandler);
 const startServer = async () => {
   try {
     await connectDB();
+    await connectRedis()
     app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
   } catch (error) {
     console.error('Startup failed:', error);
