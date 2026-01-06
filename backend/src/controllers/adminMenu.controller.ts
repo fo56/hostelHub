@@ -205,7 +205,7 @@ export const getMenuPreview = async (req: Request, res: Response) => {
     path: 'breakfast lunch dinner',
     populate: {
       path: 'dishId',
-      select: 'name mealType'
+      select: 'name mealType priceScore healthScore weeklyVotes'
     }
   });
 

@@ -2,8 +2,8 @@ import { Dish } from '../models/Dish'
 import { MenuRecommendation } from '../models/MenuRecommendation'
 import { redis } from './redis.service'
 
-const COMPUTE_TTL = 60 * 10 // 10 minutes
-const LOCK_TTL = 60 // 1 minute
+const COMPUTE_TTL = 60 * 60 * 24 * 7   // 1 week
+const LOCK_TTL = 60 * 60 * 24        // 1 hour
 
 export const computeMenuRecommendations = async (week: string) => {
   const lockKey = `lock:menu:compute:${week}`

@@ -175,7 +175,7 @@ export default function Login() {
 
         {credentialsSaved && !error && (
           <div className="p-4 border-2 border-green-300 rounded-lg bg-green-50 flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm text-green-900 font-medium">Saved credentials detected</p>
               <p className="text-xs text-green-800 mt-1">Your login information has been auto-filled</p>
@@ -185,7 +185,7 @@ export default function Login() {
 
         {errorDisplay && (
           <div className="p-4 border-2 border-red-300 rounded-lg bg-red-50 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm text-red-900 font-medium">Login failed</p>
               <p className="text-sm text-red-800 mt-1">{errorDisplay}</p>
@@ -208,14 +208,16 @@ export default function Login() {
             </div>
             <div className="space-y-1">
               <Label htmlFor="password" className="text-sm">Password</Label>
-              <div className="flex gap-2">
+                <div className="flex gap-2">
                 <Input
+                  key={!showPassword ? 'visible' : 'hidden'}
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={!showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={adminLoading}
+                  autoComplete={showPassword ? 'current-password' : 'off'}
                 />
                 <button
                   type="button"
@@ -223,9 +225,13 @@ export default function Login() {
                   disabled={adminLoading}
                   className="px-3 border-2 border-black/20 rounded-lg hover:bg-black/5 transition-colors disabled:opacity-50"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                  ) : (
+                  <Eye className="w-4 h-4" />
+                  )}
                 </button>
-              </div>
+                </div>
             </div>
             <Button type="submit" className="w-full" disabled={adminLoading}>
               {adminLoading ? 'Signing in...' : 'Sign in as Admin'}
@@ -268,28 +274,38 @@ export default function Login() {
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={adminLoading}
                   />
+
+
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="student-password" className="text-sm">Password</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="student-password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={adminLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      disabled={adminLoading}
-                      className="px-3 border-2 border-black/20 rounded-lg hover:bg-black/5 transition-colors disabled:opacity-50"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    <Label htmlFor="student-password">Password</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        key={showPassword ? 'visible' : 'hidden'}
+                        id="password"
+                        // Toggle type
+                        type={showPassword ? 'password' : 'text'}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={adminLoading}
+                        autoComplete={showPassword ? 'current-password' : 'new-password'}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={adminLoading}
+                        className="px-3 border-2 border-black/20 rounded-lg hover:bg-black/5 transition-colors disabled:opacity-50"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
+
                 <Button type="submit" className="w-full" disabled={adminLoading}>
                   {adminLoading ? 'Signing in...' : `Sign in as ${roles.find(r => r.id === selectedRole)?.label}`}
                 </Button>

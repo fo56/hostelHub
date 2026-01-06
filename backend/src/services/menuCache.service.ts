@@ -1,6 +1,6 @@
 import { redis } from './redis.service'
 import { MessMenu } from '../models/MessMenu'
-
+import { formatMeal } from '../utils/formatMeal';
 const CURRENT_MENU_TTL = 60 * 60 * 24 * 7   // 1 week
 const TODAY_MENU_TTL = 60 * 60 * 24        // 1 hour
 
@@ -22,7 +22,7 @@ export async function getCachedCurrentMenu(hostelId: string) {
       path: 'breakfast lunch dinner',
       populate: {
         path: 'dishId',
-        select: 'name mealType'
+        select: 'name mealType priceScore healthScore weeklyVotes'
       }
     })
 
@@ -55,9 +55,9 @@ export async function getCachedTodayMenu(hostelId: string) {
   const todayMenu = {
     date: new Date().toISOString().split('T')[0],
     dayIndex,
-    breakfast: menu.breakfast[dayIndex] ?? null,
-    lunch: menu.lunch[dayIndex] ?? null,
-    dinner: menu.dinner[dayIndex] ?? null
+    breakfast: formatMeal(menu.breakfast, menu.week),
+    lunch: formatMeal(menu.lunch, menu.week),
+    dinner: formatMeal(menu.dinner, menu.week)
   }
 
   await redis.set(

@@ -45,6 +45,7 @@ app.use('/api/issues', verifyToken, issueRoutes);
 
 // Student Specific Routes
 // Applying verifyToken and Role check here covers all routes inside studentRoutes
+app.use('/api/student/suggest-dishes', verifyToken, requireRole('STUDENT'), dishRoutes);
 app.use('/api/student/reviews', verifyToken, requireRole('STUDENT'), mealReviewRoutes);
 app.use('/api/student', verifyToken, requireRole('STUDENT'), studentRoutes);
 app.use('/api/menu-votes', verifyToken, requireRole('STUDENT'), menuVoteRoutes);

@@ -2,7 +2,7 @@ import { MenuRecommendation } from '../models/MenuRecommendation'
 import { MessMenu } from '../models/MessMenu'
 import { redis } from './redis.service'
 
-const BUILD_LOCK_TTL = 60
+const BUILD_LOCK_TTL = 60 * 60 * 24        // 1 hour
 
 export const buildMessMenu = async (
   hostelId: string,
