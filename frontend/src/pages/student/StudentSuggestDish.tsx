@@ -21,10 +21,17 @@ export default function StudentSuggestDish() {
     setLoading(true)
 
     try {
-      await request('/student/suggest-dishes', 'POST', {
-        name, mealType, category, tags
-      })
+      // Convert comma-separated string to an array of strings for the backend
+      const tagsArray = tags.split(',').map(tag => tag.trim()).filter(Boolean)
 
+      // FIXED: Endpoint changed from '/student/suggest-dishes' to '/dishes' 
+      // (assuming useApi hook automatically prepends '/api')
+      await request('/dishes', 'POST', {
+        name,
+        mealType,
+        category,
+        tags: tagsArray
+      })
 
       alert('Dish suggestion submitted for review')
 

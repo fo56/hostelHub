@@ -1,20 +1,13 @@
 import { Request, Response } from 'express'
 import { Dish } from '../models/Dish'
 
-/**
- * GET ALL ACTIVE + ADMIN-APPROVED DISHES (GROUPED BY MEAL)
- * Route: GET /student/dishes/active
- */
-export const getActiveDishesForVoting = async (
-  req: Request,
-  res: Response
-) => {
+export const getActiveDishesForVoting = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId
 
     const dishes = await Dish.find({
       hostelId,
-      status: 'ACTIVE' // admin-approved dishes only
+      status: 'ACTIVE'
     }).select('_id name mealType')
 
     const grouped = {

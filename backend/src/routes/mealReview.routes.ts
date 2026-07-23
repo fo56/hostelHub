@@ -3,10 +3,7 @@ import { submitMealReview } from '../controllers/mealReview.controller';
 
 const router = express.Router();
 
-// Student submits meal review
-router.post(
-  '/submit',
-  submitMealReview
-);
+// Maps to POST /api/reviews/submit
+router.post('/submit', submitMealReview);
 
 export default router;

@@ -2,8 +2,7 @@
 import express from 'express';
 import { getActiveDishesForVoting } from '../controllers/studentDish.controller'
 import {
-  getCurrentMessMenu,
-  getStudentVotingStatus, 
+  getCurrentMessMenu, 
   getServedDishesToday
 } from '../controllers/studentMenu.controller';
 import { getStudentNotifications } from '../controllers/studentNotification.controller';
@@ -17,11 +16,6 @@ router.get(
 router.get(
   '/menu/current',
   getCurrentMessMenu
-);
-
-router.get(
-  '/voting/status',
-  getStudentVotingStatus
 );
 
 

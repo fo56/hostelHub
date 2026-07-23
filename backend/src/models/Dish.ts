@@ -3,7 +3,11 @@ import mongoose from 'mongoose';
 const dishSchema = new mongoose.Schema({
   hostelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hostel', required: true },
   name: { type: String, required: true },
-  mealType: { type: String, required: true },
+  mealType: {
+  type: String,
+  required: true,
+  enum: ['Breakfast', 'Lunch', 'Dinner'],
+},
   category: { type: String, required: true },
   priceScore: { type: Number, min: 1, max: 5 },
   healthScore: { type: Number, min: 1, max: 5 },
