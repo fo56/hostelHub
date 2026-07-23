@@ -216,7 +216,7 @@ export const generateQRCode = async (req: Request, res: Response): Promise<void>
   try {
     const { userId } = req.params;
 
-    if (!userId?.trim()) {
+    if (typeof userId !== 'string' || !userId.trim()) {
       res.status(400).json({ message: 'User ID is required' });
       return;
     }

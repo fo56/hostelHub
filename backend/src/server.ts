@@ -1,6 +1,6 @@
+import 'dotenv/config';
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import helmet from 'helmet';
 import { connectDB } from './config/db';
 import authRoutes from './routes/auth.routes';
@@ -19,7 +19,6 @@ import { requireRole } from './middlewares/requireRole.middleware';
 import { errorHandler } from './middlewares/errorHandler';
  import { connectRedis} from './services/redis.service'
 
-dotenv.config();
 
 const app: Express = express();
 const PORT = process.env.PORT || 8000;
