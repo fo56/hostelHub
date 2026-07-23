@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useApi } from '../../hooks/useApi'
+import { useAuth } from '../../hooks/useAuth'
 
-export default function AdminVoting({ hostelId }: { hostelId: string }) {
+export default function AdminVoting() {
   const { request } = useApi()
+  const { user } = useAuth()
+  const hostelId = user?.hostelId || ''
 
   const [totalVoters, setTotalVoters] = useState<number>(0)
   const [targetWeek, setTargetWeek] = useState<number>(1)

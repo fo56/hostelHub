@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../../hooks/useApi'
 import { io, Socket } from 'socket.io-client'
+import { useAuth } from '../../hooks/useAuth'
 
 type Meal = 'Breakfast' | 'Lunch' | 'Dinner'
 
@@ -11,8 +12,10 @@ interface Dish {
   healthScore: number
 }
 
-export default function StudentVoting({ hostelId }: { hostelId: string }) {
+export default function StudentVoting() {
   const { request } = useApi()
+  const { user } = useAuth()
+  const hostelId = user?.hostelId || ''
 
   const [dishes, setDishes] = useState<Record<Meal, Dish[]>>({
     Breakfast: [],
