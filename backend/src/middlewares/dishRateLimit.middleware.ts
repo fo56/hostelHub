@@ -7,19 +7,23 @@ export const dishSuggestionRateLimit = async (
   res: Response,
   next: NextFunction
 ) => {
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  try {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-  const count = await Dish.countDocuments({
-    suggestedBy: req.user!._id,
-    createdAt: { $gte: oneWeekAgo }
-  });
-
-  if (count >= 3) {
-    return res.status(429).json({
-      message: 'Maximum 3 dish suggestions allowed per week'
+    const count = await Dish.countDocuments({
+      suggestedBy: req.user!._id,
+      createdAt: { $gte: oneWeekAgo }
     });
-  }
 
-  next();
+    if (count >= 3) {
+      return res.status(429).json({
+        message: 'Maximum 3 dish suggestions allowed per week'
+      });
+    }
+
+    next();
+  } catch (error) {
+    next(error); // let errorHandler respond instead of hanging
+  }
 };

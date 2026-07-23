@@ -1,233 +1,57 @@
 import { Request, Response } from 'express';
-import { MenuVoteWindow } from '../models/MenuVoteWindow';
 import { MessMenu } from '../models/MessMenu';
+import { StudentVote } from '../models/StudentVote';
 import * as ComputationService from '../services/menuComputation.service';
 import * as BuilderService from '../services/menuBuilder.service';
-import * as MenuCache from '../services/menuCache.service'
+import * as MenuCache from '../services/menuCache.service';
+import { getIO } from '../services/socket.service';
 
 /**
- * ADMIN: OPEN VOTING WINDOW
+ * ADMIN: GET LIVE VOTING STATS
  */
-export const openVotingWindow = async (req: Request, res: Response) => {
+export const getVotingStats = async (req: Request, res: Response) => {
   try {
-    const { week, durationInDays } = req.body;
     const hostelId = req.user!.hostelId;
-    const adminId = req.user!._id;
-
-    if (!week || !durationInDays) {
-      return res.status(400).json({
-        message: 'week and durationInDays are required'
-      });
-    }
-
-    await MenuVoteWindow.updateMany(
-      { hostelId, isActive: true },
-      { isActive: false }
-    );
-
-    const startsAt = new Date();
-    const endsAt = new Date();
-    endsAt.setDate(startsAt.getDate() + durationInDays);
-
-    const window = await MenuVoteWindow.create({
-      hostelId,
-      week,
-      startsAt,
-      endsAt,
-      createdBy: adminId,
-      isActive: true
-    });
-
-    return res.status(201).json({
-      message: 'Voting window opened successfully',
-      votingWindow: window
-    });
-
-  } catch (error: any) {
-    return res.status(500).json({
-      message: 'Failed to open voting window',
-      error: error.message
-    });
-  }
-};
-
-/**
- * ADMIN: CLOSE VOTING WINDOW
- */
-export const closeVotingWindow = async (req: Request, res: Response) => {
-  try {
-    const { week } = req.body;
-    const hostelId = req.user!.hostelId;
-
-    if (!week) {
-      return res.status(400).json({
-        message: 'week is required'
-      });
-    }
-
-    const window = await MenuVoteWindow.findOneAndUpdate(
-      { hostelId, week, isActive: true },
-      { isActive: false },
-      { new: true }
-    );
-
-    if (!window) {
-      return res.status(404).json({
-        message: 'No active voting window found for this week'
-      });
-    }
+    const totalVoters = await StudentVote.countDocuments({ hostelId });
 
     return res.status(200).json({
-      message: 'Voting window closed successfully',
-      votingWindow: window
+      totalVoters
     });
-
   } catch (error: any) {
-    return res.status(500).json({
-      message: 'Failed to close voting window',
-      error: error.message
-    });
+    return res.status(500).json({ message: 'Failed to fetch stats', error: error.message });
   }
 };
-// ADMIN: GET VOTING STATUS 
-export const getVotingStatus = async (req: Request, res: Response) => {
-  try { 
-    const hostelId = req.user!.hostelId; 
-    const now = new Date(); 
-    const weekParam = req.query.week; 
-    const window = weekParam 
-      ? await MenuVoteWindow.findOne({ hostelId, week: Number(weekParam) }) 
-      : await MenuVoteWindow.findOne({ hostelId }).sort({ createdAt: -1 }); 
-    
-    if (!window) { 
-      return res.status(200).json({ 
-      isOpen: false, 
-      ended: true, 
-      message: 'Voting has not been initialized' 
-      }); 
-    } 
 
-    // Auto-close expired window
-    if (window.isActive && window.endsAt < now) { 
-      window.isActive = false; 
-      await window.save(); 
-    } 
-
-    const isOpen = window.isActive && window.startsAt <= now && window.endsAt >= now; 
-    
-    return res.status(200).json({ 
-      week: window.week, 
-      isOpen, 
-      ended: !isOpen, 
-      startsAt: window.startsAt, 
-      endsAt: window.endsAt 
-    }); 
-    } catch (error: any) { 
-    return res.status(500).json({ 
-      message: 'Failed to fetch voting status', 
-      error: error.message 
-    }); 
-    }
-  };
-  // ADMIN: GENERATE FINAL MENU AFTER VOTING
+/**
+ * ADMIN: GENERATE FINAL MENU DIRECTLY
+ */
 export const generateFinalMenu = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId;
-    const now = new Date();
+    const { week } = req.body; // e.g. target week number
 
-    const window = await MenuVoteWindow.findOne({ hostelId })
-      .sort({ createdAt: -1 });
-
-    if (!window) {
-      return res.status(400).json({
-        message: 'No voting window found. Cannot generate menu.'
-      });
+    if (!week) {
+      return res.status(400).json({ message: 'Week number is required' });
     }
 
-    if (
-      window.isActive &&
-      window.startsAt <= now &&
-      window.endsAt >= now
-    ) {
-      return res.status(400).json({
-        message: 'Voting is still open. Wait until voting ends.'
-      });
-    }
+    // Compute recommendations based on active student preference pool
+    await ComputationService.computeMenuRecommendations(week.toString());
 
-    const existingMenu = await MessMenu.findOne({
-      hostelId,
-      week: window.week
-    });
-
-    if (existingMenu) {
-      return res.status(400).json({
-        message: 'Mess menu already generated for this week'
-      });
-    }
-
-    // Compute recommendations (week-aware)
-    await ComputationService.computeMenuRecommendations(window.week.toString());
-
-    // Build menu
-    const menu = await BuilderService.buildMessMenu(
-      hostelId.toString(),
-      window.week
-    );
-
-    // Close window (idempotent)
-    if (window.isActive) {
-      window.isActive = false;
-      await window.save();
-    }
+    // Build draft menu
+    const menu = await BuilderService.buildMessMenu(hostelId.toString(), week);
 
     return res.status(200).json({
-      message: 'Mess menu generated successfully',
+      message: 'Mess menu generated successfully based on active votes',
       menuId: menu._id
     });
-
-  } catch (error) {
-    console.error('Menu generation failed:', error);
-    return res.status(500).json({
-      message: 'Menu generation failed'
-    });
-  }
-};
-
-/**
- * ADMIN: PREVIEW GENERATED MENU (DRAFT ONLY)
- */
-export const getMenuPreview = async (req: Request, res: Response) => {
-  try {
-    const hostelId = req.user!.hostelId;
-
-    const menu = await MessMenu.findOne({ hostelId, published: false })
-  .populate({
-    path: 'breakfast lunch dinner',
-    populate: {
-      path: 'dishId',
-      select: 'name mealType priceScore healthScore weeklyVotes'
-    }
-  });
-
-
-    if (!menu) {
-      return res.status(404).json({
-        message: 'No unpublished menu found'
-      });
-    }
-
-    return res.status(200).json(menu);
-
   } catch (error: any) {
-    return res.status(500).json({
-      message: 'Failed to fetch menu preview',
-      error: error.message
-    });
+    console.error('Menu generation failed:', error);
+    return res.status(500).json({ message: 'Menu generation failed', error: error.message });
   }
 };
 
 /**
- * ADMIN: PUBLISH MENU
+ * ADMIN: PUBLISH MENU (Broadcasts event to students)
  */
 export const publishMenu = async (req: Request, res: Response) => {
   try {
@@ -238,22 +62,45 @@ export const publishMenu = async (req: Request, res: Response) => {
       { published: true },
       { new: true }
     );
-    await MenuCache.invalidateMenuCache(JSON.stringify(hostelId));
+
     if (!menu) {
-      return res.status(404).json({
-        message: 'No unpublished menu found'
-      });
+      return res.status(404).json({ message: 'No unpublished menu found' });
     }
+
+    await MenuCache.invalidateMenuCache(JSON.stringify(hostelId));
+
+    // Notify all connected students in the hostel that a new menu is live
+    getIO().to(`hostel_${hostelId}`).emit('MENU_PUBLISHED', {
+      week: menu.week,
+      publishedAt: new Date()
+    });
 
     return res.status(200).json({
       message: 'Menu published successfully',
       menuId: menu._id
     });
-
   } catch (error: any) {
-    return res.status(500).json({
-      message: 'Failed to publish menu',
-      error: error.message
+    return res.status(500).json({ message: 'Failed to publish menu', error: error.message });
+  }
+};
+
+export const getMenuPreview = async (req: Request, res: Response) => {
+  try {
+    const hostelId = req.user!.hostelId;
+    const menu = await MessMenu.findOne({ hostelId, published: false }).populate({
+      path: 'breakfast lunch dinner',
+      populate: {
+        path: 'dishId',
+        select: 'name mealType priceScore healthScore'
+      }
     });
+
+    if (!menu) {
+      return res.status(404).json({ message: 'No unpublished menu found' });
+    }
+
+    return res.status(200).json(menu);
+  } catch (error: any) {
+    return res.status(500).json({ message: 'Failed to fetch menu preview', error: error.message });
   }
 };

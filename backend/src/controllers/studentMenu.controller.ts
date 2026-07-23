@@ -34,41 +34,6 @@ export const getCurrentMessMenu = async (req: Request, res: Response) => {
   }
 }
 
-/**
- * CHECK STUDENT VOTING STATUS
- */
-export const getStudentVotingStatus = async (req: Request, res: Response) => {
-  try {
-    const hostelId = req.user!.hostelId;
-    const now = new Date();
-
-    const window = await MenuVoteWindow.findOne({ hostelId })
-      .sort({ createdAt: -1 });
-
-    if (!window) {
-      return res.json({ isOpen: false, week: null });
-    }
-
-    // Auto-close expired window
-    if (window.isActive && window.endsAt < now) {
-      window.isActive = false;
-      await window.save();
-    }
-
-    const isOpen =
-      window.isActive &&
-      window.startsAt <= now &&
-      window.endsAt >= now;
-
-    return res.json({
-      isOpen,
-      week: window.week
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
-  }
-};
-
 
 /**
  * GET TODAY'S SERVED DISHES

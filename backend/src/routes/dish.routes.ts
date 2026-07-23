@@ -1,16 +1,10 @@
 import express from 'express';
-
-import { verifyToken } from '../middlewares/verifyToken.middleware';
-import { requireRole } from '../middlewares/requireRole.middleware';
 import { dishSuggestionRateLimit } from '../middlewares/dishRateLimit.middleware';
 import { suggestDish } from '../controllers/dish.controller';
 
 const router = express.Router();
 
-router.post(
-  '/',
-  dishSuggestionRateLimit,
-  suggestDish
-);
+// Maps to POST /api/dishes/
+router.post('/', dishSuggestionRateLimit, suggestDish);
 
 export default router;

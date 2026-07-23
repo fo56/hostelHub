@@ -1,51 +1,65 @@
-import 'dotenv/config';
-import express, { Express, Request, Response } from 'express';
+import express, { Express } from 'express';
+import http from 'http';
 import cors from 'cors';
+import dotenv from 'dotenv';
 import helmet from 'helmet';
+
 import { connectDB } from './config/db';
+import { connectRedis } from './services/redis.service';
+import { initSocket } from './services/socket.service';
+
+// Import Routes
 import authRoutes from './routes/auth.routes';
-import adminDishRoutes from './routes/adminDish.routes';
+import userRoutes from './routes/user.routes';
+import studentRoutes from './routes/student.routes';
 import dishRoutes from './routes/dish.routes';
+import mealReviewRoutes from './routes/mealReview.routes';
+import menuVoteRoutes from './routes/studentMenu.routes';
+import issueRoutes from './routes/issue.routes';
+
+import adminDishRoutes from './routes/adminDish.routes';
 import adminMenuRoutes from './routes/adminMenu.routes';
 import adminUserRoutes from './routes/adminUser.routes';
-import mealReviewRoutes from './routes/mealReview.routes';
 import adminReviewRoutes from './routes/adminReview.routes';
-import menuVoteRoutes from './routes/menuVote.routes';
-import userRoutes from './routes/user.routes';
-import issueRoutes from './routes/issue.routes';
-import studentRoutes from './routes/student.routes';
+
 import { verifyToken } from './middlewares/verifyToken.middleware';
 import { requireRole } from './middlewares/requireRole.middleware';
 import { errorHandler } from './middlewares/errorHandler';
- import { connectRedis} from './services/redis.service'
 
+dotenv.config();
 
 const app: Express = express();
-const PORT = process.env.PORT || 8000;
+
+// 1. Create HTTP server using the imported 'http' module
+const httpServer = http.createServer(app);
+
+// 2. Set default PORT to 5000 (matching your frontend socket target)
+const PORT = process.env.PORT || 5000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+// Security & Middleware
 app.use(helmet());
-app.use(cors({
-  origin: FRONTEND_URL,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-
+app.use(
+  cors({
+    origin: FRONTEND_URL,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 app.use(express.json({ limit: '10mb' }));
 
 // Public Routes
-app.get('/', (req, res) => res.status(200).json({ message: 'Server Running' }));
+app.get('/', (_, res) => res.status(200).json({ message: 'Server Running' }));
 app.use('/api/auth', authRoutes);
 
-// Protected Routes (Require Login)
+// Shared Protected Routes
 app.use('/api/users', verifyToken, userRoutes);
 app.use('/api/issues', verifyToken, issueRoutes);
+app.use('/api/dishes', verifyToken, dishRoutes);
+app.use('/api/reviews', verifyToken, mealReviewRoutes);
 
 // Student Specific Routes
-// Applying verifyToken and Role check here covers all routes inside studentRoutes
-app.use('/api/student/suggest-dishes', verifyToken, requireRole('STUDENT'), dishRoutes);
-app.use('/api/student/reviews', verifyToken, requireRole('STUDENT'), mealReviewRoutes);
 app.use('/api/student', verifyToken, requireRole('STUDENT'), studentRoutes);
 app.use('/api/menu-votes', verifyToken, requireRole('STUDENT'), menuVoteRoutes);
 
@@ -55,17 +69,21 @@ app.use('/api/admin/users', verifyToken, requireRole('ADMIN'), adminUserRoutes);
 app.use('/api/admin/dishes', verifyToken, requireRole('ADMIN'), adminDishRoutes);
 app.use('/api/admin/reviews', verifyToken, requireRole('ADMIN'), adminReviewRoutes);
 
-// Shared/General Data Routes
-app.use('/api/dishes', verifyToken, dishRoutes);
-app.use('/api/reviews', verifyToken, mealReviewRoutes);
-
+// Global Error Handler
 app.use(errorHandler);
 
 const startServer = async () => {
   try {
     await connectDB();
-    await connectRedis()
-    app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+    await connectRedis();
+
+    // 3. Attach Socket.io to 'httpServer'
+    initSocket(httpServer);
+
+    // 4. Listen on 'httpServer' instead of 'server'
+    httpServer.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
   } catch (error) {
     console.error('Startup failed:', error);
     process.exit(1);
