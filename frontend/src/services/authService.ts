@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000/api/auth';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Type for PasswordCredential from Credential Management API
 declare global {
@@ -41,7 +41,7 @@ const getCredentials = async (): Promise<{ email: string; password: string } | n
           password: true,
           mediation: 'optional'
         } as any) as any;
-        
+
         if (credential && credential.id && credential.password) {
           return {
             email: credential.id,
@@ -137,10 +137,10 @@ class AuthService {
 
     const result = await response.json();
     this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
-    
+
     // Save credentials for autofill
     await saveCredentials(email, password);
-    
+
     return result;
   }
 
@@ -161,10 +161,10 @@ class AuthService {
 
     const result = await response.json();
     this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
-    
+
     // Save credentials for autofill
     await saveCredentials(email, password);
-    
+
     return result;
   }
 
@@ -182,7 +182,7 @@ class AuthService {
     }
 
     const result = await response.json();
-    
+
     if (result.setPasswordURL) {
       return result;
     }
@@ -254,7 +254,7 @@ class AuthService {
   // LOGOUT
   async logout(): Promise<void> {
     const refreshToken = this.getRefreshToken();
-    
+
     try {
       if (refreshToken) {
         await fetch(`${API_URL}/logout`, {

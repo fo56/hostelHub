@@ -36,7 +36,7 @@ export default function Login() {
         console.debug('No saved credentials found')
       }
     }
-    
+
     loadSavedCredentials()
   }, [])
 
@@ -53,7 +53,7 @@ export default function Login() {
       setError('Please enter both email and password')
       return
     }
-    
+
     if (!email.includes('@')) {
       setError('Please enter a valid email address')
       return
@@ -69,7 +69,7 @@ export default function Login() {
       navigate(`/${selectedRole}/dashboard`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed'
-      
+
       // Provide specific error messages
       if (errorMessage.includes('Invalid email or password')) {
         setError('Invalid email or password. Please check and try again.')
@@ -94,34 +94,38 @@ export default function Login() {
     }
     setQrLoading(true)
     try {
-      const response = await fetch('http://localhost:8000/api/auth/login-qr', {
+      // 1. Define the dynamic base URL
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+
+      // 2. Inject it into the fetch request
+      const response = await fetch(`${API_BASE_URL}/auth/login-qr`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ qrToken }),
       })
       const data = await response.json()
-      
+
       if (!response.ok) {
         const errorMsg = data.message || data.error || 'QR login failed'
         throw new Error(errorMsg)
       }
-      
+
       if (data.setPasswordURL) {
         navigate(`/set-password/${data.userId}?url=${encodeURIComponent(data.setPasswordURL)}`)
         return
       }
-      
+
       if (!data.user || !data.user.role) {
         throw new Error('Invalid authentication response. Missing user information.')
       }
-      
+
       localStorage.setItem('accessToken', data.accessToken)
       localStorage.setItem('refreshToken', data.refreshToken)
       navigate(`/${data.user.role.toLowerCase()}/dashboard`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'QR login failed'
-      
+
       if (errorMessage.includes('Invalid') || errorMessage.includes('not found')) {
         setError('Invalid QR code. Please ask your administrator for a new one.')
       } else if (errorMessage.includes('already set')) {
@@ -159,11 +163,10 @@ export default function Login() {
                 <button
                   key={role.id}
                   onClick={() => setSelectedRole(role.id)}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                    selectedRole === role.id
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all ${selectedRole === role.id
                       ? 'border-black bg-black text-white'
                       : 'border-black/20 text-black'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   <span className="text-xs font-medium">{role.label}</span>
@@ -208,7 +211,7 @@ export default function Login() {
             </div>
             <div className="space-y-1">
               <Label htmlFor="password" className="text-sm">Password</Label>
-                <div className="flex gap-2">
+              <div className="flex gap-2">
                 <Input
                   key={!showPassword ? 'visible' : 'hidden'}
                   id="password"
@@ -226,12 +229,12 @@ export default function Login() {
                   className="px-3 border-2 border-black/20 rounded-lg hover:bg-black/5 transition-colors disabled:opacity-50"
                 >
                   {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
+                    <EyeOff className="w-4 h-4" />
                   ) : (
-                  <Eye className="w-4 h-4" />
+                    <Eye className="w-4 h-4" />
                   )}
                 </button>
-                </div>
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={adminLoading}>
               {adminLoading ? 'Signing in...' : 'Sign in as Admin'}
@@ -242,21 +245,19 @@ export default function Login() {
             <div className="flex gap-2 border-b border-black/10">
               <button
                 onClick={() => { setLoginMode('email'); setError(''); }}
-                className={`flex-1 py-2 text-sm font-medium transition-all ${
-                  loginMode === 'email'
+                className={`flex-1 py-2 text-sm font-medium transition-all ${loginMode === 'email'
                     ? 'border-b-2 border-black text-black'
                     : 'text-black/60 hover:text-black'
-                }`}
+                  }`}
               >
                 Email
               </button>
               <button
                 onClick={() => { setLoginMode('qr'); setError(''); }}
-                className={`flex-1 py-2 text-sm font-medium transition-all ${
-                  loginMode === 'qr'
+                className={`flex-1 py-2 text-sm font-medium transition-all ${loginMode === 'qr'
                     ? 'border-b-2 border-black text-black'
                     : 'text-black/60 hover:text-black'
-                }`}
+                  }`}
               >
                 QR Code
               </button>
@@ -278,33 +279,33 @@ export default function Login() {
 
                 </div>
                 <div className="space-y-1">
-                    <Label htmlFor="student-password">Password</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        key={showPassword ? 'visible' : 'hidden'}
-                        id="password"
-                        // Toggle type
-                        type={showPassword ? 'password' : 'text'}
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={adminLoading}
-                        autoComplete={showPassword ? 'current-password' : 'new-password'}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        disabled={adminLoading}
-                        className="px-3 border-2 border-black/20 rounded-lg hover:bg-black/5 transition-colors disabled:opacity-50"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
+                  <Label htmlFor="student-password">Password</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      key={showPassword ? 'visible' : 'hidden'}
+                      id="password"
+                      // Toggle type
+                      type={showPassword ? 'password' : 'text'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={adminLoading}
+                      autoComplete={showPassword ? 'current-password' : 'new-password'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={adminLoading}
+                      className="px-3 border-2 border-black/20 rounded-lg hover:bg-black/5 transition-colors disabled:opacity-50"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
                   </div>
+                </div>
 
                 <Button type="submit" className="w-full" disabled={adminLoading}>
                   {adminLoading ? 'Signing in...' : `Sign in as ${roles.find(r => r.id === selectedRole)?.label}`}
@@ -338,7 +339,7 @@ export default function Login() {
 
         <p className="text-center text-xs text-black/60">
           First time?{' '}
-          <button 
+          <button
             onClick={() => navigate('/admin/register')}
             className="font-medium underline hover:text-black"
           >
