@@ -1,0 +1,21 @@
+flowchart LR
+  U[Users: Admin/Student/Worker] --> FE[React SPA\nfrontend/src]
+  FE -->|REST + JWT| BE[Express API\nbackend/src/server.ts]
+  FE -->|Socket.IO client| WS[Socket.IO Server\nbackend/src/services/socket.service.ts]
+
+  BE --> AUTH[Auth Controllers\nauth.controller.ts]
+  BE --> ISSUES[Issue Controllers\nissue.controller.ts]
+  BE --> MENU[Menu Controllers\nadminMenu/studentMenu/studentVote]
+  BE --> DISH[Dish Controllers\ndish/adminDish]
+  BE --> REVIEW[Review Controllers\nmealReview/adminReview]
+  BE --> USERS[Admin User Mgmt\nadminUser.controller.ts]
+
+  AUTH --> MONGO[(MongoDB via Mongoose)]
+  ISSUES --> MONGO
+  MENU --> MONGO
+  DISH --> MONGO
+  REVIEW --> MONGO
+  USERS --> MONGO
+
+  MENU --> REDIS[(Redis Cache + Locks)]
+  WS --> FE

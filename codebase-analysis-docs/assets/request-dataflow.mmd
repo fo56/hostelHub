@@ -1,0 +1,20 @@
+sequenceDiagram
+  participant User
+  participant FE as Frontend (useApi)
+  participant BE as Express Route
+  participant MW as verifyToken/requireRole
+  participant C as Controller
+  participant DB as MongoDB
+  participant R as Redis
+
+  User->>FE: Action (e.g., save votes)
+  FE->>BE: HTTP request + ****** token
+  BE->>MW: Authenticate + authorize
+  MW->>C: req.user context
+  C->>DB: Query/update documents
+  alt menu endpoints
+    C->>R: Cache read/write/invalidate
+  end
+  C-->>BE: JSON payload
+  BE-->>FE: Response
+  FE-->>User: Updated UI

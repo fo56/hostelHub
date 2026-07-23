@@ -1,0 +1,22 @@
+erDiagram
+  HOSTEL ||--o{ USER : has
+  HOSTEL ||--o{ DISH : owns
+  HOSTEL ||--o{ ISSUE : scopes
+  HOSTEL ||--o{ MEAL_REVIEW : scopes
+  HOSTEL ||--o{ MENU_RECOMMENDATION : scopes
+  HOSTEL ||--o{ MESS_MENU : scopes
+  HOSTEL ||--o{ STUDENT_VOTE : scopes
+  HOSTEL ||--o{ MENU_VOTE_WINDOW : scopes
+
+  USER ||--o{ ACTIVITY_LOG : performs
+  USER ||--o{ REFRESH_TOKEN : has
+  USER ||--o{ ISSUE : raises
+  USER ||--o{ ISSUE : assigned_to
+  USER ||--o{ DISH : suggests
+  USER ||--o{ DISH : approves
+  USER ||--o{ MEAL_REVIEW : writes
+  USER ||--|| STUDENT_VOTE : preference_record
+
+  DISH ||--o{ MEAL_REVIEW : reviewed_in
+  DISH ||--o{ MENU_RECOMMENDATION : candidate
+  MENU_RECOMMENDATION }o--|| MESS_MENU : selected_into
