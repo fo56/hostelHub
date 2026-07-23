@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { authService } from '../services/authService';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 interface RequestOptions {
   headers?: Record<string, string>;
@@ -68,7 +68,7 @@ export const useApi = () => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.message || errorData.error || `HTTP Error: ${response.status}`;
-        
+
         // Provide better error messages
         if (response.status === 403) {
           throw new Error('You do not have permission to perform this action.');
@@ -77,7 +77,7 @@ export const useApi = () => {
         } else if (response.status === 500) {
           throw new Error('Server error. Please try again later.');
         }
-        
+
         throw new Error(errorMessage);
       }
 
