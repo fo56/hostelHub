@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { MessMenu } from '../models/MessMenu';
-import { MenuVoteWindow } from '../models/MenuVoteWindow';
 import * as MenuCache from '../services/menuCache.service'
 import { formatMeal } from '../utils/formatMeal';
 /**
@@ -10,7 +9,7 @@ export const getCurrentMessMenu = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId
 
-    const menu = await MenuCache.getCachedCurrentMenu(JSON.stringify(hostelId))
+    const menu = await MenuCache.getCachedCurrentMenu(hostelId.toString())
 
     if (!menu) {
       return res.status(404).json({
@@ -19,12 +18,11 @@ export const getCurrentMessMenu = async (req: Request, res: Response) => {
     }
 
     return res.json({
-  week: menu.week,
-  breakfast: formatMeal(menu.breakfast, menu.week),
-  lunch: formatMeal(menu.lunch, menu.week),
-  dinner: formatMeal(menu.dinner, menu.week),
-  generatedAt: menu.generatedAt
-})
+      breakfast: formatMeal(menu.breakfast),
+      lunch: formatMeal(menu.lunch),
+      dinner: formatMeal(menu.dinner),
+      generatedAt: menu.generatedAt
+    })
 
   } catch (error: any) {
     return res.status(500).json({
@@ -42,7 +40,7 @@ export const getServedDishesToday = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId
 
-    const todayMenu = await MenuCache.getCachedTodayMenu(JSON.stringify(hostelId))
+    const todayMenu = await MenuCache.getCachedTodayMenu(hostelId.toString())
 
     if (!todayMenu) {
       return res.status(404).json({

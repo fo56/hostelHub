@@ -15,7 +15,7 @@ declare global {
 const saveCredentials = async (email: string, password: string) => {
   if (navigator.credentials) {
     try {
-      const PasswordCredentialType = (window as any).PasswordCredential;
+      const PasswordCredentialType = (window as unknown as { PasswordCredential: new (args: unknown) => PasswordCredential }).PasswordCredential;
       if (PasswordCredentialType) {
         const credential = new PasswordCredentialType({
           id: email,
@@ -23,7 +23,7 @@ const saveCredentials = async (email: string, password: string) => {
           name: email,
           iconURL: '/logo.png'
         });
-        await navigator.credentials.store(credential);
+        await navigator.credentials.store(credential as any);
       }
     } catch (err) {
       // Silently fail if credential storage is not available
@@ -36,12 +36,12 @@ const saveCredentials = async (email: string, password: string) => {
 const getCredentials = async (): Promise<{ email: string; password: string } | null> => {
   if (navigator.credentials) {
     try {
-      const PasswordCredentialType = (window as any).PasswordCredential;
+      const PasswordCredentialType = (window as unknown as { PasswordCredential: new (args: unknown) => PasswordCredential }).PasswordCredential;
       if (PasswordCredentialType) {
         const credential = await navigator.credentials.get({
           password: true,
           mediation: 'optional'
-        } as any) as any;
+        } as unknown as CredentialRequestOptions) as unknown as PasswordCredential;
 
         if (credential && credential.id && credential.password) {
           return {

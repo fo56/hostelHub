@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { io, Socket } from 'socket.io-client'
 import { useApi } from '../../hooks/useApi'
 import { useAuth } from '../../hooks/useAuth'
@@ -9,13 +10,10 @@ export default function AdminVoting() {
   const hostelId = user?.hostelId || ''
 
   const [totalVoters, setTotalVoters] = useState<number>(0)
-  const [targetWeek, setTargetWeek] = useState<number>(1)
   const [loading, setLoading] = useState<boolean>(false)
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-
   useEffect(() => {
     // Connect to Socket.io server
-    const socket: Socket = io(import.meta.env.VITE_WS_URL || 'http://localhost:5000')
+    const socket: Socket = io(import.meta.env.VITE_WS_URL || 'http://localhost:8000')
 
     socket.emit('join_hostel_room', hostelId)
 
@@ -37,10 +35,10 @@ export default function AdminVoting() {
   const handleGenerateMenu = async () => {
     setLoading(true)
     try {
-      await request('/admin/menu/generate', 'POST', { week: targetWeek })
-      setToast({ message: `Menu for Week ${targetWeek} generated! Review it under the Menu tab.`, type: 'success' })
-    } catch (e: any) {
-      setToast({ message: e.message || 'Error generating menu', type: 'error' })
+      await request('/admin/menu/generate', 'POST', {})
+      toast.success(`Menu generated! Review it under the Menu tab.`)
+    } catch (e: unknown) {
+      toast.error((e as Error).message || 'Error generating menu')
     } finally {
       setLoading(false)
     }
@@ -48,11 +46,7 @@ export default function AdminVoting() {
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
-      {toast && (
-        <div className={`p-4 rounded-lg shadow-md text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
-          {toast.message}
-        </div>
-      )}
+
 
       <header className="border-b pb-4">
         <h1 className="text-2xl font-bold">Generate Mess Menu</h1>
@@ -77,16 +71,6 @@ export default function AdminVoting() {
       <div className="p-6 border-2 border-black bg-white space-y-4 rounded">
         <h2 className="font-bold uppercase text-sm border-b pb-2">Menu Setup</h2>
         
-        <div>
-          <label className="block text-xs font-bold uppercase mb-1">Target Week Number</label>
-          <input
-            type="number"
-            className="w-full border-2 border-black p-2 rounded outline-none focus:bg-yellow-50 font-bold"
-            value={targetWeek}
-            onChange={(e) => setTargetWeek(Number(e.target.value))}
-          />
-        </div>
-
         <button
           onClick={handleGenerateMenu}
           disabled={loading}

@@ -81,3 +81,55 @@ export const rejectDish = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Failed to reject dish', error: error.message });
   }
 };
+
+export const updateDish = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, mealType, category, tags, priceScore, healthScore } = req.body;
+    const adminId = req.user?._id;
+    const hostelId = req.user?.hostelId;
+
+    if (!adminId || !hostelId) return res.status(400).json({ message: 'User context missing' });
+
+    if (
+      typeof priceScore !== 'number' || typeof healthScore !== 'number' ||
+      priceScore < 1 || priceScore > 5 || healthScore < 1 || healthScore > 5
+    ) {
+      return res.status(400).json({ message: 'priceScore and healthScore must be numbers between 1 and 5' });
+    }
+
+    const dish = await Dish.findOneAndUpdate(
+      { _id: id, hostelId },
+      { name, mealType, category, tags, priceScore, healthScore },
+      { new: true }
+    );
+
+    if (!dish) return res.status(404).json({ message: 'Dish not found or unauthorized' });
+
+    await ActivityLog.create({ userId: adminId, action: `UPDATED_DISH:${dish.name}`, ip: req.ip });
+
+    return res.status(200).json({ message: 'Dish updated successfully', dish });
+  } catch (error: any) {
+    return res.status(500).json({ message: 'Failed to update dish', error: error.message });
+  }
+};
+
+export const deleteDish = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.user?._id;
+    const hostelId = req.user?.hostelId;
+
+    if (!adminId || !hostelId) return res.status(400).json({ message: 'User context missing' });
+
+    const dish = await Dish.findOneAndDelete({ _id: id, hostelId });
+
+    if (!dish) return res.status(404).json({ message: 'Dish not found or unauthorized' });
+
+    await ActivityLog.create({ userId: adminId, action: `DELETED_DISH:${dish.name}`, ip: req.ip });
+
+    return res.status(200).json({ message: 'Dish deleted successfully' });
+  } catch (error: any) {
+    return res.status(500).json({ message: 'Failed to delete dish', error: error.message });
+  }
+};

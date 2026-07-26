@@ -27,7 +27,14 @@ export default function StudentMessMenu() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Weekly Mess Menu</h1>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">Current Mess Menu</h1>
+        {menu.generatedAt && (
+          <p className="text-sm text-gray-500 mt-1">
+            Generated on: {new Date(menu.generatedAt).toLocaleString()}
+          </p>
+        )}
+      </div>
 
       <table className="w-full border bg-white">
         <thead>

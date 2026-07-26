@@ -21,7 +21,14 @@ export default function AdminMessMenu() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    request('/admin/menu/preview').then(setMenu)
+    request('/admin/menu/preview').then((res) => {
+      setMenu(res)
+      if (res && res.published) {
+        setPublished(true)
+      } else {
+        setPublished(false)
+      }
+    })
   }, [])
 
   const publishMenu = async () => {
@@ -32,8 +39,8 @@ export default function AdminMessMenu() {
       await request('/admin/menu/publish', 'POST')
 
       setPublished(true)
-    } catch (err: any) {
-      setError(err.message || 'Failed to publish menu')
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to publish menu')
     } finally {
       setPublishing(false)
     }
@@ -46,7 +53,14 @@ export default function AdminMessMenu() {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Weekly Mess Menu</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Current Mess Menu</h1>
+          {menu.generatedAt && (
+            <p className="text-sm text-gray-500 mt-1">
+              Generated on: {new Date(menu.generatedAt).toLocaleString()}
+            </p>
+          )}
+        </div>
 
         <button
           onClick={publishMenu}

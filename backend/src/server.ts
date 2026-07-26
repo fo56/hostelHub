@@ -21,6 +21,7 @@ import adminDishRoutes from './routes/adminDish.routes';
 import adminMenuRoutes from './routes/adminMenu.routes';
 import adminUserRoutes from './routes/adminUser.routes';
 import adminReviewRoutes from './routes/adminReview.routes';
+import adminDashboardRoutes from './routes/adminDashboard.routes';
 
 import { verifyToken } from './middlewares/verifyToken.middleware';
 import { requireRole } from './middlewares/requireRole.middleware';
@@ -68,6 +69,7 @@ app.use('/api/admin/menu', verifyToken, requireRole('ADMIN'), adminMenuRoutes);
 app.use('/api/admin/users', verifyToken, requireRole('ADMIN'), adminUserRoutes);
 app.use('/api/admin/dishes', verifyToken, requireRole('ADMIN'), adminDishRoutes);
 app.use('/api/admin/reviews', verifyToken, requireRole('ADMIN'), adminReviewRoutes);
+app.use('/api/admin/dashboard', verifyToken, requireRole('ADMIN'), adminDashboardRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

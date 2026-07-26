@@ -12,10 +12,6 @@ const MessMenuSchema = new mongoose.Schema({
     required: true
   },
 
-  week: {
-    type: Number,
-    required: true
-  },
 
   breakfast: {
     type: [mongoose.Schema.Types.ObjectId],
@@ -54,7 +50,7 @@ const MessMenuSchema = new mongoose.Schema({
 
 // Prevent duplicate menus per hostel per week
 MessMenuSchema.index(
-  { hostelId: 1, week: 1 },
+  { hostelId: 1 },
   { unique: true }
 );
 

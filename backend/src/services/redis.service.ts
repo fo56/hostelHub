@@ -1,4 +1,5 @@
 // services/redis.service.ts
+import 'dotenv/config'
 import { createClient } from 'redis'
 
 export const redis = createClient({

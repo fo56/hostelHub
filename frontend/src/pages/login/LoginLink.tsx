@@ -34,7 +34,7 @@ export default function LoginLink() {
       const userRole = result.user.role.toLowerCase()
       navigate(`/${userRole}/dashboard`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed. The link may have expired.')
+      setError(err instanceof Error ? (err as Error).message : 'Login failed. The link may have expired.')
     } finally {
       setLoading(false)
     }

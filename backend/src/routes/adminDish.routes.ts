@@ -4,7 +4,9 @@ import { requireRole } from '../middlewares/requireRole.middleware';
 import {
   fetchDishes,
   approveDish,
-  rejectDish
+  rejectDish,
+  updateDish,
+  deleteDish
 } from '../controllers/adminDish.controller';
 import { createAdminDish } from '../controllers/dish.controller';
 
@@ -23,5 +25,10 @@ router.post('/:id/approve', approveDish);
 
 // POST /api/admin/dishes/:id/reject
 router.post('/:id/reject', rejectDish);
+// PUT /api/admin/dishes/:id
+router.put('/:id', updateDish);
+
+// DELETE /api/admin/dishes/:id
+router.delete('/:id', deleteDish);
 
 export default router;

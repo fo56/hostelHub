@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 import { useApi } from '../../hooks/useApi'
 
 export default function AdminCreateUser() {
@@ -13,7 +14,7 @@ export default function AdminCreateUser() {
   const [qrToken, setQrToken] = useState<string | null>(null)
   const [createdUser, setCreatedUser] = useState<any>(null)
 
-  const submit = async (e: any) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     try {
@@ -27,8 +28,8 @@ export default function AdminCreateUser() {
       setCreatedUser(res.user)
 
       setForm({ role: 'STUDENT' })
-    } catch (err: any) {
-      alert(err.message || 'Failed to create user')
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to create user')
     } finally {
       setLoading(false)
     }
@@ -36,7 +37,7 @@ export default function AdminCreateUser() {
 
   const copy = (text: string) => {
     navigator.clipboard.writeText(text)
-    alert('Copied to clipboard')
+    toast.success('Copied to clipboard')
   }
 
   return (

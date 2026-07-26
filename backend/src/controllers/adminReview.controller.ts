@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { MealReview } from '../models/MealReview';
+import mongoose from 'mongoose';
 
 export const getMealReviews = async (req: Request, res: Response) => {
   try {
@@ -66,6 +67,74 @@ export const getMealReviews = async (req: Request, res: Response) => {
   } catch (error: any) {
     return res.status(500).json({
       message: 'Failed to fetch reviews',
+      error: error.message
+    });
+  }
+};
+
+export const getReviewStats = async (req: Request, res: Response) => {
+  try {
+    const hostelId = new mongoose.Types.ObjectId(req.user!.hostelId);
+
+    // 1. Cumulative Stats per Dish
+    const dishStats = await MealReview.aggregate([
+      { $match: { hostelId: hostelId } }, // filter by hostel
+      {
+        $group: {
+          _id: '$dishId',
+          averageRating: { $avg: '$rating' },
+          totalReviews: { $sum: 1 }
+        }
+      },
+      {
+        $lookup: {
+          from: 'dishes',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'dish'
+        }
+      },
+      { $unwind: '$dish' },
+      {
+        $project: {
+          _id: 1,
+          name: '$dish.name',
+          mealType: '$dish.mealType',
+          averageRating: 1,
+          totalReviews: 1
+        }
+      },
+      { $sort: { totalReviews: -1 } }
+    ]);
+
+    // 2. Date-wise Trend
+    const trendStats = await MealReview.aggregate([
+      { $match: { hostelId: hostelId } },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$servedOn' } },
+          averageRating: { $avg: '$rating' },
+          totalReviews: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } },
+      {
+        $project: {
+          date: '$_id',
+          averageRating: 1,
+          totalReviews: 1,
+          _id: 0
+        }
+      }
+    ]);
+
+    return res.status(200).json({
+      dishStats,
+      trendStats
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: 'Failed to fetch review statistics',
       error: error.message
     });
   }

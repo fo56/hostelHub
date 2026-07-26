@@ -50,7 +50,7 @@ export default function StudentReviewForm() {
     setMessage(null);
 
     try {
-      await request('/student/reviews/submit', 'POST', {
+      await request('/reviews/submit', 'POST', {
         dishId: selectedMeal.dishId,
         mealType: selectedMeal.mealType,
         rating,
@@ -67,10 +67,10 @@ export default function StudentReviewForm() {
       setComment('');
       setSelectedMeal(null);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       setMessage({
         type: 'error',
-        text: err.message || 'Failed to submit review'
+        text: (err as Error).message || 'Failed to submit review'
       });
     } finally {
       setIsSubmitting(false);

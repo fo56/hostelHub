@@ -28,17 +28,12 @@ export const getVotingStats = async (req: Request, res: Response) => {
 export const generateFinalMenu = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId;
-    const { week } = req.body; // e.g. target week number
-
-    if (!week) {
-      return res.status(400).json({ message: 'Week number is required' });
-    }
 
     // Compute recommendations based on active student preference pool
-    await ComputationService.computeMenuRecommendations(week.toString());
+    await ComputationService.computeMenuRecommendations(hostelId.toString());
 
     // Build draft menu
-    const menu = await BuilderService.buildMessMenu(hostelId.toString(), week);
+    const menu = await BuilderService.buildMessMenu(hostelId.toString());
 
     return res.status(200).json({
       message: 'Mess menu generated successfully based on active votes',
@@ -67,11 +62,10 @@ export const publishMenu = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'No unpublished menu found' });
     }
 
-    await MenuCache.invalidateMenuCache(JSON.stringify(hostelId));
+    await MenuCache.invalidateMenuCache(hostelId.toString());
 
     // Notify all connected students in the hostel that a new menu is live
     getIO().to(`hostel_${hostelId}`).emit('MENU_PUBLISHED', {
-      week: menu.week,
       publishedAt: new Date()
     });
 
@@ -87,7 +81,7 @@ export const publishMenu = async (req: Request, res: Response) => {
 export const getMenuPreview = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId;
-    const menu = await MessMenu.findOne({ hostelId, published: false }).populate({
+    const menu = await MessMenu.findOne({ hostelId }).populate({
       path: 'breakfast lunch dinner',
       populate: {
         path: 'dishId',
@@ -96,7 +90,7 @@ export const getMenuPreview = async (req: Request, res: Response) => {
     });
 
     if (!menu) {
-      return res.status(404).json({ message: 'No unpublished menu found' });
+      return res.status(200).json(null);
     }
 
     return res.status(200).json(menu);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useApi } from '../../hooks/useApi'
-import { CheckCircle2, AlertCircle, Clock, TrendingUp, X } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Clock, X } from 'lucide-react'
 
 interface Issue {
   _id: string
@@ -17,7 +17,6 @@ interface Stats {
   openIssues: number
   solvedIssues: number
   inProgressIssues: number
-  averageResolutionTime: string
 }
 
 export default function WorkerDashboard() {
@@ -25,10 +24,10 @@ export default function WorkerDashboard() {
   const [stats, setStats] = useState<Stats>({
     openIssues: 0,
     solvedIssues: 0,
-    inProgressIssues: 0,
-    averageResolutionTime: 'N/A'
+    inProgressIssues: 0
   })
   const [activeIssues, setActiveIssues] = useState<Issue[]>([])
+  const [resolvedIssues, setResolvedIssues] = useState<Issue[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -57,17 +56,17 @@ export default function WorkerDashboard() {
         setStats({
           openIssues: openCount,
           solvedIssues: solvedCount,
-          inProgressIssues: inProgressCount,
-          averageResolutionTime: '2.5 days'
+          inProgressIssues: inProgressCount
         })
 
         setActiveIssues(allIssues.filter((i: Issue) => i.status === 'OPEN' || i.status === 'IN_PROGRESS'))
+        setResolvedIssues(allIssues.filter((i: Issue) => i.status === 'RESOLVED' || i.status === 'CLOSED'))
       } else {
         setActiveIssues([])
       }
     } catch (err) {
       console.error('Dashboard fetch error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
+      setError(err instanceof Error ? (err as Error).message : 'Failed to load dashboard data')
     } finally {
       setLoading(false)
     }
@@ -92,7 +91,7 @@ export default function WorkerDashboard() {
       setNote('')
       await fetchIssues()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update issue status')
+      setError(err instanceof Error ? (err as Error).message : 'Failed to update issue status')
     } finally {
       setUpdating(false)
     }
@@ -120,7 +119,7 @@ export default function WorkerDashboard() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="flex items-center gap-4">
             <AlertCircle className="w-8 h-8 text-black" />
@@ -150,20 +149,10 @@ export default function WorkerDashboard() {
             </div>
           </div>
         </div>
-
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <div className="flex items-center gap-4">
-            <TrendingUp className="w-8 h-8 text-black" />
-            <div>
-              <p className="text-sm text-gray-600">Avg Resolution</p>
-              <p className="text-2xl font-bold text-black">{stats.averageResolutionTime}</p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Active Issues */}
-      <div className="bg-white border border-gray-200 rounded-lg">
+      <div className="bg-white border border-gray-200 rounded-lg mb-8">
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold text-black">Active Issues</h2>
         </div>
@@ -206,6 +195,40 @@ export default function WorkerDashboard() {
                   >
                     Mark Resolved
                   </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Resolved Issues */}
+      <div className="bg-white border border-gray-200 rounded-lg">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-black">Resolved Issues</h2>
+        </div>
+
+        {resolvedIssues.length === 0 ? (
+          <div className="p-12 text-center">
+            <p className="text-gray-600">No resolved issues yet.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {resolvedIssues.map(issue => (
+              <div key={issue._id} className="p-6 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 opacity-75">
+                    <h3 className="font-bold text-black text-lg line-through">{issue.category}</h3>
+                    <p className="text-gray-600 mt-2">{issue.description}</p>
+                    <div className="flex items-center gap-3 mt-4">
+                      <span className="text-sm px-3 py-1 rounded font-medium border border-green-600 bg-green-50 text-green-700">
+                        {issue.status}
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        Reported by: {issue.raisedBy?.email || 'Unknown'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}

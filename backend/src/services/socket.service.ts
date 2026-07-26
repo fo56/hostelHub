@@ -23,6 +23,12 @@ export const initSocket = (server: HttpServer): Server => {
       console.log(`🔑 Socket ${socket.id} joined admin_room`);
     });
 
+    // Required: Allow users (admins and students) to join their hostel's room for targeted updates
+    socket.on('join_hostel_room', (hostelId: string) => {
+      socket.join(`hostel_${hostelId}`);
+      console.log(`🏠 Socket ${socket.id} joined hostel_${hostelId}`);
+    });
+
     socket.on('disconnect', () => {
       console.log(`🔌 WebSockets: Client disconnected (${socket.id})`);
     });

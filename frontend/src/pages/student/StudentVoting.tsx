@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useApi } from '../../hooks/useApi'
 import { io, Socket } from 'socket.io-client'
 import { useAuth } from '../../hooks/useAuth'
@@ -31,16 +32,15 @@ export default function StudentVoting() {
 
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [notification, setNotification] = useState<string | null>(null)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [sortBy, setSortBy] = useState<'name_asc' | 'health_desc'>('name_asc')
 
   useEffect(() => {
-    const socket: Socket = io(import.meta.env.VITE_WS_URL || 'http://localhost:5000')
+    const socket: Socket = io(import.meta.env.VITE_WS_URL || 'http://localhost:8000')
 
     socket.emit('join_hostel_room', hostelId)
 
-    socket.on('MENU_PUBLISHED', (data: { week: number }) => {
-      setNotification(`🎉 Week ${data.week} mess menu has just been published!`)
+    socket.on('MENU_PUBLISHED', () => {
+      toast.success(`🎉 A new mess menu has just been published!`, { duration: 6000 })
     })
 
     const init = async () => {
@@ -59,9 +59,9 @@ export default function StudentVoting() {
         // 2. Extract IDs from the populated vote objects returned by the backend
         if (data.votes) {
           setSelections({
-            Breakfast: data.votes.breakfast.map((d: any) => d._id || d),
-            Lunch: data.votes.lunch.map((d: any) => d._id || d),
-            Dinner: data.votes.dinner.map((d: any) => d._id || d)
+            Breakfast: data.votes.breakfast.map((d: Record<string, unknown>) => d._id || d),
+            Lunch: data.votes.lunch.map((d: Record<string, unknown>) => d._id || d),
+            Dinner: data.votes.dinner.map((d: Record<string, unknown>) => d._id || d)
           })
         }
       } catch (err) {
@@ -98,7 +98,6 @@ export default function StudentVoting() {
     if (!isComplete || submitting) return
 
     setSubmitting(true)
-    setMessage(null)
 
     try {
       await request('/menu-votes/votes', 'POST', {
@@ -109,9 +108,9 @@ export default function StudentVoting() {
         }
       })
 
-      setMessage({ type: 'success', text: 'Preferences updated successfully!' })
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Failed to save preferences' })
+      toast.success('Preferences updated successfully!')
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to save preferences')
     } finally {
       setSubmitting(false)
     }
@@ -121,25 +120,26 @@ export default function StudentVoting() {
 
   return (
     <div className="max-w-5xl mx-auto p-4 pb-24 space-y-6">
-      {notification && (
-        <div className="p-4 bg-blue-600 text-white rounded-lg shadow-md flex justify-between">
-          <span>{notification}</span>
-          <button onClick={() => setNotification(null)} className="font-bold">✕</button>
-        </div>
-      )}
 
-      <header>
-        <h1 className="text-3xl font-bold">Your Preferred Weekly Dishes</h1>
-        <p className="text-gray-600">
-          Pick your top 7 choices for each meal. You can edit these preferences at any time!
-        </p>
+
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Your Preferred Dishes</h1>
+          <p className="text-gray-600">
+            Pick your top 7 choices for each meal. You can edit these preferences at any time!
+          </p>
+        </div>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as 'name_asc' | 'health_desc')}
+          className="border p-2 rounded-lg bg-white shadow-sm font-medium outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="name_asc">Sort by Name (A-Z)</option>
+          <option value="health_desc">Sort by Health Score (High - Low)</option>
+        </select>
       </header>
 
-      {message && (
-        <div className={`p-4 rounded-lg ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          {message.text}
-        </div>
-      )}
+
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {(['Breakfast', 'Lunch', 'Dinner'] as Meal[]).map((meal) => (
@@ -152,7 +152,11 @@ export default function StudentVoting() {
             </div>
 
             <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
-              {dishes[meal].map((dish) => {
+              {[...dishes[meal]].sort((a, b) => {
+                if (sortBy === 'name_asc') return a.name.localeCompare(b.name)
+                if (sortBy === 'health_desc') return b.healthScore - a.healthScore
+                return 0
+              }).map((dish) => {
                 const isSelected = selections[meal].includes(dish._id)
                 return (
                   <button

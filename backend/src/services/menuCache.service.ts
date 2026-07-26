@@ -17,7 +17,6 @@ export async function getCachedCurrentMenu(hostelId: string) {
     hostelId,
     published: true
   })
-    .sort({ week: -1 })
     .populate({
       path: 'breakfast lunch dinner',
       populate: {
@@ -55,9 +54,9 @@ export async function getCachedTodayMenu(hostelId: string) {
   const todayMenu = {
     date: new Date().toISOString().split('T')[0],
     dayIndex,
-    breakfast: formatMeal(menu.breakfast, menu.week),
-    lunch: formatMeal(menu.lunch, menu.week),
-    dinner: formatMeal(menu.dinner, menu.week)
+    breakfast: formatMeal(menu.breakfast)[dayIndex],
+    lunch: formatMeal(menu.lunch)[dayIndex],
+    dinner: formatMeal(menu.dinner)[dayIndex]
   }
 
   await redis.set(

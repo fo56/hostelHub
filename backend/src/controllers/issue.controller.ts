@@ -121,11 +121,6 @@ export const assignIssue = async (req: AuthRequest, res: Response): Promise<void
     const { workerId } = req.body;
     const adminId = req.user?._id;
 
-    if (!workerId?.trim()) {
-      res.status(400).json({ message: 'Worker ID is required' });
-      return;
-    }
-
     const admin = await User.findById(adminId);
     if (!admin || admin.role !== 'ADMIN') {
       res.status(403).json({ message: 'Unauthorized: Only admins can assign issues' });
@@ -140,6 +135,23 @@ export const assignIssue = async (req: AuthRequest, res: Response): Promise<void
 
     if (issue.hostelId.toString() !== admin.hostelId.toString()) {
       res.status(403).json({ message: 'Unauthorized: Cannot assign issues from other hostels' });
+      return;
+    }
+
+    if (workerId === 'UNASSIGN') {
+      issue.assignedTo = undefined;
+      issue.status = 'OPEN';
+      await issue.save();
+      await issue.populate('raisedBy', 'name email');
+      res.status(200).json({
+        message: 'Issue unassigned successfully',
+        issue
+      });
+      return;
+    }
+
+    if (!workerId?.trim()) {
+      res.status(400).json({ message: 'Worker ID is required' });
       return;
     }
 
@@ -193,6 +205,11 @@ export const updateIssueStatus = async (req: AuthRequest, res: Response): Promis
     const isAssignedWorker = issue.assignedTo?.toString() === userId;
     const isAdmin = user.role === 'ADMIN';
 
+    if (isAdmin && issue.hostelId.toString() !== user.hostelId.toString()) {
+      res.status(403).json({ message: 'Unauthorized to update issues from other hostels' });
+      return;
+    }
+
     if (!isAssignedWorker && !isAdmin) {
       res.status(403).json({ message: 'Unauthorized to update this issue' });
       return;
@@ -238,6 +255,11 @@ export const deleteIssue = async (req: AuthRequest, res: Response): Promise<void
     // Only admin or the person who raised the issue can delete it
     const isAdmin = user.role === 'ADMIN';
     const isCreator = issue.raisedBy.toString() === userId?.toString();
+
+    if (isAdmin && issue.hostelId.toString() !== user.hostelId.toString()) {
+      res.status(403).json({ message: 'Unauthorized to delete issues from other hostels' });
+      return;
+    }
 
     if (!isAdmin && !isCreator) {
       res.status(403).json({ message: 'Unauthorized to delete this issue' });

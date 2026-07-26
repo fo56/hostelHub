@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useApi } from '../../hooks/useApi'
 
 interface User {
@@ -26,12 +27,14 @@ export default function AdminUsers() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const copy = (text: string) => {
     navigator.clipboard.writeText(text)
-    alert('Copied to clipboard')
+    toast.success('Copied to clipboard')
   }
 
   // DELETE USER
@@ -44,8 +47,8 @@ export default function AdminUsers() {
     try {
       await request(`/admin/users/${userId}`, 'DELETE')
       setUsers(users.filter(u => u._id !== userId))
-    } catch (err: any) {
-      alert(err.message || 'Failed to delete user')
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to delete user')
     }
   }
 

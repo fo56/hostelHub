@@ -64,7 +64,7 @@ export default function SetPassword() {
       const role = result.user.role.toLowerCase()
       navigate(`/${role}/dashboard`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set password')
+      setError(err instanceof Error ? (err as Error).message : 'Failed to set password')
     } finally {
       setLoading(false)
     }

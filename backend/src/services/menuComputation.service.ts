@@ -5,12 +5,12 @@ import { redis } from './redis.service'
 const COMPUTE_TTL = 60 * 60 * 24 * 7   // 1 week
 const LOCK_TTL = 60 * 60 * 24        // 1 hour
 
-export const computeMenuRecommendations = async (week: string) => {
-  const lockKey = `lock:menu:compute:${week}`
-  const cacheKey = `cache:menu:recommendations:${week}`
+export const computeMenuRecommendations = async (hostelId: string) => {
+  const lockKey = `lock:menu:compute:${hostelId}`
+  const cacheKey = `cache:menu:recommendations:${hostelId}`
 
   // Prevent duplicate computation
-  const lock = await redis.set(lockKey, 'locked', { EX: LOCK_TTL })
+  const lock = await redis.set(lockKey, 'locked', { NX: true, EX: LOCK_TTL })
   if (!lock) {
     return { success: true, message: 'Already computing' }
   }
@@ -26,13 +26,20 @@ export const computeMenuRecommendations = async (week: string) => {
       {
         $match: {
           status: 'ACTIVE',
-          mealType: { $exists: true }
+          mealType: { $exists: true },
+          // Convert string hostelId to ObjectId for matching
+          $expr: { $eq: ['$hostelId', { $toObjectId: hostelId }] }
         }
       },
       {
+        // Calculate total votes across all weeks since we no longer track weeks
         $addFields: {
           weeklyVoteCount: {
-            $ifNull: [`$weeklyVotes.${week}`, 0]
+            $reduce: {
+              input: { $objectToArray: "$weeklyVotes" },
+              initialValue: 0,
+              in: { $add: ["$$value", "$$this.v"] }
+            }
           }
         }
       },
@@ -87,7 +94,6 @@ export const computeMenuRecommendations = async (week: string) => {
       {
         $project: {
           hostelId: 1,
-          week: { $literal: Number(week) },
           dishId: '$_id',
           mealType: 1,
           voteScore: 1,
@@ -101,11 +107,12 @@ export const computeMenuRecommendations = async (week: string) => {
 
     const computedResults = await Dish.aggregate(pipeline)
 
-    await MenuRecommendation.deleteMany({ week: Number(week) })
+    // Delete all previous recommendations for this hostel
+    await MenuRecommendation.deleteMany({ hostelId })
+    
     await MenuRecommendation.insertMany(
       computedResults.map(item => ({
         ...item,
-        week,
         computedAt: new Date()
       }))
     )

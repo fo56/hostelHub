@@ -7,10 +7,6 @@ const menuRecommendationSchema = new Schema({
     required: true
   },
 
-  week: {
-    type: Number,
-    required: true
-  },
 
   mealType: {
     type: String,

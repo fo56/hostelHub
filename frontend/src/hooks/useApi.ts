@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 interface RequestOptions {
   headers?: Record<string, string>;
-  body?: any;
+  body?: unknown;
 }
 
 export const useApi = () => {
@@ -17,7 +17,7 @@ export const useApi = () => {
     async (
       endpoint: string,
       method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
-      body?: any,
+      body?: unknown,
       options?: RequestOptions
     ) => {
       let token = getToken();
@@ -57,7 +57,7 @@ export const useApi = () => {
               response = await fetch(`${API_BASE_URL}${endpoint}`, config);
             }
           }
-        } catch (error) {
+        } catch {
           // If refresh fails, clear tokens and redirect to login
           authService.clearTokens();
           window.location.href = '/login';

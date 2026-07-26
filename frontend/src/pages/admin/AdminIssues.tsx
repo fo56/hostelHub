@@ -5,6 +5,7 @@ interface User {
   _id: string;
   name: string;
   email: string;
+  jobType?: string;
 }
 
 interface Issue {
@@ -13,6 +14,7 @@ interface Issue {
   priority: string;
   status: string;
   description: string;
+  resolverNote?: string;
   raisedBy: User;
   assignedTo?: User;
   createdAt: string;
@@ -24,6 +26,7 @@ interface Worker {
   name: string;
   email: string;
   role: string;
+  jobType?: string;
 }
 
 export default function AdminIssues() {
@@ -35,6 +38,9 @@ export default function AdminIssues() {
   const [selectedWorker, setSelectedWorker] = useState<{ [key: string]: string }>({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  
+  const [filterCategory, setFilterCategory] = useState<string>('ALL');
+  const [filterPriority, setFilterPriority] = useState<string>('ALL');
 
   useEffect(() => {
     Promise.all([fetchIssues(), fetchWorkers()]);
@@ -86,7 +92,7 @@ export default function AdminIssues() {
       // Refresh issues
       fetchIssues();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to assign issue';
+      const message = err instanceof Error ? (err as Error).message : 'Failed to assign issue';
       setError(message);
     } finally {
       setAssigningId(null);
@@ -103,7 +109,7 @@ export default function AdminIssues() {
       setSuccess('Issue status updated successfully');
       fetchIssues();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update status';
+      const message = err instanceof Error ? (err as Error).message : 'Failed to update status';
       setError(message);
     }
   };
@@ -139,13 +145,47 @@ export default function AdminIssues() {
   };
 
   const statuses = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
+  
+  const categories = Array.from(new Set(issues.map(i => i.category)));
+
+  const filteredIssues = issues.filter(issue => {
+    const matchCategory = filterCategory === 'ALL' || issue.category === filterCategory;
+    const matchPriority = filterPriority === 'ALL' || issue.priority === filterPriority;
+    return matchCategory && matchPriority;
+  });
+
+  const activeIssues = filteredIssues.filter(i => i.status === 'OPEN' || i.status === 'IN_PROGRESS');
+  const resolvedIssues = filteredIssues.filter(i => i.status === 'RESOLVED' || i.status === 'CLOSED');
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Issues Management</h1>
-        <p className="text-gray-600 mt-2">Review and manage student-raised issues</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Issues Management</h1>
+          <p className="text-gray-600 mt-2">Review and manage student-raised issues</p>
+        </div>
+        <div className="flex gap-3">
+          <select 
+            value={filterCategory} 
+            onChange={e => setFilterCategory(e.target.value)}
+            className="border p-2 rounded-lg bg-white shadow-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 capitalize"
+          >
+            <option value="ALL">All Categories</option>
+            {categories.map(c => <option key={c} value={c} className="capitalize">{c}</option>)}
+          </select>
+          <select 
+            value={filterPriority} 
+            onChange={e => setFilterPriority(e.target.value)}
+            className="border p-2 rounded-lg bg-white shadow-sm font-medium outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="ALL">All Priorities</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="URGENT">Urgent</option>
+          </select>
+        </div>
       </div>
 
       {/* Alerts */}
@@ -160,11 +200,11 @@ export default function AdminIssues() {
         </div>
       )}
 
-      {/* Issues List */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      {/* Active Issues */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">
-            {issues.length > 0 ? `All Issues (${issues.length})` : 'No Issues'}
+            Active Issues ({activeIssues.length})
           </h2>
         </div>
 
@@ -172,13 +212,13 @@ export default function AdminIssues() {
           <div className="px-6 py-12 text-center">
             <p className="text-gray-500">Loading issues...</p>
           </div>
-        ) : issues.length === 0 ? (
+        ) : activeIssues.length === 0 ? (
           <div className="px-6 py-12 text-center">
-            <p className="text-gray-500">No issues raised yet.</p>
+            <p className="text-gray-500">No active issues.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {issues.map((issue) => (
+            {activeIssues.map((issue) => (
               <div key={issue._id} className="p-6 hover:bg-gray-50 transition">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
                   {/* Issue Details */}
@@ -223,44 +263,119 @@ export default function AdminIssues() {
 
                   {/* Assignment */}
                   <div>
-                    {issue.assignedTo ? (
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 mb-2">Assigned to:</p>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <p className="font-medium text-blue-900 text-sm">{issue.assignedTo.name}</p>
-                          <p className="text-blue-700 text-xs">{issue.assignedTo.email}</p>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Assign to Worker
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        value={selectedWorker[issue._id] !== undefined ? selectedWorker[issue._id] : (issue.assignedTo?._id || 'UNASSIGN')}
+                        onChange={(e) =>
+                          setSelectedWorker(prev => ({
+                            ...prev,
+                            [issue._id]: e.target.value
+                          }))
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="UNASSIGN">Unassigned</option>
+                        {workers.map(worker => (
+                          <option key={worker._id} value={worker._id}>
+                            {worker.name} {worker.jobType ? `(${worker.jobType})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => handleAssignIssue(issue._id)}
+                        disabled={assigningId === issue._id || selectedWorker[issue._id] === undefined || selectedWorker[issue._id] === (issue.assignedTo?._id || 'UNASSIGN')}
+                        className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 py-2 rounded-lg text-sm font-medium transition"
+                      >
+                        {assigningId === issue._id ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Resolved Issues */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Resolved Issues ({resolvedIssues.length})
+          </h2>
+        </div>
+
+        {loading ? (
+          <div className="px-6 py-12 text-center">
+            <p className="text-gray-500">Loading issues...</p>
+          </div>
+        ) : resolvedIssues.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <p className="text-gray-500">No resolved issues yet.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {resolvedIssues.map((issue) => (
+              <div key={issue._id} className="p-6 hover:bg-gray-50 transition">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+                  {/* Issue Details */}
+                  <div className="lg:col-span-2">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900 capitalize">
+                        {issue.category}
+                      </h3>
+                      <div className="flex gap-2">
+                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(issue.status)}`}>
+                          {issue.status}
+                        </span>
+                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(issue.priority)}`}>
+                          {issue.priority}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 text-sm mb-2 line-through">{issue.description}</p>
+                    <div className="text-sm text-gray-500">
+                      <p><span className="font-medium">Raised by:</span> {issue.raisedBy.name}</p>
+                      <p><span className="font-medium">Date:</span> {new Date(issue.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+
+                  {/* Status Update */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Update Status
+                    </label>
+                    <select
+                      value={issue.status}
+                      onChange={(e) => handleStatusUpdate(issue._id, e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {statuses.map(status => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Worker & Note */}
+                  <div>
+                    {issue.assignedTo && (
+                      <div className="mb-3">
+                        <p className="text-sm font-medium text-gray-700 mb-1">Resolved by:</p>
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-2 text-sm text-gray-800">
+                          {issue.assignedTo.name} {issue.assignedTo.jobType ? `(${issue.assignedTo.jobType})` : ''}
                         </div>
                       </div>
-                    ) : (
+                    )}
+                    {issue.resolverNote && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Assign to Worker
-                        </label>
-                        <div className="flex gap-2">
-                          <select
-                            value={selectedWorker[issue._id] || ''}
-                            onChange={(e) =>
-                              setSelectedWorker(prev => ({
-                                ...prev,
-                                [issue._id]: e.target.value
-                              }))
-                            }
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">Select worker</option>
-                            {workers.map(worker => (
-                              <option key={worker._id} value={worker._id}>
-                                {worker.name}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={() => handleAssignIssue(issue._id)}
-                            disabled={assigningId === issue._id || !selectedWorker[issue._id]}
-                            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 py-2 rounded-lg text-sm font-medium transition"
-                          >
-                            {assigningId === issue._id ? 'Assigning...' : 'Assign'}
-                          </button>
+                        <p className="text-sm font-medium text-gray-700 mb-1">Worker Note:</p>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-sm text-gray-800 italic">
+                          "{issue.resolverNote}"
                         </div>
                       </div>
                     )}

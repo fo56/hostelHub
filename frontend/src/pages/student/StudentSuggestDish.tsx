@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 import { useApi } from '../../hooks/useApi'
 
 const MEALS = ['Breakfast', 'Lunch', 'Dinner']
@@ -14,7 +15,7 @@ export default function StudentSuggestDish() {
 
   const submit = async () => {
     if (!name || !mealType || !category) {
-      alert('All fields are required')
+      toast.error('All fields are required')
       return
     }
 
@@ -33,15 +34,15 @@ export default function StudentSuggestDish() {
         tags: tagsArray
       })
 
-      alert('Dish suggestion submitted for review')
+      toast.success('Dish suggestion submitted for review')
 
       // reset
       setName('')
       setMealType('')
       setCategory('')
       setTags('')
-    } catch (err: any) {
-      alert(err.message || 'Failed to suggest dish')
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to suggest dish')
     } finally {
       setLoading(false)
     }

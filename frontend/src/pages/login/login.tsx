@@ -32,7 +32,7 @@ export default function Login() {
           setPassword(savedCreds.password)
           setCredentialsSaved(true)
         }
-      } catch (err) {
+      } catch {
         console.debug('No saved credentials found')
       }
     }
@@ -68,7 +68,7 @@ export default function Login() {
       }
       navigate(`/${selectedRole}/dashboard`)
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed'
+      const errorMessage = err instanceof Error ? (err as Error).message : 'Login failed'
 
       // Provide specific error messages
       if (errorMessage.includes('Invalid email or password')) {
@@ -124,7 +124,7 @@ export default function Login() {
       localStorage.setItem('refreshToken', data.refreshToken)
       navigate(`/${data.user.role.toLowerCase()}/dashboard`)
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'QR login failed'
+      const errorMessage = err instanceof Error ? (err as Error).message : 'QR login failed'
 
       if (errorMessage.includes('Invalid') || errorMessage.includes('not found')) {
         setError('Invalid QR code. Please ask your administrator for a new one.')

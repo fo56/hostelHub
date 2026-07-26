@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useApi } from '../../hooks/useApi'
 
 type TabType = 'ACTIVE' | 'UNDER_REVIEW'
@@ -8,8 +9,10 @@ export default function AdminDishManagement() {
   const [activeTab, setActiveTab] = useState<TabType>('ACTIVE')
   const [dishes, setDishes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
 
   const [showModal, setShowModal] = useState(false)
+  const [editingDishId, setEditingDishId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     mealType: 'Lunch', // Fixed Casing
@@ -28,14 +31,66 @@ export default function AdminDishManagement() {
     try {
       const data = await request(`/admin/dishes?status=${activeTab}`)
       setDishes(data || [])
-    } catch (err: any) {
-      alert(err.message || 'Failed to fetch dishes')
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to fetch dishes')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleCreateDish = async (e: React.FormEvent) => {
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc'
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+  }
+
+  const sortedDishes = [...dishes].sort((a, b) => {
+    if (!sortConfig) return 0
+    const { key, direction } = sortConfig
+    
+    // Handle nested properties if needed (like suggestedBy.name)
+    let valA = key === 'suggestedBy' ? (a.suggestedBy?.name || '') : a[key]
+    let valB = key === 'suggestedBy' ? (b.suggestedBy?.name || '') : b[key]
+
+    if (valA == null) valA = ''
+    if (valB == null) valB = ''
+
+    if (typeof valA === 'string' && typeof valB === 'string') {
+      return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
+    }
+
+    if (valA < valB) return direction === 'asc' ? -1 : 1
+    if (valA > valB) return direction === 'asc' ? 1 : -1
+    return 0
+  })
+
+  const handleEditClick = (dish: any) => {
+    setFormData({
+      name: dish.name,
+      mealType: dish.mealType,
+      category: dish.category,
+      tags: dish.tags ? dish.tags.join(', ') : '',
+      priceScore: dish.priceScore || 3,
+      healthScore: dish.healthScore || 3
+    })
+    setEditingDishId(dish._id)
+    setShowModal(true)
+  }
+
+  const deleteDish = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this dish?')) return;
+    try {
+      await request(`/admin/dishes/${id}`, 'DELETE')
+      toast.success('Dish deleted successfully!')
+      loadDishes()
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to delete dish')
+    }
+  }
+
+  const handleSaveDish = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
       const payload = {
@@ -45,13 +100,20 @@ export default function AdminDishManagement() {
         healthScore: Number(formData.healthScore)
       }
 
-      await request('/admin/dishes', 'POST', payload)
-      alert('Dish created successfully!')
+      if (editingDishId) {
+        await request(`/admin/dishes/${editingDishId}`, 'PUT', payload)
+        toast.success('Dish updated successfully!')
+      } else {
+        await request('/admin/dishes', 'POST', payload)
+        toast.success('Dish created successfully!')
+      }
+
       setShowModal(false)
+      setEditingDishId(null)
       setFormData({ name: '', mealType: 'Lunch', category: 'Veg', tags: '', priceScore: 3, healthScore: 3 })
       loadDishes()
-    } catch (err: any) {
-      alert(err.message || 'Failed to create dish')
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to save dish')
     }
   }
 
@@ -65,15 +127,15 @@ export default function AdminDishManagement() {
       priceScore < 1 || priceScore > 5 ||
       healthScore < 1 || healthScore > 5
     ) {
-      alert('Invalid score. Price and Health scores must be numbers between 1 and 5.')
+      toast.error('Invalid score. Price and Health scores must be numbers between 1 and 5.')
       return
     }
 
     try {
       await request(`/admin/dishes/${id}/approve`, 'POST', { priceScore, healthScore })
       loadDishes()
-    } catch (err: any) {
-      alert(err.message || 'Failed to approve dish')
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to approve dish')
     }
   }
 
@@ -81,15 +143,15 @@ export default function AdminDishManagement() {
     const reason = prompt('Reason for rejection:')
 
     if (!reason || !reason.trim()) {
-      alert('Rejection reason is required.')
+      toast.error('Rejection reason is required.')
       return
     }
 
     try {
       await request(`/admin/dishes/${id}/reject`, 'POST', { reason })
       loadDishes()
-    } catch (err: any) {
-      alert(err.message || 'Failed to reject dish')
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to reject dish')
     }
   }
 
@@ -98,7 +160,11 @@ export default function AdminDishManagement() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Dish Management</h1>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setEditingDishId(null)
+            setFormData({ name: '', mealType: 'Lunch', category: 'Veg', tags: '', priceScore: 3, healthScore: 3 })
+            setShowModal(true)
+          }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium"
         >
           + Suggest / Add Dish
@@ -138,25 +204,37 @@ export default function AdminDishManagement() {
         <table className="w-full border bg-white rounded shadow-sm">
           <thead className="bg-gray-100 border-b">
             <tr>
-              <th className="border p-2 text-left">Name</th>
-              <th className="border p-2 text-left">Meal Type</th>
-              <th className="border p-2 text-left">Category</th>
+              <th className="border p-2 text-left cursor-pointer hover:bg-gray-200" onClick={() => handleSort('name')}>
+                Name {sortConfig?.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th className="border p-2 text-left cursor-pointer hover:bg-gray-200" onClick={() => handleSort('mealType')}>
+                Meal Type {sortConfig?.key === 'mealType' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th className="border p-2 text-left cursor-pointer hover:bg-gray-200" onClick={() => handleSort('category')}>
+                Category {sortConfig?.key === 'category' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+              </th>
               {activeTab === 'ACTIVE' ? (
                 <>
-                  <th className="border p-2 text-center">Price Score</th>
-                  <th className="border p-2 text-center">Health Score</th>
-                  <th className="border p-2 text-left">Approved By</th>
+                  <th className="border p-2 text-center cursor-pointer hover:bg-gray-200" onClick={() => handleSort('priceScore')}>
+                    Price Score {sortConfig?.key === 'priceScore' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                  <th className="border p-2 text-center cursor-pointer hover:bg-gray-200" onClick={() => handleSort('healthScore')}>
+                    Health Score {sortConfig?.key === 'healthScore' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                  <th className="border p-2 text-center">Actions</th>
                 </>
               ) : (
                 <>
-                  <th className="border p-2 text-left">Suggested By</th>
+                  <th className="border p-2 text-left cursor-pointer hover:bg-gray-200" onClick={() => handleSort('suggestedBy')}>
+                    Suggested By {sortConfig?.key === 'suggestedBy' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                  </th>
                   <th className="border p-2 text-center">Actions</th>
                 </>
               )}
             </tr>
           </thead>
           <tbody>
-            {dishes.map((d) => (
+            {sortedDishes.map((d) => (
               <tr key={d._id} className="hover:bg-gray-50">
                 <td className="border p-2 font-medium">{d.name}</td>
                 <td className="border p-2">{d.mealType}</td>
@@ -165,7 +243,20 @@ export default function AdminDishManagement() {
                   <>
                     <td className="border p-2 text-center">{d.priceScore ?? '—'}</td>
                     <td className="border p-2 text-center">{d.healthScore ?? '—'}</td>
-                    <td className="border p-2">{d.approvedBy?.name || 'Admin'}</td>
+                    <td className="border p-2 text-center space-x-2">
+                      <button
+                        onClick={() => handleEditClick(d)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteDish(d._id)}
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </>
                 ) : (
                   <>
@@ -195,8 +286,8 @@ export default function AdminDishManagement() {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white p-6 rounded-lg max-w-md w-full space-y-4">
-            <h2 className="text-xl font-bold">Suggest / Add New Dish</h2>
-            <form onSubmit={handleCreateDish} className="space-y-3">
+            <h2 className="text-xl font-bold">{editingDishId ? 'Edit Dish' : 'Suggest / Add New Dish'}</h2>
+            <form onSubmit={handleSaveDish} className="space-y-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Dish Name</label>
                 <input
@@ -277,7 +368,10 @@ export default function AdminDishManagement() {
               <div className="flex justify-end space-x-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false)
+                    setEditingDishId(null)
+                  }}
                   className="px-4 py-2 border rounded hover:bg-gray-100"
                 >
                   Cancel
@@ -286,7 +380,7 @@ export default function AdminDishManagement() {
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
-                  Create & Approve
+                  {editingDishId ? 'Update Dish' : 'Create & Approve'}
                 </button>
               </div>
             </form>

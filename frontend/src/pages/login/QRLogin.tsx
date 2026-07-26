@@ -27,7 +27,7 @@ export default function QRLogin() {
       if (cameraRef.current) {
         cameraRef.current.srcObject = stream
       }
-    } catch (err) {
+    } catch {
       setError('Unable to access camera. Use manual input instead.')
       setManualInput(true)
     }
@@ -64,7 +64,7 @@ export default function QRLogin() {
         navigate(`/${role}/dashboard`)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? (err as Error).message : 'Login failed')
     } finally {
       setLoading(false)
     }

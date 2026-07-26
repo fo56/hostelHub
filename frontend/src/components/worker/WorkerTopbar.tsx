@@ -1,5 +1,5 @@
 import { useAuth } from '../../hooks/useAuth'
-import { LogOut } from 'lucide-react'
+
 import { useNavigate } from 'react-router-dom'
 
 export default function WorkerTopbar() {
@@ -12,7 +12,7 @@ export default function WorkerTopbar() {
   }
 
   return (
-    <header className="bg-white border-b h-16 flex items-center justify-between px-6">
+    <header className="h-14 bg-white border-b flex items-center justify-between px-6">
       <div>
         <h1 className="text-lg font-semibold text-black">Worker Portal</h1>
       </div>
@@ -23,10 +23,9 @@ export default function WorkerTopbar() {
         </span>
         <button
           onClick={handleLogout}
-          className="p-2 hover:bg-gray-100 rounded transition-colors"
-          title="Logout"
+          className="px-4 py-1 border rounded hover:bg-gray-100"
         >
-          <LogOut className="w-5 h-5 text-gray-700" />
+          Logout
         </button>
       </div>
     </header>

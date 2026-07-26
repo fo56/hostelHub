@@ -1,18 +1,13 @@
 import express from 'express';
 import { verifyToken } from '../middlewares/verifyToken.middleware';
 import { requireRole } from '../middlewares/requireRole.middleware';
-import { getMealReviews, getReviewStats } from '../controllers/adminReview.controller';
+import { getDashboardStats } from '../controllers/adminDashboard.controller';
 
 const router = express.Router();
 
-router.get(
-  '/stats',
-  getReviewStats
-);
+router.use(verifyToken, requireRole('ADMIN'));
 
-router.get(
-  '/',
-  getMealReviews
-);
+// GET /api/admin/dashboard
+router.get('/', getDashboardStats);
 
 export default router;
