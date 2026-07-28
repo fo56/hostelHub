@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { MessMenu } from '../models/MessMenu';
 import * as MenuCache from '../services/menuCache.service'
 import { formatMeal } from '../utils/formatMeal';
 

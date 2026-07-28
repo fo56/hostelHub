@@ -5,8 +5,6 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 
 import { connectDB } from './config/db';
-import { connectRedis } from './services/redis.service';
-import { initSocket } from './services/socket.service';
 
 // Import Routes
 import authRoutes from './routes/auth.routes';
@@ -77,12 +75,7 @@ app.use(errorHandler);
 const startServer = async () => {
   try {
     await connectDB();
-    await connectRedis();
 
-    // 3. Attach Socket.io to 'httpServer'
-    initSocket(httpServer);
-
-    // 4. Listen on 'httpServer' instead of 'server'
     httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
     });
