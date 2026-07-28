@@ -4,7 +4,6 @@ import { StudentVote } from '../models/StudentVote';
 import * as ComputationService from '../services/menuComputation.service';
 import * as BuilderService from '../services/menuBuilder.service';
 import * as MenuCache from '../services/menuCache.service';
-import { getIO } from '../services/socket.service';
 
 /**
  * ADMIN: GET LIVE VOTING STATS
@@ -46,7 +45,7 @@ export const generateFinalMenu = async (req: Request, res: Response) => {
 };
 
 /**
- * ADMIN: PUBLISH MENU (Broadcasts event to students)
+ * ADMIN: PUBLISH MENU 
  */
 export const publishMenu = async (req: Request, res: Response) => {
   try {
@@ -61,13 +60,6 @@ export const publishMenu = async (req: Request, res: Response) => {
     if (!menu) {
       return res.status(404).json({ message: 'No unpublished menu found' });
     }
-
-    await MenuCache.invalidateMenuCache(hostelId.toString());
-
-    // Notify all connected students in the hostel that a new menu is live
-    getIO().to(`hostel_${hostelId}`).emit('MENU_PUBLISHED', {
-      publishedAt: new Date()
-    });
 
     return res.status(200).json({
       message: 'Menu published successfully',

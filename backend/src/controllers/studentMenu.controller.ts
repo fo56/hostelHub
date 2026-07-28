@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { MessMenu } from '../models/MessMenu';
 import * as MenuCache from '../services/menuCache.service'
 import { formatMeal } from '../utils/formatMeal';
+
 /**
  * GET CURRENT MESS MENU (latest published)
  */
@@ -31,7 +32,6 @@ export const getCurrentMessMenu = async (req: Request, res: Response) => {
     })
   }
 }
-
 
 /**
  * GET TODAY'S SERVED DISHES

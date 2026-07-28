@@ -1,18 +1,8 @@
-import { redis } from './redis.service'
 import { MessMenu } from '../models/MessMenu'
 import { formatMeal } from '../utils/formatMeal';
-const CURRENT_MENU_TTL = 60 * 60 * 24 * 7   // 1 week
-const TODAY_MENU_TTL = 60 * 60 * 24        // 1 hour
 
 // CURRENT PUBLISHED MENU
 export async function getCachedCurrentMenu(hostelId: string) {
-  const key = `hostel:${hostelId}:menu:current`
-
-  const cached = await redis.get(key)
-  if (cached) {
-    return JSON.parse(cached)
-  }
-
   const menu = await MessMenu.findOne({
     hostelId,
     published: true
@@ -25,26 +15,11 @@ export async function getCachedCurrentMenu(hostelId: string) {
       }
     })
 
-  if (menu) {
-    await redis.set(
-      key,
-      JSON.stringify(menu),
-      { EX: CURRENT_MENU_TTL }
-    )
-  }
-
   return menu
 }
 
 // TODAY’S SERVED DISHES
 export async function getCachedTodayMenu(hostelId: string) {
-  const key = `hostel:${hostelId}:menu:today`
-
-  const cached = await redis.get(key)
-  if (cached) {
-    return JSON.parse(cached)
-  }
-
   const menu = await getCachedCurrentMenu(hostelId)
   if (!menu) return null
 
@@ -59,19 +34,5 @@ export async function getCachedTodayMenu(hostelId: string) {
     dinner: formatMeal(menu.dinner)[dayIndex]
   }
 
-  await redis.set(
-    key,
-    JSON.stringify(todayMenu),
-    { EX: TODAY_MENU_TTL }
-  )
-
   return todayMenu
-}
-
-// CACHE INVALIDATION
-export async function invalidateMenuCache(hostelId: string) {
-  await redis.del([
-    `hostel:${hostelId}:menu:current`,
-    `hostel:${hostelId}:menu:today`
-  ])
 }

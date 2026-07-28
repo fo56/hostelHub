@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { StudentVote } from '../models/StudentVote';
 import { Dish } from '../models/Dish';
-import { getIO } from '../services/socket.service';
 
 /**
  * GET voting dashboard data:
@@ -26,7 +25,7 @@ export const getStudentVotes = async (req: Request, res: Response) => {
       .select('_id name mealType category healthScore priceScore tags')
       .lean();
 
-    // 2. Fetch student's existing vote record (Returns Populated Objects for the Frontend to render directly if needed)
+    // 2. Fetch student's existing vote record 
     const voteRecord = await StudentVote.findOne({ userId, hostelId })
       .populate('breakfast', '_id name mealType category healthScore priceScore')
       .populate('lunch', '_id name mealType category healthScore priceScore')
@@ -117,16 +116,6 @@ export const saveStudentVotes = async (req: Request, res: Response) => {
       },
       { upsert: true, new: true, runValidators: true }
     );
-
-    // 5. Get total unique voting students count in this hostel
-    const totalVotersCount = await StudentVote.countDocuments({ hostelId });
-
-    // 6. Emit real-time update to Admin Dashboard for this specific hostel
-    getIO().to(`hostel_${hostelId}`).emit('VOTES_UPDATED', {
-      voterUserId: userId,
-      totalVoters: totalVotersCount,
-      updatedAt: updatedVotes.updatedAt
-    });
 
     return res.status(200).json({
       message: 'Preferences saved successfully',
