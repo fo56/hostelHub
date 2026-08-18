@@ -1,5 +1,5 @@
-import { Dish } from '../models/Dish'
-import { MenuRecommendation } from '../models/MenuRecommendation'
+import { Dish } from '../models/Dish';
+import { MenuRecommendation } from '../models/MenuRecommendation';
 
 export const computeMenuRecommendations = async (hostelId: string) => {
   const pipeline = [
@@ -12,18 +12,49 @@ export const computeMenuRecommendations = async (hostelId: string) => {
       }
     },
     {
-      // Calculate total votes across all weeks since we no longer track weeks
+      // 1. Join with StudentVote collection and dynamically count votes
+      $lookup: {
+        from: 'studentvotes', // Default Mongoose collection name for the StudentVote model
+        let: { dishId: '$_id', targetHostel: { $toObjectId: hostelId } },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ['$hostelId', '$$targetHostel'] }
+            }
+          },
+          {
+            // Count occurrences of this specific dishId in the student's meal arrays
+            $project: {
+              matchCount: {
+                $add: [
+                  { $size: { $filter: { input: { $ifNull: ['$breakfast', []] }, as: 'b', cond: { $eq: ['$$b', '$$dishId'] } } } },
+                  { $size: { $filter: { input: { $ifNull: ['$lunch', []] }, as: 'l', cond: { $eq: ['$$l', '$$dishId'] } } } },
+                  { $size: { $filter: { input: { $ifNull: ['$dinner', []] }, as: 'd', cond: { $eq: ['$$d', '$$dishId'] } } } }
+                ]
+              }
+            }
+          },
+          {
+            // Sum all occurrences across all students in this hostel
+            $group: {
+              _id: null,
+              totalVotes: { $sum: '$matchCount' }
+            }
+          }
+        ],
+        as: 'voteData'
+      }
+    },
+    {
+      // 2. Extract the sum from the array returned by lookup (defaults to 0 if no votes)
       $addFields: {
         weeklyVoteCount: {
-          $reduce: {
-            input: { $objectToArray: "$weeklyVotes" },
-            initialValue: 0,
-            in: { $add: ["$$value", "$$this.v"] }
-          }
+          $ifNull: [{ $arrayElemAt: ['$voteData.totalVotes', 0] }, 0]
         }
       }
     },
     {
+      // 3. Find maxVotes across all dishes to establish a baseline for the curve
       $group: {
         _id: null,
         maxVotes: { $max: '$weeklyVoteCount' },
@@ -39,6 +70,7 @@ export const computeMenuRecommendations = async (hostelId: string) => {
       }
     },
     {
+      // 4. Calculate sub-scores
       $addFields: {
         voteScore: {
           $cond: [
@@ -46,11 +78,7 @@ export const computeMenuRecommendations = async (hostelId: string) => {
             { $divide: ['$weeklyVoteCount', '$maxVotes'] },
             0
           ]
-        }
-      }
-    },
-    {
-      $addFields: {
+        },
         costEfficiency: {
           $cond: [
             { $gt: ['$priceScore', 0] },
@@ -61,6 +89,7 @@ export const computeMenuRecommendations = async (hostelId: string) => {
       }
     },
     {
+      // 5. Compute the final weighted score
       $addFields: {
         finalScore: {
           $add: [
@@ -80,25 +109,25 @@ export const computeMenuRecommendations = async (hostelId: string) => {
         healthScore: 1,
         costEfficiency: 1,
         finalScore: 1,
-        _id: 0
+        _id: 0 // Exclude original Dish _id
       }
     }
-  ]
+  ];
 
-  const computedResults = await Dish.aggregate(pipeline)
+  const computedResults = await Dish.aggregate(pipeline);
 
-  // Delete all previous recommendations for this hostel
-  await MenuRecommendation.deleteMany({ hostelId })
+  // Clear previous recommendations and save new ones
+  await MenuRecommendation.deleteMany({ hostelId });
   
   await MenuRecommendation.insertMany(
     computedResults.map(item => ({
       ...item,
       computedAt: new Date()
     }))
-  )
+  );
 
   return {
     success: true,
     count: computedResults.length
-  }
-}
+  };
+};

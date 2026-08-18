@@ -3,7 +3,6 @@ import { MessMenu } from '../models/MessMenu';
 import { StudentVote } from '../models/StudentVote';
 import * as ComputationService from '../services/menuComputation.service';
 import * as BuilderService from '../services/menuBuilder.service';
-import * as MenuCache from '../services/menuCache.service';
 
 /**
  * ADMIN: GET LIVE VOTING STATS

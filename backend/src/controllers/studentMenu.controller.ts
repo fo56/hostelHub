@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import * as MenuCache from '../services/menuCache.service'
 import { formatMeal } from '../utils/formatMeal';
-
+import * as MenuRetrieve from '../services/menuRetrieve.service';
 /**
  * GET CURRENT MESS MENU (latest published)
  */
@@ -9,7 +8,7 @@ export const getCurrentMessMenu = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId
 
-    const menu = await MenuCache.getCachedCurrentMenu(hostelId.toString())
+    const menu = await MenuRetrieve.getCurrentMenu(hostelId.toString())
 
     if (!menu) {
       return res.status(404).json({
@@ -39,7 +38,7 @@ export const getServedDishesToday = async (req: Request, res: Response) => {
   try {
     const hostelId = req.user!.hostelId
 
-    const todayMenu = await MenuCache.getCachedTodayMenu(hostelId.toString())
+    const todayMenu = await MenuRetrieve.getTodayMenu(hostelId.toString())
 
     if (!todayMenu) {
       return res.status(404).json({

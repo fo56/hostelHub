@@ -39,10 +39,20 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Check if hostel already exists
-    const existingHostel = await Hostel.findOne({ name: hostelName });
+    // Check if hostel name OR the generated domain already exists in a single query
+    const existingHostel = await Hostel.findOne({
+      $or: [{ name: hostelName }, { domain }]
+    });
+
     if (existingHostel) {
-      res.status(400).json({ message: 'This hostel name is already registered. Please choose a different name.' });
+      if (existingHostel.name.toLowerCase() === hostelName.toLowerCase()) {
+        res.status(400).json({ message: 'This hostel name is already registered. Please choose a different name.' });
+      } else {
+        // The names are different, but the first 10 characters caused a domain collision
+        res.status(400).json({ 
+          message: `The auto-generated domain (${domain}) for this hostel is already in use by another facility. Please choose a more distinct hostel name.` 
+        });
+      }
       return;
     }
 
@@ -233,7 +243,7 @@ export const generateQRCode = async (req: Request, res: Response): Promise<void>
       await user.save();
     }
 
-    const qrCodeData = `${process.env.APP_URL || 'http://localhost:3000'}/qr-login/${user.qrToken}`;
+    const qrCodeData = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/qr-login/${user.qrToken}`;
     const qrCodeImage = await QRCode.toDataURL(qrCodeData);
 
     res.json({ qrCode: qrCodeImage, qrToken: user.qrToken });
@@ -267,7 +277,7 @@ export const loginViaQR = async (req: Request, res: Response): Promise<void> => 
       user.loginURLExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
       await user.save();
 
-      const setPasswordURL = `${process.env.APP_URL || 'http://localhost:3000'}/set-password/${loginToken}`;
+      const setPasswordURL = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/set-password/${loginToken}`;
       res.json({
         message: 'First login detected',
         setPasswordURL,

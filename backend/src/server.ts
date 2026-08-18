@@ -1,3 +1,4 @@
+// server.ts
 import express, { Express } from 'express';
 import http from 'http';
 import cors from 'cors';
@@ -12,7 +13,6 @@ import userRoutes from './routes/user.routes';
 import studentRoutes from './routes/student.routes';
 import dishRoutes from './routes/dish.routes';
 import mealReviewRoutes from './routes/mealReview.routes';
-import menuVoteRoutes from './routes/studentMenu.routes';
 import issueRoutes from './routes/issue.routes';
 
 import adminDishRoutes from './routes/adminDish.routes';
@@ -29,10 +29,8 @@ dotenv.config();
 
 const app: Express = express();
 
-// 1. Create HTTP server using the imported 'http' module
 const httpServer = http.createServer(app);
 
-// 2. Set default PORT to 5000 (matching your frontend socket target)
 const PORT = process.env.PORT || 5000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -58,9 +56,8 @@ app.use('/api/issues', verifyToken, issueRoutes);
 app.use('/api/dishes', verifyToken, dishRoutes);
 app.use('/api/reviews', verifyToken, mealReviewRoutes);
 
-// Student Specific Routes
+// Student Specific Routes (Handles Menu, Notifications, and Votes)
 app.use('/api/student', verifyToken, requireRole('STUDENT'), studentRoutes);
-app.use('/api/menu-votes', verifyToken, requireRole('STUDENT'), menuVoteRoutes);
 
 // Admin Specific Routes
 app.use('/api/admin/menu', verifyToken, requireRole('ADMIN'), adminMenuRoutes);

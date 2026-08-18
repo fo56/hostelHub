@@ -2,7 +2,7 @@ import { MessMenu } from '../models/MessMenu'
 import { formatMeal } from '../utils/formatMeal';
 
 // CURRENT PUBLISHED MENU
-export async function getCachedCurrentMenu(hostelId: string) {
+export async function getCurrentMenu(hostelId: string) {
   const menu = await MessMenu.findOne({
     hostelId,
     published: true
@@ -19,8 +19,8 @@ export async function getCachedCurrentMenu(hostelId: string) {
 }
 
 // TODAY’S SERVED DISHES
-export async function getCachedTodayMenu(hostelId: string) {
-  const menu = await getCachedCurrentMenu(hostelId)
+export async function getTodayMenu(hostelId: string) {
+  const menu = await getCurrentMenu(hostelId)
   if (!menu) return null
 
   const jsDay = new Date().getDay()

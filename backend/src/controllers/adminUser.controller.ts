@@ -4,7 +4,11 @@ import { ActivityLog } from '../models/ActivityLog';
 import { Hostel } from '../models/Hostel';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
-
+import { StudentVote } from '../models/StudentVote';
+import { MealReview } from '../models/MealReview';
+import { Issue } from '../models/Issue';
+import { RefreshToken } from '../models/RefreshToken';
+import { Dish } from '../models/Dish';
 // Generate QR Code
 const generateQRCode = async (qrToken: string): Promise<string> => {
   try {
@@ -19,10 +23,10 @@ const generateQRToken = (): string => {
   return crypto.randomBytes(32).toString('hex');
 };
 
-// Generate login token URL
+// Generate login token URL - Standardized to /set-password/
 const generateLoginToken = (): { token: string; url: string } => {
   const token = crypto.randomBytes(32).toString('hex');
-  const url = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/login-link/${token}`;
+  const url = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/set-password/${token}`;
   return { token, url };
 };
 
@@ -87,7 +91,7 @@ export const createUser = async (req: Request, res: Response) => {
       roomNo: role === 'STUDENT' ? roomNo : undefined,
       jobType: role === 'WORKER' ? jobType : undefined,
       qrToken,
-      loginURL,
+      loginURL: loginToken, // STORE ONLY THE HEX TOKEN IN DB
       loginURLExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     });
 
@@ -114,7 +118,7 @@ export const createUser = async (req: Request, res: Response) => {
         jobType: newUser.jobType,
       },
       qrCode: qrCodeDataURL,
-      loginURL,
+      loginURL, // SEND THE FULL URL TO THE CLIENT
       qrToken,
     });
   } catch (err) {
@@ -257,6 +261,8 @@ export const reactivateUser = async (req: Request, res: Response) => {
 };
 
 // Delete user
+
+// Delete user
 export const deleteUser = async (req: Request, res: Response) => {
   try {
     const adminId = (req as any).user?._id;
@@ -276,22 +282,29 @@ export const deleteUser = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // --- CASCADING DELETES ---
+    // Execute all deletion queries concurrently for maximum performance
+    await Promise.all([
+      StudentVote.deleteMany({ userId }),
+      RefreshToken.deleteMany({ userId }),
+    ]);
+
+    // Finally, delete the actual user document
     await User.deleteOne({ _id: userId });
 
-    // Log activity
+    // Log the admin's activity (Note: We do this AFTER deleting the user's own logs)
     await ActivityLog.create({
       userId: adminId,
-      action: `Deleted user - ${user.name} (${user.email})`,
+      action: `Deleted user - ${user.name} (${user.email}) and all associated records`,
       ip: req.ip,
     });
 
-    return res.status(200).json({ message: 'User deleted successfully' });
+    return res.status(200).json({ message: 'User and all associated records deleted successfully' });
   } catch (err) {
     const error = err as Error;
     res.status(500).json({ message: error.message });
   }
 };
-
 // Regenerate QR code
 export const regenerateQRCode = async (req: Request, res: Response) => {
   try {
@@ -357,7 +370,7 @@ export const regenerateLoginToken = async (req: Request, res: Response) => {
     }
 
     const { token: newToken, url: newLoginURL } = generateLoginToken();
-    user.loginURL = newLoginURL;
+    user.loginURL = newToken; // STORE ONLY THE HEX TOKEN IN DB
     user.loginURLExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await user.save();
 
@@ -370,7 +383,7 @@ export const regenerateLoginToken = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       message: 'Login token regenerated',
-      loginURL: newLoginURL,
+      loginURL: newLoginURL, // SEND THE FULL URL TO THE CLIENT
       expiresIn: '24 hours',
     });
   } catch (err) {
@@ -378,4 +391,3 @@ export const regenerateLoginToken = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
-
