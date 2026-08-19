@@ -1,8 +1,8 @@
 # HostelHub — Complete Codebase Knowledge Document
 
-> **Generated**: 2026-08-16  
-> **Scope**: Full-stack analysis (backend + frontend)  
-> **Repository Root**: `hostelHub/`
+> **Generated**: 2026-08-19  
+> **Scope**: Every source file in the repository has been read and analyzed.  
+> **Audience**: An LLM (or developer) who needs to implement features, fix bugs, or refactor safely without prior context.
 
 ---
 
@@ -11,51 +11,51 @@
 1. [High-Level Overview](#1-high-level-overview)
 2. [Tech Stack & Dependencies](#2-tech-stack--dependencies)
 3. [Architecture & Directory Structure](#3-architecture--directory-structure)
-4. [Database Schema & Entity Relationships](#4-database-schema--entity-relationships)
-5. [Authentication & Security](#5-authentication--security)
-6. [Feature-by-Feature Analysis](#6-feature-by-feature-analysis)
-   - 6.1 [Multi-Tenant Hostel Management](#61-multi-tenant-hostel-management)
-   - 6.2 [User Lifecycle Management](#62-user-lifecycle-management)
-   - 6.3 [Dish Management & Suggestion Pipeline](#63-dish-management--suggestion-pipeline)
-   - 6.4 [Student Voting System](#64-student-voting-system)
-   - 6.5 [Menu Computation Engine](#65-menu-computation-engine)
-   - 6.6 [Mess Menu Management](#66-mess-menu-management)
-   - 6.7 [Meal Review & Satisfaction Analytics](#67-meal-review--satisfaction-analytics)
-   - 6.8 [Issue Tracking & Resolution](#68-issue-tracking--resolution)
-   - 6.9 [Admin Dashboard & Telemetry](#69-admin-dashboard--telemetry)
-   - 6.10 [Student Notifications](#610-student-notifications)
-7. [Cross-Feature Interaction Map](#7-cross-feature-interaction-map)
-8. [Frontend Architecture](#8-frontend-architecture)
-9. [API Reference](#9-api-reference)
-10. [Things You Must Know Before Changing Code](#10-things-you-must-know-before-changing-code)
-11. [Glossary](#11-glossary)
+4. [System Architecture Diagram](#4-system-architecture-diagram)
+5. [Data Flow](#5-data-flow)
+6. [Database Schema & Relationships](#6-database-schema--relationships)
+7. [Authentication & Security Deep Dive](#7-authentication--security-deep-dive)
+8. [Feature-by-Feature Analysis](#8-feature-by-feature-analysis)
+   - 8.1 [Multi-Tenant Hostel Provisioning](#81-multi-tenant-hostel-provisioning)
+   - 8.2 [Authentication System](#82-authentication-system)
+   - 8.3 [User Lifecycle Management](#83-user-lifecycle-management)
+   - 8.4 [Dish Management & Suggestion Pipeline](#84-dish-management--suggestion-pipeline)
+   - 8.5 [Student Voting System](#85-student-voting-system)
+   - 8.6 [Menu Computation & Recommendation Engine](#86-menu-computation--recommendation-engine)
+   - 8.7 [Menu Publishing & Retrieval](#87-menu-publishing--retrieval)
+   - 8.8 [Meal Review & Rating System](#88-meal-review--rating-system)
+   - 8.9 [Issue Tracking & Maintenance](#89-issue-tracking--maintenance)
+   - 8.10 [Admin Dashboard & Analytics](#810-admin-dashboard--analytics)
+   - 8.11 [Student Notifications](#811-student-notifications)
+9. [Cross-Feature Interaction Map](#9-cross-feature-interaction-map)
+10. [Frontend Architecture](#10-frontend-architecture)
+11. [API Reference](#11-api-reference)
+12. [Nuances, Subtleties & Gotchas](#12-nuances-subtleties--gotchas)
+13. [Technical Reference & Glossary](#13-technical-reference--glossary)
 
 ---
 
 ## 1. High-Level Overview
 
-### What Is HostelHub?
+### What It Is
 
-HostelHub is a **multi-tenant hostel management platform** that digitizes and streamlines the administrative and operational workflows of student housing facilities. It integrates three user personas — **Admins**, **Students**, and **Workers** — into a unified ecosystem.
+**HostelHub** is a multi-tenant hostel management platform that digitizes the administrative and operational workflows of student housing facilities. It connects three user roles—**Admins**, **Students**, and **Workers**—into a unified ecosystem.
 
-### Business Purpose
+### What It Does
 
-- **For Hostel Administrators**: Manage residents, staff, mess menus, and maintenance operations through a centralized dashboard.
-- **For Students**: Vote on meal preferences, suggest new dishes, review served meals, and raise maintenance issues.
-- **For Workers (Maintenance Staff)**: View and resolve assigned maintenance tickets.
+| Capability | Business Purpose |
+|---|---|
+| **Multi-tenant isolation** | Multiple hostels share one backend; each hostel's data is completely siloed via `hostelId` foreign keys on every document. |
+| **Passwordless onboarding** | Admin creates student/worker → system generates QR code + magic link → user scans/clicks to set password on first login. |
+| **Mess menu voting** | Students vote on preferred dishes (7 per meal × 3 meals). An algorithm generates an optimal weekly menu based on votes, health scores, and cost efficiency. |
+| **Issue tracking** | Students report maintenance issues; admins assign to workers; workers resolve and close. Full lifecycle management. |
+| **Meal reviews & analytics** | Students rate dishes after they are served. Admins see per-dish satisfaction aggregates and daily trend charts. |
 
-### Core Business Workflows
+### Target Users
 
-1. **Admin Provisioning** → Admin registers hostel → System creates isolated tenant workspace
-2. **User Onboarding** → Admin creates student/worker → Distributes QR code / magic link → User sets password on first login
-3. **Menu Optimization** → Students vote on preferred dishes → Admin triggers algorithmic generation → Menu published system-wide
-4. **Maintenance Resolution** → Student raises issue → Admin assigns to worker → Worker resolves and closes
-
-### What It Is NOT
-
-- It is **not** a booking/reservation system for hostel rooms.
-- It does **not** handle financial transactions, fee collection, or billing.
-- There is **no** real-time chat or messaging between users (despite Socket.io being listed as a dependency, WebSocket integration is referenced in the README but not actively implemented in the current codebase).
+- **Hostel Administrators**: Provision hostels, manage users, curate menus, track issues.
+- **Students**: Vote on meals, suggest dishes, review food, report maintenance issues.
+- **Maintenance Workers**: View assigned tickets, update status, add resolution notes.
 
 ---
 
@@ -65,221 +65,309 @@ HostelHub is a **multi-tenant hostel management platform** that digitizes and st
 
 | Category | Technology | Version | Purpose |
 |---|---|---|---|
-| Runtime | Node.js | v18+ | Server runtime |
-| Framework | Express.js | ^5.2.1 | REST API framework |
-| Language | TypeScript | ^5.9.3 | Type-safe development |
-| Database | MongoDB + Mongoose | ^9.0.1 | Document store + ODM |
-| Auth | JWT (jsonwebtoken) | ^9.0.3 | Token-based authentication |
-| Hashing | bcrypt | ^6.0.0 | Password hashing |
-| QR Codes | qrcode | ^1.5.4 | QR code generation |
-| Security | helmet | ^8.1.0 | HTTP header protection |
-| CORS | cors | ^2.8.5 | Cross-origin policy |
-| Email | nodemailer | ^9.0.3 | Email sending (declared but not actively used in controllers) |
-| Cache | redis | ^5.10.0 | Declared dependency but not used in current code |
-| Real-Time | socket.io | ^4.8.3 | Declared dependency but not actively integrated |
-| Dev Tools | nodemon, ts-node | — | Hot-reload development |
+| Runtime | Node.js | 18+ | Server runtime |
+| Framework | Express.js | 5.2.1 | REST API framework |
+| Language | TypeScript | 5.9.3 | Type safety |
+| Database | MongoDB + Mongoose | 9.0.1 | Document store + ODM |
+| Auth | jsonwebtoken + bcrypt | 9.0.3 / 6.0.0 | JWT signing + password hashing |
+| QR Codes | qrcode | 1.5.4 | Generate QR code data URLs |
+| Security | helmet + cors | 8.1.0 / 2.8.5 | HTTP headers + CORS policy |
+| Realtime | socket.io | 4.8.3 | WebSocket (imported but not actively wired in server.ts) |
+| Email | nodemailer | 9.0.3 | Email sending (imported but not actively used in controllers) |
+| Caching | redis | 5.10.0 | Redis client (dependency present, not actively used in controllers) |
+| Dev | nodemon + ts-node | 3.1.11 / 10.9.2 | Hot reload + TS execution |
 
 ### Frontend
 
 | Category | Technology | Version | Purpose |
 |---|---|---|---|
-| Framework | React | ^19.2.3 | UI component library |
-| Build | Vite | ^7.2.4 | Module bundler |
-| Language | TypeScript | ~5.9.3 | Type safety |
-| Styling | Tailwind CSS | ^4.1.18 | Utility-first CSS |
-| Routing | react-router-dom | ^7.10.1 | Client-side routing |
-| Charts | recharts | ^3.10.1 | Data visualization |
-| Icons | lucide-react | ^0.562.0 | Icon library |
-| Toasts | react-hot-toast | ^2.6.0 | Notification toasts |
-| WebSocket | socket.io-client | ^4.8.3 | Declared but not actively used |
-| Utils | clsx, tailwind-merge, date-fns | — | Classname utils, date formatting |
+| Framework | React | 19.2.3 | UI library |
+| Build | Vite | 7.2.4 | Bundler + dev server |
+| Styling | Tailwind CSS | 4.1.18 | Utility-first CSS |
+| Routing | react-router-dom | 7.10.1 | Client-side routing |
+| Charts | recharts | 3.10.1 | Data visualization |
+| Icons | lucide-react | 0.562.0 | Icon library |
+| Realtime | socket.io-client | 4.8.3 | WebSocket client |
+| Notifications | react-hot-toast | 2.6.0 | Toast notifications |
+| Utilities | date-fns, clsx, tailwind-merge | Various | Date formatting, class merging |
 
-### Key Observations
+### Environment Variables
 
-> **WARNING**: `redis`, `socket.io`, `socket.io-client`, and `nodemailer` are declared in `package.json` but have no active integration points in the source code. These appear to be planned for future features (WebSocket broadcast for menu publication, Redis caching, email notifications).
+**Backend** (`backend/.env`):
+```
+MONGODB_URI=mongodb://...
+JWT_SECRET=<secret>
+PORT=8000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+```
+
+**Frontend** (`frontend/.env`):
+```
+VITE_API_URL=http://localhost:8000/api
+VITE_WS_URL=http://localhost:5000
+```
 
 ---
 
 ## 3. Architecture & Directory Structure
 
-### Architecture Type
-
-**Monorepo (split frontend/backend)** with a classic **MVC-ish** layered architecture on the backend and **component-based** architecture on the frontend.
+The application follows a **classic monorepo** with separate `backend/` and `frontend/` packages. The backend uses the **MVC-S** (Model-View-Controller-Service) pattern.
 
 ```
 hostelHub/
-├── backend/                          # Express.js API server
+├── backend/
 │   ├── src/
 │   │   ├── config/
-│   │   │   └── db.ts                 # MongoDB connection setup
-│   │   ├── constants/
-│   │   │   └── roles.js              # ADMIN, STUDENT, WORKER enum
-│   │   ├── controllers/              # Request handlers (14 files)
-│   │   │   ├── auth.controller.ts           # 460 lines — all auth flows
-│   │   │   ├── adminUser.controller.ts      # 382 lines — CRUD + QR/link mgmt
-│   │   │   ├── adminDish.controller.ts      # 135 lines — dish CRUD & approval
-│   │   │   ├── adminMenu.controller.ts      # 92 lines — menu generation/publish
-│   │   │   ├── adminReview.controller.ts    # 142 lines — review stats
-│   │   │   ├── adminDashboard.controller.ts # 50 lines — dashboard stats
-│   │   │   ├── issue.controller.ts          # 277 lines — issue CRUD & lifecycle
-│   │   │   ├── dish.controller.ts           # 96 lines — admin + student dish creation
-│   │   │   ├── studentVote.controller.ts    # 130 lines — voting upsert
-│   │   │   ├── studentMenu.controller.ts    # 58 lines — menu retrieval
-│   │   │   ├── studentDish.controller.ts    # 32 lines — active dishes grouped
-│   │   │   ├── studentNotification.controller.ts # 53 lines
-│   │   │   ├── mealReview.controller.ts     # 132 lines — submit review
-│   │   │   └── user.controller.ts           # 18 lines — getMe
+│   │   │   └── db.ts                         # MongoDB connection
+│   │   ├── controllers/
+│   │   │   ├── auth.controller.ts            # Admin/user login, QR, magic link, password set
+│   │   │   ├── adminUser.controller.ts       # CRUD users, QR/token regen, cascading deletes
+│   │   │   ├── adminDish.controller.ts       # Approve/reject/update/delete dishes
+│   │   │   ├── adminMenu.controller.ts       # Generate menu, publish, voting stats
+│   │   │   ├── adminDashboard.controller.ts  # Aggregate dashboard stats
+│   │   │   ├── adminReview.controller.ts     # Paginated reviews, aggregate stats
+│   │   │   ├── dish.controller.ts            # Admin-create and student-suggest dishes
+│   │   │   ├── issue.controller.ts           # Full issue lifecycle
+│   │   │   ├── mealReview.controller.ts      # Student submits meal review
+│   │   │   ├── studentDish.controller.ts     # List active dishes grouped by meal
+│   │   │   ├── studentMenu.controller.ts     # Current menu + today's menu
+│   │   │   ├── studentNotification.controller.ts  # Dish approval/rejection notifications
+│   │   │   ├── studentVote.controller.ts     # Get/save student vote preferences
+│   │   │   └── user.controller.ts            # GET /me (returns decoded JWT data)
 │   │   ├── middlewares/
-│   │   │   ├── verifyToken.middleware.ts     # JWT verification
-│   │   │   ├── requireRole.middleware.ts     # RBAC enforcement
-│   │   │   ├── dishRateLimit.middleware.ts   # 3 suggestions/week limit
-│   │   │   └── errorHandler.ts              # Global error handler
-│   │   ├── models/                   # Mongoose schemas (10 files)
-│   │   │   ├── User.ts, Hostel.ts, Dish.ts, Issue.ts
-│   │   │   ├── MessMenu.ts, MenuRecommendation.ts
-│   │   │   ├── StudentVote.ts, MealReview.ts
-│   │   │   ├── RefreshToken.ts, ActivityLog.ts
-│   │   ├── routes/                   # Express routers (12 files)
-│   │   ├── services/                 # Business logic services (3 files)
-│   │   │   ├── menuComputation.service.ts   # Aggregation pipeline scoring
-│   │   │   ├── menuBuilder.service.ts       # Top-7 selection per meal
-│   │   │   └── menuCache.service.ts         # Published menu retrieval
+│   │   │   ├── verifyToken.middleware.ts      # JWT verification, attaches req.user
+│   │   │   ├── requireRole.middleware.ts      # Role-based access gate
+│   │   │   └── errorHandler.ts               # Global 500 handler
+│   │   ├── models/
+│   │   │   ├── ActivityLog.ts                # Audit log
+│   │   │   ├── Dish.ts                       # Menu item catalog
+│   │   │   ├── Hostel.ts                     # Tenant entity
+│   │   │   ├── Issue.ts                      # Maintenance tickets
+│   │   │   ├── MealReview.ts                 # Post-meal ratings
+│   │   │   ├── MenuRecommendation.ts         # Computed dish scores
+│   │   │   ├── MessMenu.ts                   # Published weekly menu
+│   │   │   ├── RefreshToken.ts               # Hashed refresh tokens
+│   │   │   ├── StudentVote.ts                # Student dish preferences
+│   │   │   └── User.ts                       # Users (admin, student, worker)
+│   │   ├── routes/                           # Express router files (11 files)
+│   │   ├── services/
+│   │   │   ├── menuComputation.service.ts    # MongoDB aggregation pipeline for scoring
+│   │   │   ├── menuBuilder.service.ts        # Pick top-7 dishes per meal
+│   │   │   └── menuRetrieve.service.ts       # Fetch published/today menu
 │   │   ├── types/
-│   │   │   └── express.d.ts          # Express Request augmentation
+│   │   │   └── express.d.ts                  # Augments Express.Request with user
 │   │   ├── utils/
-│   │   │   ├── jwt.ts                # Token generation/verification/refresh
-│   │   │   └── formatMeal.ts         # Meal data transformation
-│   │   └── server.ts                 # Application bootstrap
+│   │   │   ├── jwt.ts                        # Token generation, refresh rotation, hashing
+│   │   │   └── formatMeal.ts                 # Format populated menu recommendations
+│   │   └── server.ts                         # Express app bootstrap & route mounting
 │   ├── package.json
-│   ├── tsconfig.json
-│   └── nodemon.json
+│   └── tsconfig.json
 │
-├── frontend/                         # React + Vite SPA
+├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── admin/    — AdminSidebar.tsx, AdminTopbar.tsx
-│   │   │   ├── student/  — StudentSidebar.tsx, StudentTopbar.tsx
-│   │   │   ├── worker/   — WorkerTopbar.tsx
-│   │   │   ├── common/   — RaiseIssueForm.tsx
-│   │   │   └── ui/       — button.tsx, card.tsx, input.tsx, label.tsx, tabs.tsx
+│   │   │   ├── admin/                        # AdminSidebar, AdminTopbar
+│   │   │   ├── student/                      # StudentSidebar, StudentTopbar
+│   │   │   ├── worker/                       # WorkerTopbar
+│   │   │   ├── common/                       # RaiseIssueForm
+│   │   │   └── ui/                           # button, card, input, label, tabs
 │   │   ├── contexts/
-│   │   │   ├── AuthContext.tsx        # Auth provider
-│   │   │   └── AuthContextType.ts     # TypeScript interface
+│   │   │   ├── AuthContext.tsx               # Auth provider with login/logout
+│   │   │   └── AuthContextType.ts            # AuthContext type + createContext
 │   │   ├── hooks/
-│   │   │   ├── useApi.ts              # Authenticated fetch wrapper + token refresh
-│   │   │   ├── useAuth.ts             # Context consumer hook
-│   │   │   └── useMessService.ts      # Menu operation hooks
+│   │   │   ├── useApi.ts                     # Generic fetch wrapper with auto-refresh
+│   │   │   ├── useAuth.ts                    # Convenience hook for AuthContext
+│   │   │   └── useMessService.ts             # Menu admin operations
 │   │   ├── lib/
-│   │   │   └── utils.ts               # cn() classname merge utility
+│   │   │   └── utils.ts                      # cn() utility (clsx + tailwind-merge)
 │   │   ├── pages/
-│   │   │   ├── login/    — login.tsx, QRLogin.tsx, LoginLink.tsx, SetPassword.tsx
-│   │   │   ├── admin/    — 10 pages
-│   │   │   ├── student/  — 8 pages
-│   │   │   └── worker/   — Dashboard.tsx, WorkerLayout.tsx
+│   │   │   ├── admin/                        # 10 admin pages
+│   │   │   ├── student/                      # 8 student pages
+│   │   │   ├── worker/                       # 2 worker pages
+│   │   │   └── login/                        # 4 auth pages
 │   │   ├── routes/
-│   │   │   ├── router.tsx             # Root route configuration
-│   │   │   ├── AdminRoutes.tsx        # Admin nested routes
-│   │   │   └── StudentRoutes.tsx      # Student nested routes
+│   │   │   ├── router.tsx                    # Top-level route tree
+│   │   │   ├── AdminRoutes.tsx               # Admin route group
+│   │   │   └── StudentRoutes.tsx             # Student route group
 │   │   ├── services/
-│   │   │   └── authService.ts         # Auth API client + credential management
+│   │   │   └── authService.ts                # API calls for auth, token management
 │   │   ├── types/
-│   │   │   └── auth.ts                # Auth TypeScript interfaces
-│   │   ├── App.tsx                    # Root component
-│   │   ├── main.tsx                   # DOM entry
-│   │   └── index.css                  # Global styles
+│   │   │   └── auth.ts                       # Type definitions for auth
+│   │   ├── App.tsx                           # Router + Toaster wrapper
+│   │   ├── main.tsx                          # React DOM entry + AuthProvider
+│   │   └── index.css                         # Global styles
 │   ├── package.json
-│   ├── vite.config.ts                 # Vite config with @ alias
+│   ├── vite.config.ts
 │   ├── tailwind.config.js
-│   └── vercel.json                    # SPA rewrite rules for Vercel
+│   └── vercel.json                           # Vercel deployment config
 │
 └── README.md
 ```
 
-### Data Flow Architecture
+---
+
+## 4. System Architecture Diagram
 
 ```mermaid
-graph LR
-    subgraph Frontend
-        A[Browser] -->|fetch| B[useApi Hook]
-        B -->|Bearer JWT| C[API Endpoints]
+graph TB
+    subgraph "Frontend - React + Vite"
+        UI["React Pages"]
+        AuthCtx["AuthContext"]
+        UseApi["useApi Hook"]
+        AuthSvc["authService"]
     end
-    
-    subgraph Backend
-        C --> D[Middleware Pipeline]
-        D -->|verifyToken| E[Controller]
-        D -->|requireRole| E
-        E --> F[Service Layer]
-        E --> G[Model Layer]
-        F --> G
-        G -->|Mongoose| H[(MongoDB)]
+
+    subgraph "Backend - Express + TypeScript"
+        Server["server.ts"]
+        MW["Middlewares"]
+        Routes["Route Layer"]
+        Controllers["Controller Layer"]
+        Services["Service Layer"]
+        Models["Mongoose Models"]
     end
-    
-    subgraph Auth
-        I[localStorage] -->|accessToken| B
-        I -->|refreshToken| J[authService]
-        J -->|POST /auth/refresh| C
+
+    subgraph "Data Layer"
+        MongoDB["MongoDB"]
     end
+
+    UI --> UseApi
+    UI --> AuthSvc
+    AuthCtx --> AuthSvc
+    UseApi -->|"HTTP + JWT"| Server
+    AuthSvc -->|"HTTP"| Server
+    Server --> MW
+    MW -->|"verifyToken + requireRole"| Routes
+    Routes --> Controllers
+    Controllers --> Services
+    Controllers --> Models
+    Services --> Models
+    Models --> MongoDB
 ```
 
 ---
 
-## 4. Database Schema & Entity Relationships
+## 5. Data Flow
+
+### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+    participant DB as MongoDB
+
+    Note over C,S: Admin Registration
+    C->>S: POST /api/auth/register-admin
+    S->>DB: Create Hostel + Admin User
+    S->>DB: Store hashed refresh token
+    S-->>C: accessToken + refreshToken
+
+    Note over C,S: First-Time User Login via QR
+    C->>S: POST /api/auth/login-qr with qrToken
+    S->>DB: Find user by qrToken
+    alt Password not set
+        S-->>C: setPasswordURL
+        C->>S: POST /api/auth/set-password
+        S->>DB: Hash and store password
+        S-->>C: accessToken + refreshToken
+    else Password set
+        S-->>C: accessToken + refreshToken
+    end
+
+    Note over C,S: Token Refresh with Rotation
+    C->>S: POST /api/auth/refresh with refreshToken
+    S->>DB: findOneAndDelete old token
+    S->>DB: Create new refresh token
+    S-->>C: new accessToken + refreshToken
+```
+
+### Menu Generation Flow
+
+```mermaid
+sequenceDiagram
+    participant Students as Students
+    participant Admin as Admin
+    participant API as Backend API
+    participant DB as MongoDB
+
+    Students->>API: POST /api/student/votes
+    API->>DB: Upsert StudentVote
+
+    Admin->>API: POST /api/admin/menu/generate
+    API->>DB: Aggregation Pipeline on Dishes + StudentVotes
+    Note over API,DB: Computes voteScore, healthScore, costEfficiency, finalScore
+    API->>DB: Delete old MenuRecommendations
+    API->>DB: Insert new MenuRecommendations
+    API->>DB: Pick top 7 per meal and Upsert MessMenu
+    API-->>Admin: menuId
+
+    Admin->>API: GET /api/admin/menu/preview
+    API-->>Admin: Full menu with dish details
+
+    Admin->>API: POST /api/admin/menu/publish
+    API->>DB: Set MessMenu.published = true
+    API-->>Admin: Success
+```
+
+---
+
+## 6. Database Schema & Relationships
 
 ### Entity-Relationship Diagram
 
 ```mermaid
 erDiagram
-    HOSTEL {
-        ObjectId _id PK
+    Hostel {
+        ObjectId _id
         String name
         String domain UK
         Date createdAt
     }
-    
-    USER {
-        ObjectId _id PK
+
+    User {
+        ObjectId _id
         ObjectId hostelId FK
         String name
         String email UK
         String registrationNo
-        String role
+        String role "ADMIN or STUDENT or WORKER"
         String roomNo
         String jobType
         String qrToken UK
         String passwordHash
         Boolean isPasswordSet
-        Boolean isActive
         String loginURL UK
         Date loginURLExpires
+        Boolean isActive
         Date createdAt
     }
-    
-    DISH {
-        ObjectId _id PK
+
+    Dish {
+        ObjectId _id
         ObjectId hostelId FK
         String name
-        String mealType
+        String mealType "Breakfast or Lunch or Dinner"
         String category
-        Number priceScore
-        Number healthScore
-        String status
+        Number priceScore "1 to 5"
+        Number healthScore "1 to 5"
+        String status "UNDER_REVIEW or ACTIVE or INACTIVE"
         ObjectId suggestedBy FK
         ObjectId approvedBy FK
         String rejectionReason
-        Map weeklyVotes
     }
-    
-    STUDENT_VOTE {
-        ObjectId _id PK
+
+    StudentVote {
+        ObjectId _id
         ObjectId hostelId FK
-        ObjectId userId FK
-        ObjectId_Array breakfast
-        ObjectId_Array lunch
-        ObjectId_Array dinner
+        ObjectId userId FK_UK
+        ObjectIdArray breakfast
+        ObjectIdArray lunch
+        ObjectIdArray dinner
     }
-    
-    MENU_RECOMMENDATION {
-        ObjectId _id PK
+
+    MenuRecommendation {
+        ObjectId _id
         ObjectId hostelId FK
         String mealType
         ObjectId dishId FK
@@ -289,883 +377,766 @@ erDiagram
         Number finalScore
         Date computedAt
     }
-    
-    MESS_MENU {
-        ObjectId _id PK
-        ObjectId hostelId FK
-        ObjectId_Array breakfast
-        ObjectId_Array lunch
-        ObjectId_Array dinner
+
+    MessMenu {
+        ObjectId _id
+        ObjectId hostelId FK_UK
+        ObjectIdArray breakfast "7 MenuRecommendation refs"
+        ObjectIdArray lunch "7 MenuRecommendation refs"
+        ObjectIdArray dinner "7 MenuRecommendation refs"
         Date generatedAt
         Boolean published
     }
-    
-    MEAL_REVIEW {
-        ObjectId _id PK
+
+    Issue {
+        ObjectId _id
+        ObjectId hostelId FK
+        ObjectId raisedBy FK
+        ObjectId assignedTo FK
+        String category
+        String priority "LOW or MEDIUM or HIGH or URGENT"
+        String status "OPEN or IN_PROGRESS or RESOLVED or CLOSED"
+        String description
+        String resolverNote
+    }
+
+    MealReview {
+        ObjectId _id
         ObjectId hostelId FK
         ObjectId studentId FK
         ObjectId dishId FK
         String mealType
         Date servedOn
-        Number rating
+        Number rating "1 to 5"
         String comment
-        String_Array images
     }
-    
-    ISSUE {
-        ObjectId _id PK
-        ObjectId hostelId FK
-        ObjectId raisedBy FK
-        ObjectId assignedTo FK
-        String category
-        String priority
-        String status
-        String description
-        String resolverNote
-    }
-    
-    REFRESH_TOKEN {
-        ObjectId _id PK
+
+    RefreshToken {
+        ObjectId _id
         ObjectId userId FK
-        String token UK
+        String token "SHA-256 hash"
         Date expiresAt
+        Date createdAt "TTL 7 days"
     }
-    
-    ACTIVITY_LOG {
-        ObjectId _id PK
+
+    ActivityLog {
+        ObjectId _id
         ObjectId userId FK
         String action
         String ip
         Date timestamp
     }
-    
-    HOSTEL ||--o{ USER : "has many"
-    HOSTEL ||--o{ DISH : "has many"
-    HOSTEL ||--o{ ISSUE : "has many"
-    HOSTEL ||--o| MESS_MENU : "has one active"
-    USER ||--o{ DISH : "suggests"
-    USER ||--o| STUDENT_VOTE : "casts one"
-    USER ||--o{ MEAL_REVIEW : "writes"
-    USER ||--o{ ISSUE : "raises"
-    USER ||--o{ ISSUE : "assigned to"
-    USER ||--o{ REFRESH_TOKEN : "has many"
-    USER ||--o{ ACTIVITY_LOG : "generates"
-    DISH ||--o{ MENU_RECOMMENDATION : "scored as"
-    MENU_RECOMMENDATION }o--|| MESS_MENU : "selected into"
+
+    Hostel ||--o{ User : "hostelId"
+    Hostel ||--o{ Dish : "hostelId"
+    Hostel ||--o{ Issue : "hostelId"
+    Hostel ||--o| MessMenu : "hostelId unique"
+    Hostel ||--o{ StudentVote : "hostelId"
+    Hostel ||--o{ MenuRecommendation : "hostelId"
+    Hostel ||--o{ MealReview : "hostelId"
+    User ||--o{ Issue : "raisedBy"
+    User ||--o{ MealReview : "studentId"
+    User ||--o| StudentVote : "userId unique"
+    User ||--o{ RefreshToken : "userId"
+    User ||--o{ ActivityLog : "userId"
+    Dish ||--o{ MenuRecommendation : "dishId"
+    Dish ||--o{ MealReview : "dishId"
 ```
 
-### Key Schema Constraints
+### Key Indexes & Constraints
 
-| Model | Constraint | File Reference |
-|---|---|---|
-| `User.email` | Unique globally | `backend/src/models/User.ts` |
-| `User.qrToken` | Unique + sparse | `backend/src/models/User.ts` |
-| `User.loginURL` | Unique + sparse | `backend/src/models/User.ts` |
-| `StudentVote.userId` | Unique (one vote record per student) | `backend/src/models/StudentVote.ts` |
-| `MessMenu.hostelId` | Unique index (one menu per hostel) | `backend/src/models/MessMenu.ts` |
-| `MessMenu.breakfast/lunch/dinner` | Exactly 7 items each | `backend/src/models/MessMenu.ts` |
-| `MealReview` | Compound unique: `{hostelId, studentId, dishId, servedOn}` | `backend/src/models/MealReview.ts` |
-| `RefreshToken.createdAt` | TTL index: auto-delete after 604800s (7 days) | `backend/src/models/RefreshToken.ts` |
-
----
-
-## 5. Authentication & Security
-
-### Authentication Flows
-
-The system supports **5 distinct authentication methods**:
-
-```mermaid
-flowchart TD
-    A[User Arrives] --> B{Who is logging in?}
-    
-    B -->|Admin First Time| C[POST /auth/register-admin]
-    C --> C1[Create Hostel + Admin User]
-    C1 --> C2[Return JWT + Refresh Token]
-    
-    B -->|Admin Returning| D[POST /auth/login-admin]
-    D --> D1[Verify bcrypt password]
-    D1 --> D2[Return JWT + Refresh Token]
-    
-    B -->|Student/Worker with Password| E[POST /auth/login-user]
-    E --> E1[Check isPasswordSet + isActive]
-    E1 --> E2[Verify bcrypt password]
-    E2 --> E3[Return JWT + Refresh Token]
-    
-    B -->|First-Time via QR| F[POST /auth/login-qr]
-    F --> F1{isPasswordSet?}
-    F1 -->|No| F2[Generate loginURL token]
-    F2 --> F3[Return setPasswordURL]
-    F3 --> F4[POST /auth/set-password]
-    F4 --> F5[Hash and save password]
-    F5 --> F6[Return JWT + Refresh Token]
-    F1 -->|Yes| F7[Return JWT + Refresh Token]
-    
-    B -->|Via Magic Link| G[POST /auth/login-url]
-    G --> G1[Check loginURLExpires]
-    G1 --> G2[Clear loginURL after use]
-    G2 --> G3[Return JWT + Refresh Token]
-```
-
-### JWT Token Architecture
-
-| Token | Expiry | Storage (Frontend) | File |
+| Model | Index | Type | Notes |
 |---|---|---|---|
-| Access Token | 15 minutes | `localStorage.accessToken` | `backend/src/utils/jwt.ts` |
-| Refresh Token | 7 days | `localStorage.refreshToken` + MongoDB `RefreshToken` collection | `backend/src/utils/jwt.ts` |
-
-**JWT Payload Structure** (access token):
-```json
-{
-  "userId": "ObjectId string",
-  "email": "user@domain.com",
-  "role": "ADMIN|STUDENT|WORKER",
-  "hostelId": "ObjectId string"
-}
-```
-
-### Token Refresh Flow
-
-Implemented in `frontend/src/hooks/useApi.ts`:
-
-1. API call returns `401`
-2. `useApi` hook reads `refreshToken` from `localStorage`
-3. Calls `POST /auth/refresh` with the refresh token
-4. On success: stores new token pair, retries original request
-5. On failure: clears tokens, redirects to `/login`
-
-> **IMPORTANT**: The refresh flow does **not** revoke the old refresh token before issuing a new one. This means multiple valid refresh tokens can coexist for the same user.
-
-### Middleware Pipeline
-
-Every protected request passes through this sequence:
-
-```
-Request → helmet() → cors() → express.json() → verifyToken → requireRole → Controller
-```
-
-| Middleware | File | Function |
-|---|---|---|
-| `verifyToken` | `backend/src/middlewares/verifyToken.middleware.ts` | Extracts JWT from `Authorization: Bearer <token>`, decodes payload, sets `req.user` |
-| `requireRole` | `backend/src/middlewares/requireRole.middleware.ts` | Checks `req.user.role` against allowed roles array |
-| `dishSuggestionRateLimit` | `backend/src/middlewares/dishRateLimit.middleware.ts` | Counts Dish documents by `suggestedBy` in last 7 days; blocks if >= 3 |
-| `errorHandler` | `backend/src/middlewares/errorHandler.ts` | Catches uncaught errors, returns 500 |
-
-### Multi-Tenancy Enforcement
-
-Data isolation is enforced at the **application layer**, not the database layer:
-
-- Every model (except `Hostel` and `RefreshToken`) has a `hostelId` field.
-- Controllers read `req.user.hostelId` (from JWT) and filter all queries by it.
-- The `adminUser.controller.ts` performs an **additional** check: it fetches the admin's user record from DB and verifies `admin.hostelId` matches the target record's `hostelId`.
-
-> **CAUTION**: The `issue.routes.ts` file applies `verifyToken` globally but does NOT apply `requireRole` on `POST /`, `GET /my-issues`, or `PATCH /:issueId/status`. The controller logic handles authorization internally, but the route-level protection is inconsistent with other admin routes.
-
-### Security Hardening
-
-- **Helmet.js**: Enabled globally (`backend/src/server.ts:40`)
-- **CORS**: Restricted to single `FRONTEND_URL` origin with credentials
-- **bcrypt salt rounds**: 10 (hardcoded in `auth.controller.ts:54`)
-- **JSON body limit**: 10MB (`server.ts:49`)
-- **Password minimum length**: 8 characters (checked in controller, not model)
-- **QR tokens**: 32 random bytes, hex-encoded
-- **Credential Management API**: Frontend uses browser's `navigator.credentials` for autofill
+| `User` | `email` | Unique | Global email uniqueness |
+| `User` | `qrToken` | Unique, sparse | Only for students/workers |
+| `User` | `loginURL` | Unique, sparse | Only during onboarding |
+| `StudentVote` | `userId` | Unique | One vote record per user |
+| `MessMenu` | `hostelId` | Unique | One menu per hostel at a time |
+| `MealReview` | `(hostelId, studentId, dishId, servedOn)` | Compound unique | One review per student per dish per day |
+| `RefreshToken` | `token` | Unique | Hashed JWT |
+| `RefreshToken` | `createdAt` | TTL (604800s) | Auto-delete after 7 days |
+| `Hostel` | `domain` | Unique | Prevents collision |
 
 ---
 
-## 6. Feature-by-Feature Analysis
+## 7. Authentication & Security Deep Dive
 
-### 6.1 Multi-Tenant Hostel Management
+### Authentication Mechanisms
 
-**Business Purpose**: Allow multiple independent hostels to operate on a single deployment, with complete data isolation.
+The system supports **four** login methods:
 
-**How It Works**:
+1. **Admin email + password**: Traditional bcrypt-verified login. Admin creates their password during registration.
+2. **Student/Worker email + password**: Only works after the user has set their password via the onboarding flow.
+3. **QR Code login**: Admin generates a QR code containing a 32-byte hex token. Scanning it either logs the user in (if password is set) or redirects to the set-password page.
+4. **Magic Link login**: A tokenized URL (24h expiry) that logs the user in directly.
 
-1. Admin registers via `POST /api/auth/register-admin`
-2. A `Hostel` document is created with a generated `domain` (hostel name → lowercase, strip spaces, truncate to 10 chars, append `.com`)
-3. Admin email **must** end with `@{domain}` — enforced in `auth.controller.ts:37`
-4. All subsequent user emails are auto-generated using `{name}_{roomNo}@{domain}` pattern
+### JWT Strategy
 
-**Key Files**:
-- `backend/src/models/Hostel.ts` — Schema: `{ name, domain, createdAt }`
-- `backend/src/controllers/auth.controller.ts` — `registerAdmin()` (lines 18–90)
-- `backend/src/controllers/adminUser.controller.ts` — `createUser()` uses admin's `hostelId`
-
-**Domain Generation Logic** (`auth.controller.ts:10-15`):
-```typescript
-const generateDomain = (hostelName: string): string => {
-  return hostelName.toLowerCase().replace(/\s+/g, '').substring(0, 10) + '.com';
-};
-```
-
-> **WARNING**: Two hostels with names starting with the same 10 characters would generate the same domain. The Hostel model enforces `unique: true` on `domain`, so the second registration would fail with a MongoDB duplicate key error — but the error message would be unhelpful.
-
----
-
-### 6.2 User Lifecycle Management
-
-**Business Purpose**: Admin creates and manages student/worker accounts with passwordless initial authentication.
-
-**Technical Flow**:
-
-```mermaid
-sequenceDiagram
-    participant Admin
-    participant API
-    participant DB
-    participant Student
-    
-    Admin->>API: POST /api/admin/users
-    API->>DB: Create User (isPasswordSet=false)
-    API->>API: Generate QR token + Login URL
-    API-->>Admin: user, qrCode, loginURL, qrToken
-    Admin-->>Student: Share QR code or magic link
-    
-    Student->>API: POST /api/auth/login-qr
-    API->>DB: Find user by qrToken
-    API-->>Student: setPasswordURL (first login)
-    
-    Student->>API: POST /api/auth/set-password
-    API->>DB: Update passwordHash, isPasswordSet=true
-    API-->>Student: accessToken, refreshToken
-```
-
-**User States**:
-- `isPasswordSet: false` → First-time user, cannot use email/password login
-- `isActive: true` → Normal state
-- `isActive: false` → Deactivated, blocked from login
-- Deleted → Permanently removed from DB
-
-**Key Files**:
-- `backend/src/controllers/adminUser.controller.ts` — Full CRUD: `createUser`, `getUsers`, `getUser`, `deactivateUser`, `reactivateUser`, `deleteUser`, `regenerateQRCode`, `regenerateLoginToken`
-
-**Auto-generated Email Pattern**:
-- Students: `{name}_{roomNo}@{hostel.domain}`
-- Workers: `{name}@{hostel.domain}`
-
-**Activity Logging**: Every admin action (create, deactivate, reactivate, delete, QR regenerate, login token regenerate) is logged to `ActivityLog`.
-
----
-
-### 6.3 Dish Management & Suggestion Pipeline
-
-**Business Purpose**: Build a catalog of dishes that students vote on. Students can suggest new dishes; admins curate the catalog.
-
-**Dish Lifecycle**:
-
-```mermaid
-stateDiagram-v2
-    [*] --> UNDER_REVIEW: Student suggests dish
-    [*] --> ACTIVE: Admin creates dish directly
-    UNDER_REVIEW --> ACTIVE: Admin approves
-    UNDER_REVIEW --> INACTIVE: Admin rejects
-    ACTIVE --> INACTIVE: Admin deactivates
-```
-
-**Two Creation Paths**:
-
-| Path | Endpoint | Initial Status | Scores Set? |
+| Token | Lifetime | Storage Client | Storage Server |
 |---|---|---|---|
-| Student suggestion | `POST /api/dishes` | `UNDER_REVIEW` | No (null) |
-| Admin direct creation | `POST /api/admin/dishes` | `ACTIVE` | Yes (defaults to 3) |
+| Access Token | 15 minutes | localStorage | Not stored |
+| Refresh Token | 7 days | localStorage | SHA-256 hash in MongoDB |
 
-**Rate Limiting**: Students are limited to **3 dish suggestions per 7-day rolling window**. Enforced by `dishSuggestionRateLimit` middleware.
+**Refresh Token Rotation**: The `verifyRefreshToken()` function uses `findOneAndDelete()` — consuming the old token atomically and requiring a new one to be issued. This is a one-time-use pattern that mitigates token replay attacks.
 
-**Duplicate Prevention**: Both paths check for existing dishes with the same name (case-insensitive regex).
+### RBAC Implementation
 
-**Key Files**:
-- `backend/src/controllers/dish.controller.ts` — `suggestDish()`, `createAdminDish()`
+- **Middleware chain**: `verifyToken` then `requireRole('ADMIN')` (or `'STUDENT'`, `'WORKER'`).
+- Roles are embedded in the JWT payload (`role` field) and also checked against the database in controllers.
+- **IDOR protection**: Controllers verify that the resource's `hostelId` matches `req.user.hostelId` before performing operations.
+
+### Security Headers & Policies
+
+- **Helmet.js**: Adds `X-Content-Type-Options`, `X-Frame-Options`, CSP headers, etc.
+- **CORS**: Restricted to `FRONTEND_URL` with credentials support.
+- **JSON body limit**: 10MB (`express.json({ limit: '10mb' })`).
+- **Password hashing**: bcrypt with 10 salt rounds.
+
+### Credential Management API
+
+The frontend integrates with the browser's Credential Management API (`navigator.credentials.store/get`) to offer autofill on supported browsers.
+
+---
+
+## 8. Feature-by-Feature Analysis
+
+### 8.1 Multi-Tenant Hostel Provisioning
+
+**Business purpose**: Allow independent hostels to share a single deployment while maintaining strict data isolation.
+
+**How it works**:
+
+| Aspect | Detail |
+|---|---|
+| Entry point | `POST /api/auth/register-admin` |
+| Controller | `auth.controller.ts` → `registerAdmin()` |
+| Domain generation | First 10 chars of hostel name (lowercased, spaces removed) + `.com` |
+| Email constraint | Admin email **must** end with `@<generated-domain>` |
+| Collision handling | Checks both exact name match and domain collision |
+| Side effects | Creates `Hostel` doc + `User` doc (role=ADMIN) + issues JWT pair |
+
+**Data isolation mechanism**: Every model that holds tenant-specific data has a `hostelId` field. Controllers always filter by `req.user.hostelId`.
+
+**Gotcha**: The domain is derived from the first 10 characters. Two hostels named "University" and "University2" would produce the same domain `university.com` — collision error.
+
+---
+
+### 8.2 Authentication System
+
+**Business purpose**: Secure access with minimal friction for first-time users (QR/magic link) and strong security (JWT rotation, bcrypt).
+
+**Files involved**:
+- `backend/src/controllers/auth.controller.ts` — All 8 auth handlers
+- `backend/src/utils/jwt.ts` — Token generation, verification, rotation
+- `backend/src/routes/auth.routes.ts` — Route definitions
+- `frontend/src/services/authService.ts` — Client-side auth operations
+- `frontend/src/contexts/AuthContext.tsx` — React state management
+- `frontend/src/hooks/useApi.ts` — Auto-refresh on 401
+
+**Login flow matrix**:
+
+| Method | Endpoint | Pre-conditions | Returns |
+|---|---|---|---|
+| Admin login | `POST /login-admin` | Password set at registration | `accessToken + refreshToken` |
+| User login | `POST /login-user` | Password set + active account | `accessToken + refreshToken` |
+| QR login | `POST /login-qr` | Valid `qrToken` in DB | If password set: tokens. If not: `setPasswordURL` |
+| Magic link | `POST /login-url` | Valid `loginURL` + not expired (24h) | `accessToken + refreshToken` |
+| Set password | `POST /set-password` | Valid `loginURL` + password >= 8 chars | `accessToken + refreshToken` |
+
+**Auto-refresh**: `useApi.ts` intercepts 401 responses, calls `authService.refreshToken()`, retries the original request with the new token. If refresh fails, clears tokens and redirects to `/login`.
+
+---
+
+### 8.3 User Lifecycle Management
+
+**Business purpose**: Admins create, manage, deactivate, and delete student/worker accounts within their hostel.
+
+**Files**:
+- `backend/src/controllers/adminUser.controller.ts` — 7 handler functions
+- `backend/src/routes/adminUser.routes.ts`
+- `frontend/src/pages/admin/AdminUsers.tsx`, `AdminCreateUser.tsx`
+
+**Operations**:
+
+| Operation | Endpoint | Key Behavior |
+|---|---|---|
+| Create user | `POST /api/admin/users` | Auto-generates email from `name_roomNo@domain`. Generates QR token + login URL. Logs to ActivityLog. |
+| List users | `GET /api/admin/users` | Filters by hostelId, excludes ADMIN accounts. Supports `role` and `status` query params. |
+| Get user | `GET /api/admin/users/:userId` | IDOR-safe: checks `hostelId` match |
+| Deactivate | `PATCH /api/admin/users/:userId/deactivate` | Sets `isActive=false`. Deactivated users cannot login. |
+| Reactivate | `PATCH /api/admin/users/:userId/reactivate` | Sets `isActive=true` |
+| Delete | `DELETE /api/admin/users/:userId` | **Cascading delete**: removes `StudentVote` + `RefreshToken` records, then the User |
+| Regen QR | `POST /api/admin/users/:userId/qr-code` | Generates new 32-byte hex token, overwrites old one |
+| Regen login URL | `POST /api/admin/users/:userId/login-token` | Generates new token + 24h expiry |
+
+**Gotcha**: The cascading delete does **not** remove `MealReview`, `Issue`, `Dish` (suggestedBy), or `ActivityLog` records. Orphaned references may exist.
+
+---
+
+### 8.4 Dish Management & Suggestion Pipeline
+
+**Business purpose**: Build a curated catalog of menu items. Students can suggest new dishes; admins curate.
+
+**Files**:
+- `backend/src/controllers/dish.controller.ts` — `createAdminDish()`, `suggestDish()`
 - `backend/src/controllers/adminDish.controller.ts` — `fetchDishes()`, `approveDish()`, `rejectDish()`, `updateDish()`, `deleteDish()`
 - `backend/src/models/Dish.ts`
 
+**Dish lifecycle**:
+
+```mermaid
+stateDiagram-v2
+    state "UNDER_REVIEW" as UR
+    state "ACTIVE" as A
+    state "INACTIVE" as I
+    [*] --> UR: Student suggests
+    [*] --> A: Admin creates directly
+    UR --> A: Admin approves with scores
+    UR --> I: Admin rejects with reason
+    A --> A: Admin updates properties
+    A --> [*]: Admin deletes
+    I --> [*]: Admin deletes
+```
+
+**Key rules**:
+- Dish names are unique per hostel (case-insensitive regex check).
+- Student-suggested dishes start as `UNDER_REVIEW` and have no price/health scores until approved.
+- Admin-created dishes are immediately `ACTIVE` with default scores of 3 if not provided.
+- Only `ACTIVE` dishes are eligible for voting and menu generation.
+
 ---
 
-### 6.4 Student Voting System
+### 8.5 Student Voting System
 
-**Business Purpose**: Allow students to express meal preferences that drive the algorithmic menu generation.
+**Business purpose**: Democratically determine meal preferences. Each student selects exactly 7 dishes per meal type (Breakfast, Lunch, Dinner).
 
-**How Voting Works**:
-
-1. Student fetches active dishes via `GET /api/menu-votes/votes`
-2. Student selects **exactly 7 dishes** for each meal type (breakfast, lunch, dinner)
-3. Student submits via `POST /api/menu-votes/votes`
-4. System validates: all IDs must be valid ObjectIds, exist in DB, be ACTIVE, belong to the student's hostel
-5. Stored as a single `StudentVote` document per student (upserted)
-
-**Validation Rules** (`backend/src/controllers/studentVote.controller.ts`):
-- Exactly 7 dishes per meal type — hardcoded requirement
-- All dish IDs must be valid MongoDB ObjectIds
-- All dishes must be `ACTIVE` and belong to the student's hostel
-- Duplicate IDs within a meal are allowed
-
-**Key Files**:
+**Files**:
 - `backend/src/controllers/studentVote.controller.ts` — `getStudentVotes()`, `saveStudentVotes()`
 - `backend/src/models/StudentVote.ts`
+- `frontend/src/pages/student/StudentVoting.tsx`
 
-> **NOTE**: The `weeklyVotes` field on the `Dish` model is a Map but is **not directly updated by the voting controller**. The `weeklyVotes` Map is used during the aggregation pipeline in `menuComputation.service.ts`.
+**How it works**:
+1. Student fetches all `ACTIVE` dishes for their hostel + their current vote record.
+2. Student selects exactly **7 dishes per meal** (Breakfast, Lunch, Dinner = 21 total selections).
+3. Backend validates: exactly 7 per meal, all valid ObjectIds, all dishes ACTIVE and in the correct hostel.
+4. Uses `findOneAndUpdate` with `upsert: true` — students can re-vote anytime.
+
+**Constraint**: `StudentVote` has `userId` as unique — each student has exactly one vote document.
+
+**Gotcha**: The voting system is **continuous** — there's no voting window concept enforced in the backend. Students can update preferences anytime. The `useMessService.ts` hook references `openVoting` and `getVotingStatus` endpoints, but these are **not implemented** in the backend routes/controllers.
 
 ---
 
-### 6.5 Menu Computation Engine
+### 8.6 Menu Computation & Recommendation Engine
 
-**Business Purpose**: Algorithmically determine the optimal weekly menu based on student preferences, health scores, and cost efficiency.
+**Business purpose**: Algorithmically generate the optimal weekly menu by combining student preferences, nutritional value, and cost efficiency.
 
-**This is the most complex subsystem in the codebase.** It involves three service files working in sequence:
+**Files**:
+- `backend/src/services/menuComputation.service.ts` — MongoDB aggregation pipeline
+- `backend/src/services/menuBuilder.service.ts` — Top-7 selection
+- `backend/src/models/MenuRecommendation.ts`
 
-#### Step 1: Compute Recommendations (`menuComputation.service.ts`)
+**The Algorithm** (inside `computeMenuRecommendations()`):
 
-Runs a **MongoDB aggregation pipeline** on the `Dish` collection:
+The entire computation is a **single MongoDB aggregation pipeline**:
 
-1. **$match**: Active dishes for the hostel
-2. **$addFields**: Calculate `weeklyVoteCount` by reducing the `weeklyVotes` Map
-3. **$group**: Find the maximum vote count across all dishes (for normalization)
-4. **$addFields**: Calculate three scoring dimensions:
-   - `voteScore` = `weeklyVoteCount / maxVotes` (0 to 1, normalized)
-   - `costEfficiency` = `1 / priceScore` (inverse — lower price = higher efficiency)
-5. **$addFields**: Calculate **weighted final score**:
+1. **Filter**: Only `ACTIVE` dishes in the target hostel
+2. **$lookup StudentVotes**: For each dish, count how many times it appears across all students' vote arrays (breakfast + lunch + dinner)
+3. **Normalize votes**: `voteScore = weeklyVoteCount / maxVotes` (0-1 range)
+4. **Cost efficiency**: `costEfficiency = 1 / priceScore` (inversely proportional — cheaper = more efficient)
+5. **Final weighted score**:
    ```
    finalScore = (0.5 * voteScore) + (0.3 * healthScore) + (0.2 * costEfficiency)
    ```
-6. Results are saved to `MenuRecommendation` collection (old records deleted first)
 
-**Scoring Weights**:
-| Factor | Weight | Description |
-|---|---|---|
-| Vote Score | 50% | Student popularity |
-| Health Score | 30% | Nutritional value |
-| Cost Efficiency | 20% | Budget friendliness |
+6. **Persist**: Delete all old `MenuRecommendation` docs for this hostel, insert new ones.
 
-#### Step 2: Build Menu (`menuBuilder.service.ts`)
+**Menu Builder** (`buildMessMenu()`):
+- For each meal type, sort `MenuRecommendation` by `finalScore` descending, take top 7.
+- **Hard requirement**: Must have at least 7 dishes per meal type or throws an error.
+- Upserts the `MessMenu` document (one per hostel, unique index).
+- Sets `published: false` (draft state).
 
-For each meal type (Breakfast, Lunch, Dinner):
-1. Query `MenuRecommendation` sorted by `finalScore` descending
-2. Take top 7 dishes
-3. **Throws error** if fewer than 7 dishes exist for any meal type
-4. Upsert into `MessMenu` (one per hostel) with `published: false`
-
-#### Step 3: Cache / Retrieve (`menuCache.service.ts`)
-
-- `getCachedCurrentMenu()`: Fetches published `MessMenu` with full population of `Dish` data
-- `getCachedTodayMenu()`: Determines today's day index (Monday=0 through Sunday=6) and returns only that day's dishes
-
-> **IMPORTANT**: Despite the file name `menuCache.service.ts`, there is **no actual caching** (no Redis, no in-memory cache). Every call hits MongoDB directly.
-
-**Key Files**:
-- `backend/src/services/menuComputation.service.ts` — Aggregation pipeline
-- `backend/src/services/menuBuilder.service.ts` — Top-7 selection
-- `backend/src/services/menuCache.service.ts` — DB-direct retrieval
-- `backend/src/utils/formatMeal.ts` — Transforms populated meal data
+**Gotcha**: The scoring weights (0.5, 0.3, 0.2) are **hardcoded** in the aggregation pipeline. Changing them requires modifying `menuComputation.service.ts`.
 
 ---
 
-### 6.6 Mess Menu Management
+### 8.7 Menu Publishing & Retrieval
 
-**Business Purpose**: Admin workflow to generate, preview, and publish weekly menus.
+**Business purpose**: Admin reviews the generated menu and publishes it for students to see.
 
-**Admin Workflow**:
+**Files**:
+- `backend/src/controllers/adminMenu.controller.ts` — `publishMenu()`, `getMenuPreview()`
+- `backend/src/services/menuRetrieve.service.ts` — `getCurrentMenu()`, `getTodayMenu()`
+- `backend/src/controllers/studentMenu.controller.ts` — `getCurrentMessMenu()`, `getServedDishesToday()`
 
-```mermaid
-sequenceDiagram
-    participant Admin
-    participant API
-    participant ComputeService
-    participant BuilderService
-    participant DB
-    
-    Admin->>API: GET /api/admin/menu/voting/stats
-    API-->>Admin: totalVoters
-    
-    Admin->>API: POST /api/admin/menu/generate
-    API->>ComputeService: computeMenuRecommendations
-    ComputeService->>DB: Aggregation pipeline
-    ComputeService->>DB: Delete old, insert new recommendations
-    API->>BuilderService: buildMessMenu
-    BuilderService->>DB: Top-7 per meal, upsert MessMenu
-    API-->>Admin: menuId
-    
-    Admin->>API: GET /api/admin/menu/preview
-    API-->>Admin: Full menu with dish details
-    
-    Admin->>API: POST /api/admin/menu/publish
-    API->>DB: Set published=true
-    API-->>Admin: Published confirmation
-```
+**Menu structure**:
+- The `MessMenu` holds 7 `MenuRecommendation` ObjectIds per meal (breakfast, lunch, dinner).
+- Each `MenuRecommendation` references a `Dish` via `dishId`.
+- The 7 entries represent the **7 days of the week** (index 0 = Monday, index 6 = Sunday).
 
-**Key Files**:
-- `backend/src/controllers/adminMenu.controller.ts`
-- `backend/src/controllers/studentMenu.controller.ts`
+**Today's menu**: `getTodayMenu()` maps `new Date().getDay()` (0=Sunday) to a 0-6 index where Monday=0 and Sunday=6 (`jsDay === 0 ? 6 : jsDay - 1`).
+
+**Gotcha**: Only one menu exists per hostel (unique index on `hostelId`). Generating a new menu **overwrites** the previous one via `findOneAndUpdate` with `upsert: true`. There is no menu history.
 
 ---
 
-### 6.7 Meal Review & Satisfaction Analytics
+### 8.8 Meal Review & Rating System
 
-**Business Purpose**: Collect student feedback on served meals to inform future menu decisions.
+**Business purpose**: Post-meal quality feedback from students. Enables data-driven food quality improvement.
 
-**How Reviews Work**:
-
-1. Student submits review via `POST /api/reviews/submit` with `{ dishId, mealType, rating (1-5), comment, images[], servedOn }`
-2. Validations:
-   - Dish must exist, be ACTIVE, belong to student's hostel
-   - `mealType` must match the dish's `mealType`
-   - `servedOn` cannot be in the future
-   - Maximum 3 images per review
-   - One review per student per dish per day (compound unique index)
-
-**Admin Analytics** (`GET /api/admin/reviews/stats`):
-- **Per-dish stats**: Average rating + total reviews (via `$group` + `$lookup`)
-- **Date-wise trends**: Average rating + total reviews per day
-
-**Key Files**:
-- `backend/src/controllers/mealReview.controller.ts`
-- `backend/src/controllers/adminReview.controller.ts`
+**Files**:
+- `backend/src/controllers/mealReview.controller.ts` — `submitMealReview()`
+- `backend/src/controllers/adminReview.controller.ts` — `getMealReviews()`, `getReviewStats()`
 - `backend/src/models/MealReview.ts`
 
+**Review submission rules**:
+- Required fields: `dishId`, `mealType`, `rating` (1-5), `servedOn` (date)
+- Optional: `comment` (max 500 chars), `images` (max 3 URL strings)
+- The dish must be `ACTIVE` and the `mealType` must match the dish's `mealType`
+- `servedOn` cannot be in the future
+- **One review per student per dish per day** (compound unique index)
+
+**Admin analytics** (two aggregation pipelines):
+1. **Per-dish stats**: Average rating + total reviews per dish
+2. **Date-wise trend**: Average rating + review count grouped by `servedOn` date
+
+**Admin reviews listing**: Supports filtering by `mealType`, `date`, `dishId` with pagination (page/limit, capped at 50).
+
 ---
 
-### 6.8 Issue Tracking & Resolution
+### 8.9 Issue Tracking & Maintenance
 
-**Business Purpose**: Enable students to report hostel maintenance issues and track their resolution.
+**Business purpose**: End-to-end maintenance request lifecycle — from student report to worker resolution.
 
-**Issue Lifecycle**:
+**Files**:
+- `backend/src/controllers/issue.controller.ts` — 7 handler functions
+- `backend/src/models/Issue.ts`
+- `frontend/src/pages/student/StudentIssues.tsx`, `frontend/src/pages/admin/AdminIssues.tsx`, `frontend/src/pages/worker/Dashboard.tsx`
+
+**Issue lifecycle**:
 
 ```mermaid
 stateDiagram-v2
     [*] --> OPEN: Student creates issue
     OPEN --> IN_PROGRESS: Admin assigns to worker
     IN_PROGRESS --> OPEN: Admin unassigns
-    IN_PROGRESS --> RESOLVED: Worker/Admin updates
-    RESOLVED --> CLOSED: Worker/Admin updates
+    IN_PROGRESS --> RESOLVED: Worker resolves
+    RESOLVED --> CLOSED: Admin closes
     OPEN --> CLOSED: Admin closes directly
+    IN_PROGRESS --> CLOSED: Admin closes directly
 ```
 
-**Priority Levels**: `LOW`, `MEDIUM`, `HIGH`, `URGENT`
+**Authorization matrix**:
 
-**Authorization Matrix**:
-
-| Action | Student | Worker | Admin |
+| Action | Admin | Student creator | Assigned Worker |
 |---|---|---|---|
-| Create Issue | Yes | Yes | Yes |
-| View Own Issues | Yes | — | — |
-| View Assigned Issues | — | Yes | — |
-| View All Issues | — | — | Yes (same hostel) |
-| Assign/Unassign | — | — | Yes (same hostel) |
-| Update Status | — | Yes (if assigned) | Yes (same hostel) |
-| Delete Issue | Yes (if creator) | — | Yes (same hostel) |
+| Create issue | No | Yes | No |
+| View all issues | Yes | No | No |
+| View own issues | No | Yes | No |
+| View assigned issues | No | No | Yes |
+| Assign issue | Yes | No | No |
+| Update status | Yes | No | Yes (assigned only) |
+| Delete issue | Yes | Yes (own only) | No |
 
-**Unassign Mechanism**: Sending `workerId: "UNASSIGN"` to `PATCH /issues/:issueId/assign` clears the assignment and resets status to `OPEN`. This is a magic string.
+**IDOR protection**: Admin can only assign workers and manage issues within their own hostel. The `issue.hostelId` is compared against `admin.hostelId`.
 
-**Key Files**:
-- `backend/src/controllers/issue.controller.ts`
-- `backend/src/models/Issue.ts`
-- `backend/src/routes/issue.routes.ts`
+**Special behavior**: Sending `workerId: "UNASSIGN"` in the assign endpoint removes the worker and resets the issue to `OPEN`.
 
 ---
 
-### 6.9 Admin Dashboard & Telemetry
+### 8.10 Admin Dashboard & Analytics
 
-**Business Purpose**: Provide a quick overview of hostel operations.
+**Business purpose**: Central command view with key metrics and recent activity.
 
-**Endpoint**: `GET /api/admin/dashboard`
+**File**: `backend/src/controllers/adminDashboard.controller.ts`
 
-**Response Shape**:
-```json
-{
-  "totalStudents": 150,
-  "activeDishes": 42,
-  "openIssues": 7,
-  "totalVotes": 85,
-  "recentActivity": [...]
-}
-```
+**Metrics returned**:
 
-Uses `Promise.all()` for parallel query execution across 4 collections.
+| Metric | Query |
+|---|---|
+| `totalStudents` | Active students in hostel |
+| `activeDishes` | Dishes with status `ACTIVE` |
+| `openIssues` | Issues with status `OPEN` or `IN_PROGRESS` |
+| `totalVotes` | Count of `StudentVote` documents |
+| `recentActivity` | Last 15 `ActivityLog` entries for users in this hostel |
 
-**Key File**: `backend/src/controllers/adminDashboard.controller.ts`
+**Performance note**: Uses `Promise.all()` for parallel DB queries but then makes a sequential query to find all user IDs in the hostel before filtering ActivityLogs — this two-step approach could be slow for large hostels.
 
 ---
 
-### 6.10 Student Notifications
+### 8.11 Student Notifications
 
-**Business Purpose**: Inform students about the outcome of their dish suggestions.
+**Business purpose**: Inform students about the status of their suggested dishes.
 
-**Endpoint**: `GET /api/student/notifications`
+**File**: `backend/src/controllers/studentNotification.controller.ts`
 
-Queries `Dish` collection for dishes where `suggestedBy` matches the student and status is `ACTIVE` (approved) or `INACTIVE` (rejected).
+**How it works**: Queries `Dish` documents where `suggestedBy` = current user and `status` is `ACTIVE` (approved) or `INACTIVE` (rejected). Maps to notification objects with type `APPROVED` or `REJECTED`, including rejection reason.
 
-> **NOTE**: These are not push notifications. They are polled via REST API. Derived from dish status changes, not from a dedicated notification model.
-
-**Key File**: `backend/src/controllers/studentNotification.controller.ts`
+**Note**: This is a poll-based system, not push notifications. The student frontend must fetch `/api/student/notifications` on page load.
 
 ---
 
-## 7. Cross-Feature Interaction Map
+## 9. Cross-Feature Interaction Map
 
 ```mermaid
-flowchart TD
-    A[Admin Creates Hostel] --> B[Admin Creates Users]
-    B --> C[Students Set Passwords]
-    
-    C --> D[Students Suggest Dishes]
-    D --> E[Admin Approves/Rejects Dishes]
-    E -->|Approved| F[Dish becomes ACTIVE]
-    F --> G[Students Vote on Dishes]
-    
-    G --> H[Admin Generates Menu]
-    H --> I[Computation Engine Scores Dishes]
-    I --> J[Builder Selects Top 7 per Meal]
-    J --> K[Admin Reviews Preview]
-    K --> L[Admin Publishes Menu]
-    
-    L --> M[Students View Today Menu]
-    M --> N[Students Submit Meal Reviews]
-    N --> O[Admin Views Review Analytics]
-    
-    C --> P[Students Raise Issues]
-    P --> Q[Admin Assigns to Workers]
-    Q --> R[Workers Resolve Issues]
-    
-    E -->|Rejected| S[Student Sees Notification]
-    E -->|Approved| S
+graph LR
+    subgraph "User Management"
+        CreateUser["Create User"]
+        DeleteUser["Delete User"]
+    end
+
+    subgraph "Dish Pipeline"
+        SuggestDish["Suggest Dish"]
+        ApproveDish["Approve Dish"]
+        DishCatalog["Active Dishes"]
+    end
+
+    subgraph "Voting to Menu"
+        Vote["Student Votes"]
+        Compute["Menu Computation"]
+        BuildMenu["Build Menu"]
+        Publish["Publish Menu"]
+    end
+
+    subgraph "Post-Service"
+        TodayMenu["Today Menu"]
+        Review["Meal Review"]
+        ReviewStats["Review Stats"]
+    end
+
+    subgraph "Maintenance"
+        RaiseIssue["Raise Issue"]
+        AssignIssue["Assign to Worker"]
+        ResolveIssue["Resolve Issue"]
+    end
+
+    CreateUser -->|"generates QR and link"| Auth["Authentication"]
+    DeleteUser -->|"cascades"| Vote
+    SuggestDish --> ApproveDish
+    ApproveDish --> DishCatalog
+    DishCatalog --> Vote
+    Vote --> Compute
+    Compute --> BuildMenu
+    BuildMenu --> Publish
+    Publish --> TodayMenu
+    TodayMenu --> Review
+    Review --> ReviewStats
+    RaiseIssue --> AssignIssue
+    AssignIssue --> ResolveIssue
+    SuggestDish -.->|"notifications"| Notifications["Student Notifications"]
+    ApproveDish -.->|"notifications"| Notifications
 ```
 
-### Feature Dependencies
-
-| Feature | Depends On | Feeds Into |
-|---|---|---|
-| User Management | Hostel exists | All other features |
-| Dish Suggestions | Active user | Dish Catalog |
-| Dish Approvals | Pending suggestions | Voting, Menu |
-| Student Voting | Active dishes (min 7 per meal) | Menu Computation |
-| Menu Computation | Active dishes with votes | Menu Builder |
-| Menu Builder | Computed recommendations (min 7 per meal) | Mess Menu |
-| Menu Publishing | Generated (unpublished) menu | Student Menu View, Reviews |
-| Meal Reviews | Published menu + served dishes | Admin Analytics |
-| Issue Tracking | Active users | Worker Dashboard |
-| Dashboard Stats | All features | Admin Dashboard |
+**Critical chain**: `Dishes -> Votes -> Computation -> Menu -> Publish -> Today's Menu -> Reviews`. Breaking any link (e.g., deleting dishes that are in votes) can cascade failures.
 
 ---
 
-## 8. Frontend Architecture
+## 10. Frontend Architecture
 
-### Application Shell
+### Component Hierarchy
 
 ```
-main.tsx → StrictMode → AuthProvider → App.tsx → Router → Toaster + AppRoutes
+<StrictMode>
+  <AuthProvider>          -- React Context for auth state
+    <BrowserRouter>
+      <Toaster />         -- Global toast notifications
+      <AppRoutes>
+        /login            -> Login (tab-based: Admin | Student | Worker)
+        /qr-login         -> QRLogin
+        /login-link       -> LoginLink
+        /set-password/:id -> SetPassword
+        /admin/register   -> AdminRegister
+
+        /admin            -> AdminLayout (Sidebar + Topbar + Outlet)
+          /dashboard      -> AdminDashboard
+          /users          -> AdminUsers
+          /create-user    -> AdminCreateUser
+          /voting         -> AdminVoting
+          /menu           -> AdminMessMenu
+          /reviews        -> AdminReviews
+          /issues         -> AdminIssues
+          /dishes         -> AdminDishApprovals
+
+        /student          -> StudentLayout (Sidebar + Topbar + Outlet)
+          /dashboard      -> StudentDashboard
+          /voting/status  -> StudentVoting
+          /menu           -> StudentMessMenu
+          /reviews        -> StudentReview
+          /suggest-dishes -> StudentSuggestDish
+          /issues         -> StudentIssues
+
+        /worker           -> WorkerLayout (Outlet only)
+          /dashboard      -> WorkerDashboard (issues management)
+
+        /                 -> Redirect to /login
+      </AppRoutes>
+    </BrowserRouter>
+  </AuthProvider>
+</StrictMode>
 ```
-
-### Routing Structure
-
-| Path | Component | Role |
-|---|---|---|
-| `/login` | `Login` | Public |
-| `/qr-login` | `QRLogin` | Public |
-| `/login-link` | `LoginLink` | Public |
-| `/set-password/:userId` | `SetPassword` | Public |
-| `/admin/register` | `AdminRegister` | Public |
-| `/admin/dashboard` | `AdminDashboard` | ADMIN |
-| `/admin/users` | `AdminUsers` | ADMIN |
-| `/admin/create-user` | `AdminCreateUser` | ADMIN |
-| `/admin/voting` | `AdminVoting` | ADMIN |
-| `/admin/menu` | `AdminMessMenu` | ADMIN |
-| `/admin/reviews` | `AdminReviews` | ADMIN |
-| `/admin/issues` | `AdminIssues` | ADMIN |
-| `/admin/dishes` | `AdminDishApprovals` | ADMIN |
-| `/student/dashboard` | `StudentDashboard` | STUDENT |
-| `/student/voting/status` | `StudentVoting` | STUDENT |
-| `/student/menu` | `StudentMessMenu` | STUDENT |
-| `/student/reviews` | `StudentReview` | STUDENT |
-| `/student/suggest-dishes` | `StudentSuggestDish` | STUDENT |
-| `/student/issues` | `StudentIssues` | STUDENT |
-| `/worker/dashboard` | `WorkerDashboard` | WORKER |
-| `/` | Redirects to `/login` | — |
 
 ### State Management
 
-- **Global State**: `AuthContext` (user data, loading, error states)
-- **Local State**: Each page manages its own state via `useState`/`useEffect`
-- **No global store**: No Redux, Zustand, or similar
-
-### API Communication Pattern
-
-All authenticated requests go through the `useApi()` hook (`frontend/src/hooks/useApi.ts`):
-
-```typescript
-const { request } = useApi();
-const data = await request('/admin/dashboard', 'GET');
-const result = await request('/issues', 'POST', { category, priority, description });
-```
-
-The `request()` function:
-1. Attaches `Bearer` token from `localStorage`
-2. Handles `401` → attempts token refresh → retries original request
-3. On refresh failure → clears tokens, redirects to `/login`
-
-### Layout System
-
-- **Admin**: `AdminLayout` → `AdminSidebar` + `AdminTopbar` + `<Outlet />`
-- **Student**: `StudentLayout` → `StudentSidebar` + `StudentTopbar` + `<Outlet />`
-- **Worker**: `WorkerLayout` → `WorkerTopbar` + `<Outlet />`
+- **AuthContext**: Global auth state (`user`, `isLoading`, `error`, `login()`, `logout()`). Uses `useState` — no persistence across page refreshes (tokens are in localStorage, but user object is not rehydrated on mount).
+- **Page-level state**: Each page manages its own data fetching via `useApi()` hook. No global store (Redux/Zustand).
+- **API layer**: `useApi()` provides a `request()` function that handles JWT attachment, 401 auto-refresh, and error formatting.
 
 ### UI Component Library
 
-Custom component library in `frontend/src/components/ui/`:
-- `button.tsx` — Variant-based button (default, destructive, outline, secondary, ghost, link)
-- `card.tsx` — Card + CardHeader + CardTitle + CardDescription + CardContent + CardFooter
-- `input.tsx` — Styled input wrapper
-- `label.tsx` — Form label
-- `tabs.tsx` — Tab navigation
+Custom components in `frontend/src/components/ui/`:
 
-All use `cn()` utility from `lib/utils.ts` (clsx + tailwind-merge).
-
-> **NOTE**: Frontend routing does not enforce authentication or role-based access. Any user can navigate to `/admin/dashboard` by URL — the backend will reject unauthorized API calls, but the page will still render (with errors).
+| Component | File | Purpose |
+|---|---|---|
+| `Button` | `button.tsx` | Styled button with variant + size props, uses `clsx` + `tailwind-merge` |
+| `Card` | `card.tsx` | Card, CardHeader, CardTitle, CardContent, CardFooter |
+| `Input` | `input.tsx` | Styled input with `forwardRef` |
+| `Label` | `label.tsx` | Styled label |
+| `Tabs` | `tabs.tsx` | Tab navigation system (TabsList, TabsTrigger, TabsContent) |
 
 ---
 
-## 9. API Reference
+## 11. API Reference
 
-### Authentication (`/api/auth`)
+### Route Mount Summary (from server.ts)
 
-| Method | Path | Auth | Body | Response |
+| Mount Path | Auth | Role Gate | Route File | Controller File |
 |---|---|---|---|---|
-| `POST` | `/register-admin` | None | `{ hostelName, adminName, adminEmail, adminPassword }` | `{ hostel, user, accessToken, refreshToken }` |
-| `POST` | `/login-admin` | None | `{ email, password }` | `{ user, accessToken, refreshToken }` |
-| `POST` | `/login-user` | None | `{ email, password, role }` | `{ user, accessToken, refreshToken }` |
-| `POST` | `/login-qr` | None | `{ qrToken }` | `{ user, tokens }` or `{ setPasswordURL, userId }` |
-| `POST` | `/login-url` | None | `{ loginURL }` | `{ user, accessToken, refreshToken }` |
-| `POST` | `/set-password` | None | `{ loginURL, password }` | `{ user, accessToken, refreshToken }` |
-| `POST` | `/refresh` | None | `{ refreshToken }` | `{ tokens: { accessToken, refreshToken } }` |
-| `POST` | `/logout` | JWT | `{ refreshToken }` | `{ message }` |
-| `GET` | `/qr/:userId` | JWT | — | `{ qrCode, qrToken }` |
+| `/api/auth` | Mixed | None | `auth.routes.ts` | `auth.controller.ts` |
+| `/api/users` | `verifyToken` | Any | `user.routes.ts` | `user.controller.ts` |
+| `/api/issues` | `verifyToken` | Any (internal checks) | `issue.routes.ts` | `issue.controller.ts` |
+| `/api/dishes` | `verifyToken` | Any | `dish.routes.ts` | `dish.controller.ts` |
+| `/api/reviews` | `verifyToken` | Any | `mealReview.routes.ts` | `mealReview.controller.ts` |
+| `/api/student/*` | `verifyToken` | `STUDENT` | `student.routes.ts` | Multiple student controllers |
+| `/api/admin/menu` | `verifyToken` | `ADMIN` | `adminMenu.routes.ts` | `adminMenu.controller.ts` |
+| `/api/admin/users` | `verifyToken` | `ADMIN` | `adminUser.routes.ts` | `adminUser.controller.ts` |
+| `/api/admin/dishes` | `verifyToken` | `ADMIN` | `adminDish.routes.ts` | `adminDish.controller.ts` |
+| `/api/admin/reviews` | `verifyToken` | `ADMIN` | `adminReview.routes.ts` | `adminReview.controller.ts` |
+| `/api/admin/dashboard` | `verifyToken` | `ADMIN` | `adminDashboard.routes.ts` | `adminDashboard.controller.ts` |
 
-### Admin - User Management (`/api/admin/users`)
+### Full Endpoint Catalog
 
-| Method | Path | Body | Response |
+#### Authentication (9 endpoints)
+
+| Method | Path | Auth | Description |
 |---|---|---|---|
-| `POST` | `/` | `{ name, email?, role, roomNo?, jobType?, registrationNo? }` | `{ user, qrCode, loginURL, qrToken }` |
-| `GET` | `/` | Query: `?role=&status=` | `{ users: [...] }` |
-| `GET` | `/:userId` | — | `{ user }` |
-| `PATCH` | `/:userId/deactivate` | — | `{ message }` |
-| `PATCH` | `/:userId/reactivate` | — | `{ message }` |
-| `DELETE` | `/:userId` | — | `{ message }` |
-| `POST` | `/:userId/qr-code` | — | `{ qrCode, qrToken }` |
-| `POST` | `/:userId/login-token` | — | `{ loginURL, expiresIn }` |
+| `POST` | `/api/auth/register-admin` | Public | Register hostel + admin |
+| `POST` | `/api/auth/login-admin` | Public | Admin login |
+| `POST` | `/api/auth/login-user` | Public | Student/worker login |
+| `POST` | `/api/auth/login-qr` | Public | QR code login |
+| `POST` | `/api/auth/login-url` | Public | Magic link login |
+| `POST` | `/api/auth/set-password` | Public | Set password (first login) |
+| `POST` | `/api/auth/refresh` | Public | Refresh access token |
+| `POST` | `/api/auth/logout` | JWT | Revoke refresh token |
+| `GET` | `/api/auth/qr/:userId` | JWT | Generate QR code image |
 
-### Admin - Dish Management (`/api/admin/dishes`)
+#### Admin User Management (8 endpoints)
 
-| Method | Path | Body | Response |
+| Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/` | Query: `?status=` | `[...dishes]` |
-| `POST` | `/` | `{ name, mealType, category, tags?, priceScore?, healthScore? }` | `{ dish }` |
-| `POST` | `/:id/approve` | `{ priceScore, healthScore }` | `{ dish }` |
-| `POST` | `/:id/reject` | `{ reason }` | `{ message }` |
-| `PUT` | `/:id` | `{ name, mealType, category, tags, priceScore, healthScore }` | `{ dish }` |
-| `DELETE` | `/:id` | — | `{ message }` |
+| `POST` | `/api/admin/users` | JWT+ADMIN | Create student/worker |
+| `GET` | `/api/admin/users` | JWT+ADMIN | List users (filter by role/status) |
+| `GET` | `/api/admin/users/:userId` | JWT+ADMIN | Get single user |
+| `PATCH` | `/api/admin/users/:userId/deactivate` | JWT+ADMIN | Deactivate user |
+| `PATCH` | `/api/admin/users/:userId/reactivate` | JWT+ADMIN | Reactivate user |
+| `DELETE` | `/api/admin/users/:userId` | JWT+ADMIN | Delete user + cascade |
+| `POST` | `/api/admin/users/:userId/qr-code` | JWT+ADMIN | Regenerate QR |
+| `POST` | `/api/admin/users/:userId/login-token` | JWT+ADMIN | Regenerate login URL |
 
-### Admin - Menu (`/api/admin/menu`)
+#### Dish Management (7 endpoints)
 
-| Method | Path | Response |
-|---|---|---|
-| `GET` | `/voting/stats` | `{ totalVoters }` |
-| `POST` | `/generate` | `{ message, menuId }` |
-| `GET` | `/preview` | Full menu object or `null` |
-| `POST` | `/publish` | `{ message, menuId }` |
-
-### Admin - Reviews (`/api/admin/reviews`)
-
-| Method | Path | Response |
-|---|---|---|
-| `GET` | `/` | `{ reviews, pagination }` — Query: `?mealType=&date=&dishId=&page=&limit=` |
-| `GET` | `/stats` | `{ dishStats, trendStats }` |
-
-### Admin - Dashboard (`/api/admin/dashboard`)
-
-| Method | Path | Response |
-|---|---|---|
-| `GET` | `/` | `{ totalStudents, activeDishes, openIssues, totalVotes, recentActivity }` |
-
-### Shared - Issues (`/api/issues`)
-
-| Method | Path | Auth | Body |
+| Method | Path | Auth | Description |
 |---|---|---|---|
-| `POST` | `/` | JWT | `{ category, priority, description }` |
-| `GET` | `/my-issues` | JWT | — |
-| `GET` | `/assigned` | JWT | — |
-| `GET` | `/admin/all` | JWT+ADMIN | — |
-| `PATCH` | `/:issueId/assign` | JWT+ADMIN | `{ workerId }` or `{ workerId: "UNASSIGN" }` |
-| `PATCH` | `/:issueId/status` | JWT | `{ status, resolverNote? }` |
-| `DELETE` | `/:issueId` | JWT | — |
+| `POST` | `/api/dishes` | JWT | Suggest dish (student) or create dish (admin) |
+| `GET` | `/api/admin/dishes` | JWT+ADMIN | List all dishes (filter by status) |
+| `POST` | `/api/admin/dishes` | JWT+ADMIN | Create dish directly (bypasses review) |
+| `POST` | `/api/admin/dishes/:id/approve` | JWT+ADMIN | Approve a suggested dish |
+| `POST` | `/api/admin/dishes/:id/reject` | JWT+ADMIN | Reject a suggested dish |
+| `PUT` | `/api/admin/dishes/:id` | JWT+ADMIN | Update dish properties |
+| `DELETE` | `/api/admin/dishes/:id` | JWT+ADMIN | Delete dish |
 
-### Shared - Dishes (`/api/dishes`)
+#### Menu & Voting (9 endpoints)
 
-| Method | Path | Auth | Middleware | Body |
-|---|---|---|---|---|
-| `POST` | `/` | JWT | `dishSuggestionRateLimit` | `{ name, mealType, category, tags? }` |
-
-### Shared - Reviews (`/api/reviews`)
-
-| Method | Path | Auth | Body |
+| Method | Path | Auth | Description |
 |---|---|---|---|
-| `POST` | `/submit` | JWT | `{ dishId, mealType, rating, comment?, images?, servedOn }` |
+| `GET` | `/api/student/dishes/active` | JWT+STUDENT | Active dishes grouped by meal |
+| `GET` | `/api/student/votes` | JWT+STUDENT | Get voting options + current votes |
+| `POST` | `/api/student/votes` | JWT+STUDENT | Save/update votes (7 per meal) |
+| `GET` | `/api/admin/menu/voting/stats` | JWT+ADMIN | Total voter count |
+| `POST` | `/api/admin/menu/generate` | JWT+ADMIN | Run algorithm + build menu |
+| `GET` | `/api/admin/menu/preview` | JWT+ADMIN | Preview generated menu |
+| `POST` | `/api/admin/menu/publish` | JWT+ADMIN | Publish menu |
+| `GET` | `/api/student/menu/current` | JWT+STUDENT | Get published weekly menu |
+| `GET` | `/api/student/menu/today` | JWT+STUDENT | Get today's specific dishes |
 
-### Student (`/api/student`)
+#### Issues (7 endpoints)
 
-| Method | Path | Response |
-|---|---|---|
-| `GET` | `/menu/today` | Today's dishes |
-| `GET` | `/menu/current` | Full weekly published menu |
-| `GET` | `/dishes/active` | Grouped active dishes |
-| `GET` | `/notifications` | Dish approval/rejection notifications |
-
-### Student - Voting (`/api/menu-votes`)
-
-| Method | Path | Body | Response |
+| Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/votes` | — | `{ availableDishes, votes }` |
-| `POST` | `/votes` | `{ votes: { breakfast: [7], lunch: [7], dinner: [7] } }` | `{ votes }` |
+| `POST` | `/api/issues` | JWT | Create issue (student) |
+| `GET` | `/api/issues/my-issues` | JWT | Student's own issues |
+| `GET` | `/api/issues/assigned` | JWT | Worker's assigned issues |
+| `GET` | `/api/issues/admin/all` | JWT+ADMIN | All issues in hostel |
+| `PATCH` | `/api/issues/:issueId/assign` | JWT+ADMIN | Assign/unassign issue |
+| `PATCH` | `/api/issues/:issueId/status` | JWT | Update issue status |
+| `DELETE` | `/api/issues/:issueId` | JWT | Delete issue |
 
-### User (`/api/users`)
+#### Reviews (3 endpoints)
 
-| Method | Path | Response |
-|---|---|---|
-| `GET` | `/me` | `{ id, role, hostelId, name, email }` |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/reviews/submit` | JWT | Submit meal review |
+| `GET` | `/api/admin/reviews/stats` | JWT+ADMIN | Aggregate review statistics |
+| `GET` | `/api/admin/reviews` | JWT+ADMIN | Paginated review list |
+
+#### Other (3 endpoints)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/` | Public | Health check |
+| `GET` | `/api/users/me` | JWT | Returns decoded JWT user info |
+| `GET` | `/api/student/notifications` | JWT+STUDENT | Dish approval/rejection notifications |
+| `GET` | `/api/admin/dashboard` | JWT+ADMIN | Dashboard aggregate stats |
 
 ---
 
-## 10. Things You Must Know Before Changing Code
+## 12. Nuances, Subtleties & Gotchas
 
-### Critical Gotchas
+### Things You MUST Know Before Changing Code
 
-#### 1. The "7 Dishes" Constraint is Everywhere
-The number **7** (representing 7 days of the week) is hardcoded across multiple layers:
-- `MessMenu` model validator: `arr.length === 7`
-- `StudentVote` controller: `votes[meal].length !== 7`
-- `menuBuilder.service.ts`: `.limit(7)` and `if (dishes.length < 7) throw`
-- `menuCache.service.ts`: Array index `[dayIndex]` to pick today's dish
+#### 1. MessMenu Unique Index = One Menu Per Hostel
 
-**If you change the week structure, you must update ALL of these locations.**
+`MessMenu` has a **unique index on `hostelId`**. This means each hostel can only have ONE menu document at a time. Generating a new menu **replaces** the old one. There is no menu versioning or history.
 
-#### 2. `weeklyVotes` on Dish Model is Misleading
-The `Dish.weeklyVotes` field is a `Map<string, number>` but its keys/values are not well-documented. The aggregation pipeline reduces it to a single sum. It is unclear how/when these values are populated — the `studentVote.controller.ts` does NOT update this field when saving votes.
+**Impact**: If you need menu history, you must remove the unique index and add a `weekOf` or version field.
 
-#### 3. MessMenu Unique Index Allows Only ONE Menu Per Hostel
-`MessMenu` has a unique index on `hostelId`. This means a hostel can only have **one menu document** — the current one. Historical menus are **overwritten** on each generation cycle. There is no menu history.
+#### 2. MenuRecommendation: Full Wipe on Regenerate
 
-#### 4. Login URL vs. QR Token Confusion
-- `loginURL` in the `User` model stores a **token** (hex string), not a full URL
-- The full URL is constructed in `adminUser.controller.ts` as `${FRONTEND_URL}/login-link/${token}`
-- But in `auth.controller.ts`, `loginViaQR` constructs it as `${APP_URL}/set-password/${token}`
-- These use **different env vars** (`FRONTEND_URL` vs `APP_URL`) and **different paths** (`/login-link/` vs `/set-password/`)
+`computeMenuRecommendations()` calls `deleteMany({ hostelId })` before inserting new recommendations. This means all previous computation data is lost on each generation cycle.
 
-#### 5. Duplicate Route Definitions
-`studentMenu.routes.ts` and `student.routes.ts` both define routes for `/menu/today`, `/menu/current`, `/dishes/active`, and `/notifications`. Both files are imported in `server.ts` and mounted on different base paths (`/api/menu-votes` and `/api/student`), creating duplicate endpoints.
+#### 3. Cascading Delete Gaps
 
-#### 6. No Input Sanitization Beyond Trim
-Controllers check for empty/missing fields but do not sanitize against XSS. The `$regex` patterns in dish name checks use unescaped user input — a **potential ReDoS vector**.
+When deleting a user via `deleteUser()`, only `StudentVote` and `RefreshToken` are cascade-deleted. The following are **NOT** cleaned up:
+- `MealReview` (studentId will be orphaned)
+- `Issue` (raisedBy/assignedTo will be orphaned)
+- `Dish` (suggestedBy will be orphaned)
+- `ActivityLog` (userId will be orphaned)
 
-#### 7. Error Handler is Minimal
-The global `errorHandler` logs the error and returns `500` with a generic message. It does not differentiate between Mongoose validation errors and application errors or strip stack traces in production.
+#### 4. Socket.io: Dependency Present, Not Wired
 
-#### 8. The `roles.js` File is Unused
-`backend/src/constants/roles.js` exports a `ROLES` object, but it is **never imported** anywhere. Roles are hardcoded as string literals throughout the codebase.
+`socket.io` and `socket.io-client` are in the dependencies, and an `http.createServer(app)` is used instead of `app.listen()` (typical for Socket.io setups), but **no Socket.io server is actually initialized or used** in `server.ts`. The README mentions WebSocket for real-time menu broadcasting, but this is not implemented in the current codebase.
 
-#### 9. No Cascade Deletes
-Deleting a `User` does not clean up their `StudentVote`, `MealReview`, `Issue`, `RefreshToken`, `ActivityLog`, or `Dish` records.
+#### 5. Redis: Dependency Present, Not Used
 
-#### 10. Frontend Auth Context Only Handles Admin Login
-`AuthContext.tsx` hardcodes `authService.loginAdmin()` in its `login` method. Student and worker logins use `authService.loginUser()` directly from the login page, bypassing the context.
+The `redis` package is in backend dependencies, and `formatMeal.ts` has a comment about "Plain object from Redis", but no Redis client is initialized or used anywhere in the codebase.
 
-### Performance Considerations
+#### 6. Nodemailer: Imported, Not Used
 
-- **Dashboard Stats**: Makes 5 sequential/parallel DB queries on every load. No caching.
-- **Menu Computation**: Runs a heavy aggregation pipeline synchronously in the request handler.
-- **Review Stats**: Uses two separate aggregation pipelines. No materialized views.
-- **User List in Dashboard**: Fetches ALL user IDs in hostel just to filter ActivityLogs.
+`nodemailer` is in dependencies but no controller or service actually sends emails. The email verification fields on the User model (`emailVerificationToken`, `emailVerificationExpires`, `emailVerified`) exist but are only set to `true` for admins during registration.
 
-### Security Considerations
+#### 7. user.controller.ts Returns JWT Payload, Not DB Data
 
-- **Token storage in localStorage**: Vulnerable to XSS. HttpOnly cookies would be more secure.
-- **No rate limiting on login endpoints**: Susceptible to brute-force attacks.
-- **No CSRF protection**.
-- **Password policy**: Only checks minimum length (8). No complexity requirements.
-- **Refresh token rotation**: Old tokens are not revoked when new ones are issued during refresh.
+The `getMe()` controller returns data from `req.user` (decoded JWT), not from the database. It will have stale data if the user's profile was modified after the token was issued. The `name` and `email` fields will always be `null` because they are not included in the JWT payload.
+
+#### 8. Frontend AuthContext Does Not Rehydrate on Refresh
+
+`AuthContext` stores user data in React `useState`. On page refresh, the user object is lost (set to `null`). Tokens persist in `localStorage`, but the user profile is not re-fetched. Individual pages work because they use `useApi()` which attaches the token from localStorage.
+
+#### 9. Domain Collision from Hostel Name
+
+The `generateDomain()` function takes only the first 10 characters. Hostel names that share the same first 10 characters will collide. Example: "Grand Hotel" and "Grand Hotel Deluxe" both produce `grandhotel.com`.
+
+#### 10. Express v5 in Use
+
+The backend uses **Express 5.2.1** (not the more common v4). Express 5 has breaking changes in error handling, path matching, and removed `app.del()`. Be aware when consulting v4-era documentation.
+
+#### 11. verifyToken Does Not Check isActive
+
+The `verifyToken` middleware only validates the JWT signature and expiry. It does **not** check if the user's `isActive` flag is `true` in the database. A deactivated user with a valid (unexpired) access token can still make API calls for up to 15 minutes until the token expires. The `loginUser` controller does check `isActive`, and `refreshAccessToken` checks it when issuing new tokens.
+
+#### 12. Issue Routes Have Dual Auth Patterns
+
+The issue routes file (`issue.routes.ts`) applies `verifyToken` individually per route, but the route is also mounted in `server.ts` with `app.use('/api/issues', verifyToken, issueRoutes)`. This results in **double verification** — not harmful but redundant.
+
+#### 13. VITE_WS_URL Points to Port 5000
+
+The frontend `.env.example` has `VITE_WS_URL=http://localhost:5000`, but the backend runs on port 8000. Since WebSockets are not implemented, this is a dead config — but could cause confusion when implementing Socket.io.
+
+#### 14. Meal Array = 7 Days, Not Configurable
+
+The `MessMenu` model validates that each meal array has exactly 7 entries (one per weekday). The `menuBuilder.service.ts` also requires exactly 7 dishes per meal type. This "7" is hardcoded in both the model validator and the service.
+
+#### 15. No Input Sanitization for Regex
+
+`dish.controller.ts` uses `name: { $regex: \`^${name}$\`, $options: 'i' }` for case-insensitive name matching. The `name` field is user input and is **not sanitized for regex special characters**. This is a potential **ReDoS** (Regular Expression Denial of Service) vulnerability.
 
 ---
 
-## 11. Glossary
+## 13. Technical Reference & Glossary
+
+### Domain Glossary
 
 | Term | Definition |
 |---|---|
-| **Hostel** | A tenant in the multi-tenant system. Maps to one MongoDB `Hostel` document. |
-| **Domain** | Auto-generated string derived from hostel name. Used for email addresses. |
-| **ADMIN** | Role that manages a single hostel. |
-| **STUDENT** | Role representing a hostel resident. |
-| **WORKER** | Role representing maintenance staff. |
-| **QR Token** | A 64-character hex string for passwordless first-time login. |
-| **Login URL / Magic Link** | A tokenized URL for first-time password setup. Expires in 24 hours. |
-| **Dish** | A food item in the catalog with a status lifecycle. |
-| **priceScore** | Admin-assigned cost metric (1–5). Used inversely in menu computation. |
-| **healthScore** | Admin-assigned nutrition metric (1–5). Used directly in scoring. |
-| **StudentVote** | A single document per student with 7 preferred dishes per meal type. |
-| **MenuRecommendation** | A computed scoring record output by the aggregation pipeline. |
-| **MessMenu** | The published weekly menu with 7 items per meal type (21 total). |
-| **MealReview** | A student's rating and comment on a dish served on a specific date. |
-| **Issue** | A maintenance request with priority and status lifecycle. |
-| **ActivityLog** | An audit trail entry for admin actions. |
-| **finalScore** | Weighted composite: `0.5*voteScore + 0.3*healthScore + 0.2*costEfficiency`. |
+| **Hostel** | A tenant entity representing a student housing facility. Each hostel is data-isolated. |
+| **Domain** | Auto-generated email domain (e.g., `grandhotel.com`) derived from the first 10 characters of the hostel name. |
+| **Dish** | A food item in the catalog. Has a meal type (Breakfast/Lunch/Dinner), scores, and a lifecycle status. |
+| **MessMenu** | The published weekly meal schedule. Contains 7 dishes per meal type (one per day). |
+| **MenuRecommendation** | An intermediate computation record storing a dish's score for a specific hostel and meal type. |
+| **StudentVote** | A student's dish preferences — 7 dishes per meal type. One record per student (upsert). |
+| **MealReview** | A post-meal rating (1-5) submitted by a student for a specific dish on a specific date. |
+| **Issue** | A maintenance/facility ticket raised by a student, assigned to a worker, and resolved. |
+| **QR Token** | A 32-byte hex string stored on the User model, embedded in a QR code for passwordless login. |
+| **Login URL / Magic Link** | A 32-byte hex token with 24h expiry, used for first-time password setup. |
+| **Refresh Token Rotation** | Security pattern where each refresh token is single-use (deleted on verification and a new one is issued). |
+| **ActivityLog** | Audit trail recording admin actions (user creation, dish approval, etc.) with timestamps and IP addresses. |
+| **VoteScore** | Normalized (0-1) popularity of a dish based on student votes. |
+| **CostEfficiency** | Inverse of priceScore (cheaper = more efficient). Used in menu computation. |
+| **FinalScore** | Weighted composite: `0.5*voteScore + 0.3*healthScore + 0.2*costEfficiency`. Determines menu ranking. |
+| **IDOR** | Insecure Direct Object Reference — mitigated by checking `hostelId` match in controllers. |
 
----
+### Key Classes & Functions
 
-## Appendix A: Environment Variables
+#### Backend
 
-### Backend (`backend/.env`)
-
-| Variable | Required | Default | Purpose |
+| File | Export | Type | Purpose |
 |---|---|---|---|
-| `MONGODB_URI` | Yes | `mongodb://localhost:27017/hostelHub` | MongoDB connection string |
-| `JWT_SECRET` | Yes | — | JWT signing key |
-| `PORT` | No | `5000` | Server port |
-| `NODE_ENV` | No | `development` | Environment mode |
-| `FRONTEND_URL` | No | `http://localhost:5173` | CORS allowed origin |
-| `APP_URL` | No | `http://localhost:3000` | Used in QR code URL generation |
+| `server.ts` | `startServer()` | Function | App bootstrap: connects DB, starts HTTP server |
+| `config/db.ts` | `connectDB()` | Function | Mongoose connection with 5s timeouts |
+| `utils/jwt.ts` | `generateAccessToken()` | Function | Signs JWT with 15m expiry |
+| `utils/jwt.ts` | `generateRefreshToken()` | Function | Signs JWT (7d), stores SHA-256 hash in DB |
+| `utils/jwt.ts` | `verifyRefreshToken()` | Function | Verifies + deletes token (rotation) |
+| `utils/jwt.ts` | `refreshAccessToken()` | Function | Looks up user, issues new token pair |
+| `utils/jwt.ts` | `revokeRefreshToken()` | Function | Deletes hashed token from DB |
+| `utils/formatMeal.ts` | `formatMeal()` | Function | Transforms populated MenuRecommendation arrays for API response |
+| `services/menuComputation.service.ts` | `computeMenuRecommendations()` | Function | MongoDB aggregation pipeline for scoring |
+| `services/menuBuilder.service.ts` | `buildMessMenu()` | Function | Picks top-7 per meal, upserts MessMenu |
+| `services/menuRetrieve.service.ts` | `getCurrentMenu()` | Function | Fetches published menu with populated dishes |
+| `services/menuRetrieve.service.ts` | `getTodayMenu()` | Function | Extracts today's dishes from the weekly menu |
+| `middlewares/verifyToken.middleware.ts` | `verifyToken` | Middleware | Decodes JWT, attaches req.user |
+| `middlewares/requireRole.middleware.ts` | `requireRole()` | Middleware factory | Checks req.user.role against allowed roles |
+| `middlewares/errorHandler.ts` | `errorHandler` | Middleware | Global 500 catch-all |
 
-> **WARNING**: `server.ts` defaults to port `5000`, but `.env.example` specifies `PORT=8000`. The frontend `.env.example` references `VITE_API_URL=http://localhost:8000/api` and `VITE_WS_URL=http://localhost:5000`. Ensure consistency.
+#### Frontend
 
-### Frontend (`frontend/.env`)
-
-| Variable | Required | Default | Purpose |
+| File | Export | Type | Purpose |
 |---|---|---|---|
-| `VITE_API_URL` | Yes | `http://localhost:8000/api` | Backend API base URL |
-| `VITE_WS_URL` | No | `http://localhost:5000` | WebSocket server URL (unused) |
-| `VITE_APP_NAME` | No | — | Application display name |
-| `VITE_APP_ENVIRONMENT` | No | — | Environment label |
-| `VITE_ENABLE_DEBUG` | No | — | Debug mode flag |
+| `main.tsx` | -- | Entry | React DOM render with AuthProvider |
+| `App.tsx` | `App` | Component | Router + Toaster wrapper |
+| `contexts/AuthContext.tsx` | `AuthProvider` | Component | Auth state management |
+| `contexts/AuthContextType.ts` | `AuthContext` | Context | React context object |
+| `hooks/useApi.ts` | `useApi()` | Hook | Generic API caller with auto-refresh |
+| `hooks/useAuth.ts` | `useAuth()` | Hook | Shorthand for useContext(AuthContext) |
+| `hooks/useMessService.ts` | `useMessService()` | Hook | Menu admin operations |
+| `services/authService.ts` | `authService` | Singleton | All auth API calls + token management |
+| `lib/utils.ts` | `cn()` | Utility | clsx() + twMerge() |
+
+### Deployment Configuration
+
+- **Frontend**: `vercel.json` with SPA rewrite rule (`"rewrites": [{"source": "/(.*)", "destination": "/index.html"}]`)
+- **Backend**: Built via `tsc`, runs via `node dist/server.js`
+- **Database**: MongoDB (local or Atlas)
 
 ---
 
-## Appendix B: File Index (Prioritized)
-
-| Priority | Path | Type | Lines | Notes |
-|---|---|---|---|---|
-| ★★★ | `backend/src/server.ts` | Entry | 88 | Application bootstrap, all route mounts |
-| ★★★ | `backend/src/controllers/auth.controller.ts` | Controller | 460 | All 8 auth flows |
-| ★★★ | `backend/src/controllers/adminUser.controller.ts` | Controller | 382 | User CRUD + QR/Link management |
-| ★★★ | `backend/src/services/menuComputation.service.ts` | Service | 104 | Core scoring algorithm |
-| ★★★ | `backend/src/utils/jwt.ts` | Utility | 100 | All token operations |
-| ★★☆ | `backend/src/controllers/issue.controller.ts` | Controller | 277 | Issue lifecycle |
-| ★★☆ | `backend/src/controllers/studentVote.controller.ts` | Controller | 130 | Voting logic |
-| ★★☆ | `backend/src/controllers/adminDish.controller.ts` | Controller | 135 | Dish approval workflow |
-| ★★☆ | `backend/src/middlewares/verifyToken.middleware.ts` | Middleware | 41 | JWT verification |
-| ★★☆ | `backend/src/models/*.ts` | Models | ~210 | All 10 Mongoose schemas |
-| ★★☆ | `frontend/src/services/authService.ts` | Service | 312 | Frontend auth + credential mgmt |
-| ★★☆ | `frontend/src/hooks/useApi.ts` | Hook | 90 | Authenticated fetch + token refresh |
-| ★☆☆ | `backend/src/services/menuBuilder.service.ts` | Service | 39 | Top-7 dish selection |
-| ★☆☆ | `backend/src/services/menuCache.service.ts` | Service | 38 | Menu retrieval |
-| ★☆☆ | `backend/src/controllers/adminMenu.controller.ts` | Controller | 92 | Menu generation/publish |
-| ★☆☆ | `backend/src/controllers/mealReview.controller.ts` | Controller | 132 | Review submission |
-| ★☆☆ | `backend/src/controllers/adminReview.controller.ts` | Controller | 142 | Review aggregation stats |
-| ★☆☆ | `frontend/src/routes/router.tsx` | Routes | 43 | All frontend routes |
-| ★☆☆ | `frontend/src/contexts/AuthContext.tsx` | Context | 55 | Auth state management |
-
----
-
-*End of document. This knowledge base covers every file, function, model, route, and business rule in the HostelHub codebase as of the analysis date.*
+> **Document completeness**: Every source file in the repository has been read and analyzed. This document covers all 10 data models, 14 backend controllers, 11 route files, 3 service files, 3 middleware files, 2 utility files, the complete frontend routing tree, auth system, hooks, services, and all component directories.
