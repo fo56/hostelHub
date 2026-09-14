@@ -9,7 +9,7 @@ import { Button } from '../../components/ui/button'
 import { Modal } from '../../components/ui/modal'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
-import { Trash2, Copy } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 
 interface User {
   _id: string
@@ -158,7 +158,7 @@ export default function AdminUsers() {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center">
-                        {user._id !== currentUser?._id && !(user.role === 'ADMIN' && user.username.startsWith('admin@')) && (
+                        {user._id !== currentUser?.id && !(user.role === 'ADMIN' && user.username.startsWith('admin@')) && (
                           <button
                             onClick={() => confirmDeleteUser(user._id)}
                             className="p-1.5 text-muted hover:text-(--color-semantic-error) hover:bg-(--color-semantic-error)/10 rounded transition-colors" 

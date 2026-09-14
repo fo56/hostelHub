@@ -49,8 +49,6 @@ export default function AppTopbar() {
   } else if (user?.role === 'student') {
     activeLinks = studentLinks
     homeRoute = '/student/dashboard'
-  } else if (user?.role === 'worker') {
-    homeRoute = '/worker/dashboard'
   }
 
   const navLinks = activeLinks.map(link => (
@@ -71,12 +69,6 @@ export default function AppTopbar() {
 
   const rightActions = isAuthenticated ? (
     <div className="flex items-center gap-2">
-      {user?.role === 'worker' && (
-        <span className="text-body-sm text-muted mr-2 hidden sm:inline-block">
-          {user.email}
-        </span>
-      )}
-      
       {user?.role === 'student' && (
         <Button 
           variant="tertiary" 
@@ -91,13 +83,13 @@ export default function AppTopbar() {
       <Button 
         variant="tertiary" 
         onClick={handleLogout}
-        className={user?.role === 'worker' || user?.role === 'admin' 
+        className={user?.role === 'admin' 
           ? "text-body-sm text-(--color-semantic-error) hover:bg-(--color-canvas) hover:text-(--color-semantic-error) h-8 px-3"
           : "text-muted hover:text-ink gap-2 px-2"}
         title="Logout"
       >
         <LogOut className="w-5 h-5 mr-2" />
-        {(user?.role === 'worker' || user?.role === 'admin') && <span className="hidden sm:inline-block">Logout</span>}
+        {user?.role === 'admin' && <span className="hidden sm:inline-block">Logout</span>}
       </Button>
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </div>
