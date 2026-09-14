@@ -6,7 +6,7 @@ import { useAuth } from '../hooks/useAuth'
 import AppLayout from '../components/common/AppLayout'
 
 // Lazy Load Pages
-const Login = lazy(() => import('../pages/auth/Login'))
+const Login = lazy(() => import('../pages/Login'))
 const Home = lazy(() => import('../pages/Home'))
 const AdminRegister = lazy(() => import('../pages/admin/AdminRegister'))
 
