@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 
 interface JwtPayload {
   userId: string;
-  role: 'STUDENT' | 'ADMIN' | 'WORKER';
+  role: 'STUDENT' | 'ADMIN';
   hostelId: string;
   email: string;
 }

@@ -1,195 +1,436 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useApi } from '../../hooks/useApi'
-import { io, Socket } from 'socket.io-client'
 import { useAuth } from '../../hooks/useAuth'
+import { logger } from '../../lib/logger'
+import type { MealType, Dish } from '../../lib/types'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card'
+import { Plus, ChevronDown } from 'lucide-react'
+import { Modal } from '../../components/ui/modal'
+import { Select } from '../../components/ui/select'
 
-type Meal = 'Breakfast' | 'Lunch' | 'Dinner'
+// Suggest Dish Modal Component
+function SuggestDishModal({ isOpen, onClose, mealPlan }: { isOpen: boolean, onClose: () => void, mealPlan: any[] }) {
+  const { request } = useApi()
+  const [name, setName] = useState('')
+  const [mealType, setMealType] = useState<MealType | ''>('')
+  const [category, setCategory] = useState('')
+  const [tags, setTags] = useState('')
+  const [loading, setLoading] = useState(false)
 
-interface Dish {
-  _id: string
-  name: string
-  mealType: Meal
-  healthScore: number
+  if (!isOpen) return null
+
+  const submit = async () => {
+    if (!name || !mealType || !category) {
+      toast.error('Name, meal type, and category are required')
+      return
+    }
+    setLoading(true)
+    try {
+      const tagsArray = tags.split(',').map(tag => tag.trim()).filter(Boolean)
+      await request('/dishes', 'POST', {
+        name,
+        mealType,
+        category,
+        tags: tagsArray
+      })
+      toast.success('Dish suggestion submitted for review')
+      setName('')
+      setMealType('')
+      setCategory('')
+      setTags('')
+      onClose()
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to suggest dish')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Suggest a Dish">
+      <div className="p-4 space-y-4">
+        <div>
+          <label className="block text-body-sm mb-1">Dish Name</label>
+          <Input
+            placeholder="e.g. Paneer Tikka"
+            value={name}
+            onChange={e => setName(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-body-sm mb-1">Meal Type</label>
+          <Select
+            className="w-full"
+            value={mealType}
+            onChange={e => {
+              setMealType(e.target.value as MealType)
+              setCategory('') // reset category when meal changes
+            }}
+          >
+            <option value="">Select meal</option>
+            {mealPlan.map(meal => (
+              <option key={meal.mealName} value={meal.mealName}>{meal.mealName}</option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <label className="block text-body-sm mb-1">Category</label>
+          <Select
+            className="w-full"
+            value={category}
+            onChange={e => setCategory(e.target.value)}
+            disabled={!mealType}
+          >
+            <option value="">Select category</option>
+            {mealPlan.find(m => m.mealName === mealType)?.categories.map((cat: any) => (
+              <option key={cat.categoryName} value={cat.categoryName}>{cat.categoryName}</option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <label className="block text-body-sm mb-1">Tags (comma separated)</label>
+          <Input
+            placeholder="e.g. spicy, dry, special"
+            value={tags}
+            onChange={e => setTags(e.target.value)}
+          />
+        </div>
+        <Button onClick={submit} disabled={loading} className="w-full mt-4">
+          {loading ? 'Submitting...' : 'Submit Suggestion'}
+        </Button>
+      </div>
+    </Modal>
+  )
 }
+
 
 export default function StudentVoting() {
   const { request } = useApi()
   const { user } = useAuth()
   const hostelId = user?.hostelId || ''
 
-  const [dishes, setDishes] = useState<Record<Meal, Dish[]>>({
-    Breakfast: [],
-    Lunch: [],
-    Dinner: []
-  })
-
-  const [selections, setSelections] = useState<Record<Meal, string[]>>({
-    Breakfast: [],
-    Lunch: [],
-    Dinner: []
-  })
+  const [mealPlan, setMealPlan] = useState<any[]>([])
+  const [dishes, setDishes] = useState<Dish[]>([])
+  const [selections, setSelections] = useState<Record<string, string[]>>({})
+  const [initialSelections, setInitialSelections] = useState<Record<string, string[]>>({})
+  const [wantsNewMenu, setWantsNewMenu] = useState(false)
+  const [initialWantsNewMenu, setInitialWantsNewMenu] = useState(false)
+  
+  const [isConfirmToggleOpen, setIsConfirmToggleOpen] = useState(false)
+  const [pendingToggleState, setPendingToggleState] = useState(false)
 
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [sortBy, setSortBy] = useState<'name_asc' | 'health_desc'>('name_asc')
+  const [isSortOpen, setIsSortOpen] = useState(false)
+  const [isSuggestModalOpen, setIsSuggestModalOpen] = useState(false)
+  const [expandedMeal, setExpandedMeal] = useState<string>('')
 
   useEffect(() => {
-    const socket: Socket = io(import.meta.env.VITE_WS_URL || 'http://localhost:8000')
-
-    socket.emit('join_hostel_room', hostelId)
-
-    socket.on('MENU_PUBLISHED', () => {
-      toast.success(`🎉 A new mess menu has just been published!`, { duration: 6000 })
-    })
-
     const init = async () => {
       try {
-        // Only one call needed since getStudentVotes returns both dishes and user's votes
-        const data = await request('/menu-votes/votes')
+        const data = await request('/student/votes')
 
-        // 1. Group the flat availableDishes array by Meal Type
-        const groupedDishes: Record<Meal, Dish[]> = {
-          Breakfast: data.availableDishes.filter((d: Dish) => d.mealType === 'Breakfast'),
-          Lunch: data.availableDishes.filter((d: Dish) => d.mealType === 'Lunch'),
-          Dinner: data.availableDishes.filter((d: Dish) => d.mealType === 'Dinner')
-        }
-        setDishes(groupedDishes)
+        setMealPlan(data.mealPlan || [])
+        setDishes(data.availableDishes || [])
 
-        // 2. Extract IDs from the populated vote objects returned by the backend
+        const initialSelectionsObj: Record<string, string[]> = {}
         if (data.votes) {
-          setSelections({
-            Breakfast: data.votes.breakfast.map((d: Record<string, unknown>) => d._id || d),
-            Lunch: data.votes.lunch.map((d: Record<string, unknown>) => d._id || d),
-            Dinner: data.votes.dinner.map((d: Record<string, unknown>) => d._id || d)
+          data.votes.forEach((v: any) => {
+            initialSelectionsObj[`${v.mealName}-${v.categoryName}`] = v.dishes.map((d: any) => d._id || d)
           })
         }
+
+        // Ensure all configured categories have a key in selections even if empty
+        if (data.mealPlan) {
+          data.mealPlan.forEach((meal: any) => {
+            meal.categories.forEach((cat: any) => {
+              const key = `${meal.mealName}-${cat.categoryName}`
+              if (!initialSelectionsObj[key]) initialSelectionsObj[key] = []
+            })
+          })
+        }
+
+        setSelections(initialSelectionsObj)
+        setInitialSelections(JSON.parse(JSON.stringify(initialSelectionsObj)))
+        setWantsNewMenu(data.wantsNewMenu || false)
+        setInitialWantsNewMenu(data.wantsNewMenu || false)
+
+        if (data.mealPlan && data.mealPlan.length > 0) {
+          setExpandedMeal(data.mealPlan[0].mealName)
+        }
       } catch (err) {
-        console.error('Failed to load student data:', err)
+        logger.error('APP', 'Failed to load student data:', err)
       } finally {
         setLoading(false)
       }
     }
 
     init()
+  }, [hostelId, request])
 
-    return () => {
-      socket.disconnect()
-    }
-  }, [hostelId])
-
-  const toggleDish = (meal: Meal, dishId: string) => {
+  const toggleDish = (mealName: string, categoryName: string, dishId: string) => {
+    const key = `${mealName}-${categoryName}`
     setSelections((prev) => {
-      const current = prev[meal]
+      const current = prev[key] || []
       if (current.includes(dishId)) {
-        return { ...prev, [meal]: current.filter((id) => id !== dishId) }
+        return { ...prev, [key]: current.filter((id) => id !== dishId) }
       }
-      if (current.length >= 7) return prev
-      return { ...prev, [meal]: [...current, dishId] }
+      return { ...prev, [key]: [...current, dishId] }
     })
   }
 
-  const isComplete =
-    selections.Breakfast.length === 7 &&
-    selections.Lunch.length === 7 &&
-    selections.Dinner.length === 7
-
   const handleSavePreferences = async () => {
-    if (!isComplete || submitting) return
+    if (submitting) return
 
     setSubmitting(true)
 
     try {
-      await request('/menu-votes/votes', 'POST', {
-        votes: {
-          breakfast: selections.Breakfast,
-          lunch: selections.Lunch,
-          dinner: selections.Dinner
-        }
+      const votesArray = Object.entries(selections).map(([key, ids]) => {
+        const [mealName, categoryName] = key.split('-')
+        return { mealName, categoryName, dishes: ids }
       })
 
+      await request('/student/votes', 'POST', {
+        votes: votesArray,
+        wantsNewMenu
+      })
+
+      setInitialSelections(JSON.parse(JSON.stringify(selections)))
+      setInitialWantsNewMenu(wantsNewMenu)
       toast.success('Preferences updated successfully!')
-    } catch (err: unknown) {
-      toast.error((err as Error).message || 'Failed to save preferences')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save preferences')
     } finally {
       setSubmitting(false)
     }
   }
 
-  if (loading) return <div className="p-8 text-center">Loading meal choices...</div>
+  const hasChanges = JSON.stringify(selections) !== JSON.stringify(initialSelections) || wantsNewMenu !== initialWantsNewMenu
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChanges) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasChanges])
+
+  if (loading) return <div className="p-4 text-center text-body text-(--color-ink)">Loading meal choices...</div>
+
+  const handleToggleClick = () => {
+    setPendingToggleState(!wantsNewMenu)
+    setIsConfirmToggleOpen(true)
+  }
+
+  const confirmToggle = () => {
+    setWantsNewMenu(pendingToggleState)
+    setIsConfirmToggleOpen(false)
+  }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 pb-24 space-y-6">
-
-
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Your Preferred Dishes</h1>
-          <p className="text-gray-600">
-            Pick your top 7 choices for each meal. You can edit these preferences at any time!
-          </p>
-        </div>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as 'name_asc' | 'health_desc')}
-          className="border p-2 rounded-lg bg-white shadow-sm font-medium outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="name_asc">Sort by Name (A-Z)</option>
-          <option value="health_desc">Sort by Health Score (High - Low)</option>
-        </select>
-      </header>
-
-
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {(['Breakfast', 'Lunch', 'Dinner'] as Meal[]).map((meal) => (
-          <div key={meal} className="bg-white border rounded-xl shadow-sm">
-            <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
-              <h2 className="font-bold">{meal}</h2>
-              <span className={`text-sm font-semibold ${selections[meal].length === 7 ? 'text-green-600' : 'text-orange-600'}`}>
-                {selections[meal].length}/7 Selected
-              </span>
-            </div>
-
-            <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
-              {[...dishes[meal]].sort((a, b) => {
-                if (sortBy === 'name_asc') return a.name.localeCompare(b.name)
-                if (sortBy === 'health_desc') return b.healthScore - a.healthScore
-                return 0
-              }).map((dish) => {
-                const isSelected = selections[meal].includes(dish._id)
-                return (
-                  <button
-                    key={dish._id}
-                    onClick={() => toggleDish(meal, dish._id)}
-                    className={`w-full p-3 rounded-lg border text-left transition flex justify-between items-center ${
-                      isSelected ? 'bg-blue-600 text-white font-medium' : 'hover:border-blue-400'
-                    }`}
-                  >
-                    <span>{dish.name}</span>
-                    <span className="text-xs opacity-75">Health: {dish.healthScore}</span>
-                  </button>
-                )
-              })}
-            </div>
+    <div className="w-full pb-32">
+      <section className="mb-6">
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+          <div className="w-full xl:w-auto">
+            <h1 className="text-card-title md:text-headline tracking-tight text-ink leading-tight">
+              Vote for Menu Additions
+            </h1>
+            <p className="text-body text-muted mt-1">
+              Select your preferred dishes and save the choices.
+            </p>
           </div>
-        ))}
+          
+          <div className="flex flex-row flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto mt-2 xl:mt-0">
+            <div className="relative">
+              <button 
+                onClick={() => setIsSortOpen(!isSortOpen)}
+                className="flex items-center justify-between gap-2 text-body-sm text-ink px-3 py-1.5 rounded border border-hairline bg-surface hover:bg-surface-soft transition-colors w-auto"
+              >
+                {sortBy === 'name_asc' ? 'Sort by Name' : 'Sort by Health'}
+                <ChevronDown className="w-4 h-4 text-muted" />
+              </button>
+              {isSortOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsSortOpen(false)} />
+                  <div className="absolute top-full mt-1 right-auto left-0 xl:right-0 xl:left-auto w-40 bg-canvas border border-hairline rounded shadow-sm z-50 py-1 flex flex-col">
+                    <button 
+                      className="w-full text-left px-3 py-2 text-body-sm text-ink hover:bg-surface transition-colors" 
+                      onClick={() => { setSortBy('name_asc'); setIsSortOpen(false) }}
+                    >
+                      Sort by Name
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-body-sm text-ink hover:bg-surface transition-colors" 
+                      onClick={() => { setSortBy('health_desc'); setIsSortOpen(false) }}
+                    >
+                      Sort by Health
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleToggleClick}
+              className={`px-3 py-1.5 min-h-[36px] rounded text-body-sm font-medium transition-all border flex items-center justify-center gap-2 whitespace-nowrap w-auto ${
+                wantsNewMenu 
+                  ? 'bg-(--color-semantic-error)/10 border-(--color-semantic-error)/30 text-(--color-semantic-error) shadow-sm' 
+                  : 'bg-surface border-hairline text-ink hover:border-ink/30'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${wantsNewMenu ? 'bg-(--color-semantic-error) animate-pulse' : 'bg-muted'}`} />
+              {wantsNewMenu ? 'Menu Request Active' : 'Request New Menu'}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {mealPlan.map((meal) => {
+          let mealSelectedCount = 0
+          meal.categories.forEach((cat: any) => {
+            const key = `${meal.mealName}-${cat.categoryName}`
+            mealSelectedCount += selections[key]?.length || 0
+          })
+
+          return (
+            <div key={meal.mealName} className={`flex flex-col bg-canvas sm:bg-surface/30 sm:border sm:border-hairline rounded-xl overflow-hidden transition-all ${expandedMeal === meal.mealName ? 'h-[500px]' : 'h-auto'} md:!h-[calc(100vh-280px)] md:max-h-[650px] md:min-h-[400px]`}>
+              <div 
+                className="flex items-center justify-between p-4 shrink-0 cursor-pointer md:cursor-default border-b border-hairline group bg-surface-soft/50 sm:bg-transparent hover:bg-surface-soft/80 transition-colors"
+                onClick={() => setExpandedMeal(meal.mealName === expandedMeal ? '' : meal.mealName)}
+              >
+                <h2 className="text-body font-medium m-0 flex items-center gap-2 text-ink">
+                  {meal.mealName}
+                  <ChevronDown className={`w-4 h-4 text-muted transition-transform md:hidden ${expandedMeal === meal.mealName ? 'rotate-180' : ''}`} />
+                </h2>
+                <span className={`text-caption transition-colors ${mealSelectedCount > 0 ? 'text-ink font-medium bg-ink/10 px-2 py-1 rounded-md' : 'text-muted'}`}>
+                  {mealSelectedCount} SELECTED
+                </span>
+              </div>
+
+              <div className={`flex-1 overflow-y-auto min-h-0 flex-col custom-scrollbar ${expandedMeal === meal.mealName ? 'flex' : 'hidden md:flex'}`}>
+                {meal.categories.map((cat: any) => {
+                  const key = `${meal.mealName}-${cat.categoryName}`
+                  const selectedCount = selections[key]?.length || 0
+                  const availableForCategory = dishes.filter(d => d.mealType === meal.mealName && d.category === cat.categoryName)
+
+                  return (
+                    <div key={key} className="shrink-0 mb-6 last:mb-0">
+                      <div className="flex justify-between items-center px-4 py-3 bg-surface/50 sticky top-0 z-10 backdrop-blur-sm border-b border-hairline/50">
+                        <h3 className="text-[11px] font-medium text-muted uppercase tracking-widest">{cat.categoryName}</h3>
+                        {selectedCount > 0 && <span className="text-[11px] text-muted">{selectedCount} picked</span>}
+                      </div>
+
+                      <div className="flex flex-col divide-y divide-hairline/50">
+                        {[...availableForCategory].sort((a, b) => {
+                          if (sortBy === 'health_desc') {
+                            const aScore = a.healthScore || 0
+                            const bScore = b.healthScore || 0
+                            if (aScore !== bScore) return bScore - aScore
+                          }
+                          return a.name.localeCompare(b.name)
+                        }).map((dish) => {
+                          const isSelected = selections[key]?.includes(dish._id)
+                          return (
+                            <button
+                              key={dish._id}
+                              onClick={() => toggleDish(meal.mealName, cat.categoryName, dish._id)}
+                              className={`w-full px-4 py-3 text-left transition-colors flex flex-col items-start h-auto min-h-0 group relative ${
+                                isSelected
+                                  ? 'bg-ink/5'
+                                  : 'bg-transparent hover:bg-surface-soft'
+                                }`}
+                            >
+                              {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-ink rounded-r-full" />}
+                              <div className="flex justify-between w-full items-start gap-2">
+                                <span className={`leading-tight text-body whitespace-normal transition-colors ${isSelected ? 'font-medium text-ink' : 'font-normal text-ink/90 group-hover:text-ink'}`}>
+                                  {dish.name}
+                                </span>
+                                {isSelected && (
+                                  <div className="w-4 h-4 rounded-full bg-ink flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                                    <svg className="w-2.5 h-2.5 text-canvas" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {(dish.healthScore !== undefined) && (
+                                <div className="flex items-center gap-1.5 w-full mt-1.5 opacity-80">
+                                  <div 
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      dish.healthScore >= 4 ? 'bg-(--color-semantic-success)' : 
+                                      dish.healthScore >= 2.5 ? 'bg-(--color-semantic-warning)' : 
+                                      'bg-(--color-semantic-error)'
+                                    }`}
+                                  />
+                                  <span className="text-[10px] text-muted font-medium tracking-wide">
+                                    HEALTH {dish.healthScore}/5
+                                  </span>
+                                </div>
+                              )}
+                            </button>
+                          )
+                        })}
+
+                        {availableForCategory.length === 0 && (
+                          <div className="text-left px-4 py-3 text-muted text-body-sm italic opacity-70">
+                            No rotating dishes available.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg z-10">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <span className="text-sm text-gray-600">
-            {isComplete ? 'All categories complete!' : 'Please pick exactly 7 dishes per category.'}
-          </span>
-          <button
-            onClick={handleSavePreferences}
-            disabled={!isComplete || submitting}
-            className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg disabled:bg-gray-300 transition"
-          >
-            {submitting ? 'Saving...' : 'Save Choices'}
-          </button>
-        </div>
+      {/* Suggest Floating Action Button */}
+      <button 
+        onClick={() => setIsSuggestModalOpen(true)}
+        className="fixed bottom-20 right-4 sm:bottom-24 sm:right-8 z-40 bg-ink text-canvas rounded-full w-14 h-14 shadow-lg flex items-center justify-center hover:scale-105 hover:bg-ink/90 active:scale-95 transition-all"
+        title="Suggest New Dish"
+      >
+        <Plus className="w-7 h-7" />
+      </button>
+
+      {/* Frozen Save Bar */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-canvas/90 backdrop-blur-md border-t border-hairline z-30 flex justify-center shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)]">
+        <Button 
+          onClick={handleSavePreferences} 
+          disabled={submitting || !hasChanges} 
+          className="w-full sm:w-auto sm:min-w-[200px] text-body font-medium shadow-sm"
+        >
+          {submitting ? 'Saving...' : 'Save Choices'}
+        </Button>
       </div>
+
+      <SuggestDishModal isOpen={isSuggestModalOpen} onClose={() => setIsSuggestModalOpen(false)} mealPlan={mealPlan} />
+
+      <Modal isOpen={isConfirmToggleOpen} onClose={() => setIsConfirmToggleOpen(false)} title="Confirm Action">
+        <div className="p-6">
+          <p className="text-body text-ink mb-6">
+            {pendingToggleState 
+              ? 'Are you sure you want to request a new menu? If 50% of voting students do this, the current menu will be discarded and a new one will be generated instantly.'
+              : 'Are you sure you want to cancel your request for a new menu?'}
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setIsConfirmToggleOpen(false)}>Cancel</Button>
+            <Button variant="primary" onClick={confirmToggle}>
+              {pendingToggleState ? 'Yes, Request New Menu' : 'Yes, Cancel Request'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

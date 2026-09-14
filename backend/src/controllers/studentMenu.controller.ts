@@ -11,15 +11,11 @@ export const getCurrentMessMenu = async (req: Request, res: Response) => {
     const menu = await MenuRetrieve.getCurrentMenu(hostelId.toString())
 
     if (!menu) {
-      return res.status(404).json({
-        message: 'Mess menu has not been published yet'
-      })
+      return res.status(200).json(null)
     }
 
     return res.json({
-      breakfast: formatMeal(menu.breakfast),
-      lunch: formatMeal(menu.lunch),
-      dinner: formatMeal(menu.dinner),
+      meals: menu.meals,
       generatedAt: menu.generatedAt
     })
 

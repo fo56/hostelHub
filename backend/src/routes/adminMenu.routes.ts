@@ -5,7 +5,8 @@ import {
   getVotingStats,
   generateFinalMenu,
   getMenuPreview,
-  publishMenu
+  publishMenu,
+  updateMenu
 } from '../controllers/adminMenu.controller';
 
 const router = express.Router();
@@ -16,5 +17,6 @@ router.get('/voting/stats', getVotingStats);
 router.post('/generate', generateFinalMenu);
 router.get('/preview', getMenuPreview);
 router.post('/publish', publishMenu);
+router.put('/update', updateMenu);
 
 export default router;

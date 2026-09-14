@@ -2,10 +2,11 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { StudentVote } from '../models/StudentVote';
 import { Dish } from '../models/Dish';
+import { Hostel } from '../models/Hostel';
 
 /**
  * GET voting dashboard data:
- * - All ACTIVE dishes belonging to the student's hostel
+ * - All ACTIVE ROTATING dishes belonging to the student's hostel
  * - The student's current saved votes
  */
 export const getStudentVotes = async (req: Request, res: Response) => {
@@ -17,28 +18,28 @@ export const getStudentVotes = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'User authentication context missing' });
     }
 
-    // 1. Fetch all ACTIVE dishes for this hostel (Returns a flat Array)
+    const hostel = await Hostel.findById(hostelId);
+    if (!hostel) return res.status(404).json({ message: 'Hostel not found' });
+
+    // 1. Fetch all ACTIVE ROTATING dishes for this hostel (Returns a flat Array)
     const availableDishes = await Dish.find({
       hostelId,
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      itemClass: 'ROTATING'
     })
       .select('_id name mealType category healthScore priceScore tags')
       .lean();
 
     // 2. Fetch student's existing vote record 
     const voteRecord = await StudentVote.findOne({ userId, hostelId })
-      .populate('breakfast', '_id name mealType category healthScore priceScore')
-      .populate('lunch', '_id name mealType category healthScore priceScore')
-      .populate('dinner', '_id name mealType category healthScore priceScore')
+      .populate('votes.dishes', '_id name mealType category healthScore priceScore')
       .lean();
 
     return res.status(200).json({
+      mealPlan: hostel.mealPlan,
       availableDishes,
-      votes: {
-        breakfast: voteRecord?.breakfast || [],
-        lunch: voteRecord?.lunch || [],
-        dinner: voteRecord?.dinner || []
-      }
+      votes: voteRecord?.votes || [],
+      wantsNewMenu: voteRecord?.wantsNewMenu || false
     });
   } catch (error: any) {
     return res.status(500).json({
@@ -53,7 +54,7 @@ export const getStudentVotes = async (req: Request, res: Response) => {
  */
 export const saveStudentVotes = async (req: Request, res: Response) => {
   try {
-    const { votes } = req.body; 
+    const { votes, wantsNewMenu } = req.body; 
     const userId = req.user?._id;
     const hostelId = req.user?.hostelId;
 
@@ -61,27 +62,17 @@ export const saveStudentVotes = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'User authentication context missing' });
     }
 
-    if (!votes || typeof votes !== 'object') {
-      return res.status(400).json({ message: 'Invalid payload format' });
-    }
-
-    const meals = ['breakfast', 'lunch', 'dinner'] as const;
-
-    // 1. Validate exactly 7 dishes per category
-    for (const meal of meals) {
-      if (!Array.isArray(votes[meal]) || votes[meal].length !== 7) {
-        return res.status(400).json({
-          message: `Exactly 7 dishes are required for ${meal}`
-        });
-      }
+    if (!Array.isArray(votes)) {
+      return res.status(400).json({ message: 'Invalid payload format, expected array of votes' });
     }
 
     // 2. Flatten all submitted dish IDs and check for valid ObjectId formatting
-    const allSubmittedDishIds: string[] = [
-      ...votes.breakfast,
-      ...votes.lunch,
-      ...votes.dinner
-    ];
+    const allSubmittedDishIds: string[] = [];
+    for (const v of votes) {
+      if (Array.isArray(v.dishes)) {
+        allSubmittedDishIds.push(...v.dishes);
+      }
+    }
 
     const hasInvalidFormat = allSubmittedDishIds.some(
       (id) => !mongoose.Types.ObjectId.isValid(id)
@@ -91,18 +82,19 @@ export const saveStudentVotes = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'One or more dish IDs are invalid' });
     }
 
-    // 3. Extract unique IDs and verify they exist in this hostel and are ACTIVE
+    // 3. Extract unique IDs and verify they exist in this hostel, are ACTIVE, and are ROTATING
     const uniqueSubmittedIds = Array.from(new Set(allSubmittedDishIds));
 
     const validDishesCount = await Dish.countDocuments({
       _id: { $in: uniqueSubmittedIds },
       hostelId,
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      itemClass: 'ROTATING'
     });
 
     if (validDishesCount !== uniqueSubmittedIds.length) {
       return res.status(400).json({
-        message: 'One or more selected dishes are inactive or do not belong to your hostel'
+        message: 'One or more selected dishes are invalid (must be active rotating dishes belonging to your hostel)'
       });
     }
 
@@ -110,12 +102,24 @@ export const saveStudentVotes = async (req: Request, res: Response) => {
     const updatedVotes = await StudentVote.findOneAndUpdate(
       { userId, hostelId },
       {
-        breakfast: votes.breakfast,
-        lunch: votes.lunch,
-        dinner: votes.dinner
+        votes: votes,
+        ...(wantsNewMenu !== undefined && { wantsNewMenu })
       },
-      { upsert: true, new: true, runValidators: true }
+      { upsert: true, returnDocument: 'after', runValidators: true }
     );
+
+    // 5. Check if we should trigger auto-generation
+    const totalVoters = await StudentVote.countDocuments({ hostelId });
+    const votersWantingNewMenu = await StudentVote.countDocuments({ hostelId, wantsNewMenu: true });
+    
+    if (totalVoters > 0 && (votersWantingNewMenu / totalVoters) >= 0.5) {
+      const ComputationService = require('../services/menuComputation.service');
+      const BuilderService = require('../services/menuBuilder.service');
+      
+      await ComputationService.computeMenuRecommendations(hostelId.toString());
+      await BuilderService.buildMessMenu(hostelId.toString(), true, 'AUTO');
+      await StudentVote.updateMany({ hostelId }, { wantsNewMenu: false });
+    }
 
     return res.status(200).json({
       message: 'Preferences saved successfully',

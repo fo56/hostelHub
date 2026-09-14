@@ -12,30 +12,36 @@ declare global {
 }
 
 // Helper to save credentials if browser supports it
+let isCredentialRequestPending = false;
+
 const saveCredentials = async (email: string, password: string) => {
-  if (navigator.credentials) {
+  if (navigator.credentials && !isCredentialRequestPending) {
     try {
+      isCredentialRequestPending = true;
       const PasswordCredentialType = (window as unknown as { PasswordCredential: new (args: unknown) => PasswordCredential }).PasswordCredential;
       if (PasswordCredentialType) {
         const credential = new PasswordCredentialType({
           id: email,
           password: password,
           name: email,
-          iconURL: '/logo.png'
+          iconURL: window.location.origin + '/logo.png'
         });
         await navigator.credentials.store(credential as any);
       }
     } catch (err) {
       // Silently fail if credential storage is not available
       console.debug('Could not save credentials:', err);
+    } finally {
+      isCredentialRequestPending = false;
     }
   }
 };
 
 // Helper to get saved credentials
 const getCredentials = async (): Promise<{ email: string; password: string } | null> => {
-  if (navigator.credentials) {
+  if (navigator.credentials && !isCredentialRequestPending) {
     try {
+      isCredentialRequestPending = true;
       const PasswordCredentialType = (window as unknown as { PasswordCredential: new (args: unknown) => PasswordCredential }).PasswordCredential;
       if (PasswordCredentialType) {
         const credential = await navigator.credentials.get({
@@ -52,6 +58,8 @@ const getCredentials = async (): Promise<{ email: string; password: string } | n
       }
     } catch (err) {
       console.debug('Could not retrieve credentials:', err);
+    } finally {
+      isCredentialRequestPending = false;
     }
   }
   return null;
@@ -62,10 +70,11 @@ export interface AdminRegisterRequest {
   adminName: string;
   adminEmail: string;
   adminPassword: string;
+  mealPlan?: any[];
 }
 
 export interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -77,8 +86,8 @@ export interface TokenResponse {
 export interface UserData {
   id: string;
   name: string;
-  email: string;
-  role: 'ADMIN' | 'STUDENT' | 'WORKER';
+  username: string;
+  role: 'admin' | 'student';
   hostelId?: string;
 }
 
@@ -89,23 +98,12 @@ export interface LoginResponse {
   refreshToken: string;
 }
 
-export interface QRLoginRequest {
-  qrToken: string;
-}
 
-export interface URLLoginRequest {
-  loginURL: string;
-}
-
-export interface SetPasswordRequest {
-  loginURL: string;
-  password: string;
-}
 
 class AuthService {
   // ADMIN REGISTRATION
   async registerAdmin(data: AdminRegisterRequest): Promise<LoginResponse> {
-    const response = await fetch(`${API_URL}/register-admin`, {
+    const response = await fetch(`${API_URL}/admin/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -121,13 +119,13 @@ class AuthService {
     return result;
   }
 
-  // ADMIN LOGIN
-  async loginAdmin(email: string, password: string): Promise<LoginResponse> {
-    const response = await fetch(`${API_URL}/login-admin`, {
+  // UNIFIED LOGIN
+  async login(username: string, password: string): Promise<LoginResponse> {
+    const response = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username, password }),
     });
 
     if (!response.ok) {
@@ -140,93 +138,12 @@ class AuthService {
     this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
 
     // Save credentials for autofill
-    await saveCredentials(email, password);
+    await saveCredentials(username, password);
 
     return result;
   }
 
-  // STUDENT/WORKER LOGIN (email & password)
-  async loginUser(email: string, password: string, role: 'STUDENT' | 'WORKER'): Promise<LoginResponse> {
-    const response = await fetch(`${API_URL}/login-user`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ email, password, role }),
-    });
 
-    if (!response.ok) {
-      const error = await response.json();
-      const errorMessage = error.message || error.error || 'Login failed';
-      throw new Error(errorMessage);
-    }
-
-    const result = await response.json();
-    this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
-
-    // Save credentials for autofill
-    await saveCredentials(email, password);
-
-    return result;
-  }
-
-  // QR CODE LOGIN
-  async loginViaQR(qrToken: string): Promise<LoginResponse | { setPasswordURL: string; userId: string }> {
-    const response = await fetch(`${API_URL}/login-qr`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ qrToken }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || error.error || 'Login failed');
-    }
-
-    const result = await response.json();
-
-    if (result.setPasswordURL) {
-      return result;
-    }
-
-    this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
-    return result;
-  }
-
-  // TOKENIZED LOGIN URL
-  async loginViaURL(loginURL: string): Promise<LoginResponse> {
-    const response = await fetch(`${API_URL}/login-url`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ loginURL }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || error.error || 'Login failed');
-    }
-
-    const result = await response.json();
-    this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
-    return result;
-  }
-
-  // SET PASSWORD (First login)
-  async setPassword(loginURL: string, password: string): Promise<LoginResponse> {
-    const response = await fetch(`${API_URL}/set-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ loginURL, password }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || error.error || 'Failed to set password');
-    }
-
-    const result = await response.json();
-    this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
-    return result;
-  }
 
   // REFRESH TOKEN
   async refreshToken(): Promise<TokenResponse> {
@@ -270,6 +187,22 @@ class AuthService {
     } finally {
       this.clearTokens();
     }
+  }
+
+  // GET CURRENT USER
+  async getMe(): Promise<UserData> {
+    const response = await fetch(`${API_BASE_URL}/users/me`, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+
+    if (!response.ok) {
+      const error: any = new Error('Failed to fetch user data');
+      error.status = response.status;
+      throw error;
+    }
+
+    return await response.json();
   }
 
   // TOKEN MANAGEMENT

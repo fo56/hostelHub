@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import mongoose from 'mongoose';
 
 export async function connectDB() {
@@ -8,7 +9,7 @@ export async function connectDB() {
       connectTimeoutMS: 5000,
     });
   } catch (error) {
-    console.error('MongoDB connection failed:', error instanceof Error ? error.message : error);
+    logger.error('APP', 'MongoDB connection failed:', error instanceof Error ? error.message : error);
     process.exit(1);
   }
 };

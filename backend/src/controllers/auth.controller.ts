@@ -1,27 +1,22 @@
+import mongoose from 'mongoose';
+import { logger } from '../utils/logger';
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import QRCode from 'qrcode';
 import { User } from '../models/User';
 import { Hostel } from '../models/Hostel';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken, refreshAccessToken, revokeRefreshToken } from '../utils/jwt';
 
-// Helper function to generate domain from hostel name
-const generateDomain = (hostelName: string): string => {
-  return hostelName
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .substring(0, 10) + '.com';
-};
-
 // ADMIN REGISTRATION
 export const registerAdmin = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { hostelName, adminName, adminEmail, adminPassword } = req.body;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-    // Validate required fields
+  try {
+    const { hostelName, adminName, adminEmail, adminPassword, mealPlan } = req.body;
+
     if (!hostelName?.trim() || !adminName?.trim() || !adminEmail?.trim() || !adminPassword?.trim()) {
-      res.status(400).json({ message: 'All fields (hostel name, admin name, email, password) are required' });
+      res.status(400).json({ message: 'All fields are required' });
       return;
     }
 
@@ -30,16 +25,13 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Generate domain
-    const domain = generateDomain(hostelName);
+    const domain = hostelName
+      .toLowerCase()
+      .replace(/\s+/g, '')
+      .substring(0, 10);
 
-    // Verify email matches domain
-    if (!adminEmail.endsWith(`@${domain}`)) {
-      res.status(400).json({ message: `Admin email must end with @${domain}` });
-      return;
-    }
+    const generatedUsername = `admin@${domain}`;
 
-    // Check if hostel name OR the generated domain already exists in a single query
     const existingHostel = await Hostel.findOne({
       $or: [{ name: hostelName }, { domain }]
     });
@@ -48,37 +40,40 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
       if (existingHostel.name.toLowerCase() === hostelName.toLowerCase()) {
         res.status(400).json({ message: 'This hostel name is already registered. Please choose a different name.' });
       } else {
-        // The names are different, but the first 10 characters caused a domain collision
         res.status(400).json({ 
-          message: `The auto-generated domain (${domain}) for this hostel is already in use by another facility. Please choose a more distinct hostel name.` 
+          message: `The domain (${domain}) is already in use by another facility. Please choose a distinct domain.` 
         });
       }
       return;
     }
 
-    // Create hostel
-    const hostel = new Hostel({ name: hostelName, domain });
-    await hostel.save();
+    const finalMealPlan = mealPlan || [
+      { mealName: 'Breakfast', offDays: [], categories: [{ categoryName: 'Main Course' }, { categoryName: 'Beverage' }, { categoryName: 'Bread' }, { categoryName: 'Condiment' }] },
+      { mealName: 'Lunch', offDays: [], categories: [{ categoryName: 'Main Course' }, { categoryName: 'Lentils' }, { categoryName: 'Rice' }, { categoryName: 'Sides' }, { categoryName: 'Condiment' }, { categoryName: 'Bread' }] },
+      { mealName: 'Snack', offDays: [], categories: [{ categoryName: 'Snacks' }] },
+      { mealName: 'Dinner', offDays: [], categories: [{ categoryName: 'Main Course' }, { categoryName: 'Lentils' }, { categoryName: 'Rice' }, { categoryName: 'Sides' }, { categoryName: 'Dessert' }, { categoryName: 'Bread' }] }
+    ];
 
-    // Hash password
+    const hostel = new Hostel({ name: hostelName, domain, mealPlan: finalMealPlan });
+    await hostel.save({ session });
+
     const passwordHash = await bcrypt.hash(adminPassword, 10);
-
-    // Create admin user
     const user = new User({
       hostelId: hostel._id,
       name: adminName,
+      username: generatedUsername,
       email: adminEmail,
       role: 'ADMIN',
       passwordHash,
-      isPasswordSet: true,
-      emailVerified: true
     });
-    await user.save();
+    await user.save({ session });
 
-    // Generate tokens
+    await session.commitTransaction();
+    session.endSession();
+
     const accessToken = generateAccessToken({
       userId: user._id.toString(),
-      email: user.email,
+      username: user.username,
       role: user.role,
       hostelId: hostel._id.toString()
     });
@@ -88,339 +83,68 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
     res.status(201).json({
       message: 'Admin registered successfully',
       hostel: { id: hostel._id, name: hostel.name, domain: hostel.domain },
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, username: user.username, email: user.email, role: user.role },
       accessToken,
       refreshToken
     });
   } catch (error) {
-    console.error('Admin registration error:', error);
+    await session.abortTransaction();
+    session.endSession();
+    logger.error('APP', 'Admin registration error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Registration failed';
     res.status(500).json({ message: `Registration failed: ${errorMessage}` });
   }
 };
 
-// ADMIN LOGIN
-export const loginAdmin = async (req: Request, res: Response): Promise<void> => {
+// UNIFIED LOGIN (Email & Password)
+export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    // Validate required fields
-    if (!email?.trim() || !password?.trim()) {
-      res.status(400).json({ message: 'Email and password are required' });
+    if (!username?.trim() || !password?.trim()) {
+      res.status(400).json({ message: 'Username and password are required' });
       return;
     }
 
-    const user = await User.findOne({ email, role: 'ADMIN' });
+    const user = await User.findOne({ username: username.toLowerCase() });
     if (!user) {
-      console.warn(`[AUTH] Login attempt failed - admin not found for email: ${email}`);
-      res.status(401).json({ message: 'Invalid email or password' });
+      res.status(401).json({ message: 'Invalid username or password' });
       return;
     }
 
-    if (!user.passwordHash) {
-      console.warn(`[AUTH] Login attempt - admin has no password hash: ${email}`);
-      res.status(401).json({ message: 'Invalid email or password' });
-      return;
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isPasswordValid) {
-      console.warn(`[AUTH] Login attempt failed - invalid password for admin: ${email}`);
-      res.status(401).json({ message: 'Invalid email or password' });
-      return;
-    }
-
-    const accessToken = generateAccessToken({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-      hostelId: user.hostelId.toString()
-    });
-
-    const refreshToken = await generateRefreshToken(user._id.toString());
-
-    console.log(`[AUTH] Admin login successful: ${email} (ID: ${user._id})`);
-
-    res.json({
-      message: 'Login successful',
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
-      accessToken,
-      refreshToken
-    });
-  } catch (error) {
-    console.error('[AUTH] Admin login error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Login failed';
-    res.status(500).json({ message: `Login failed: ${errorMessage}` });
-  }
-};
-
-// STUDENT/WORKER LOGIN (email & password)
-export const loginUser = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, password, role } = req.body;
-
-    // Validate required fields
-    if (!email?.trim() || !password?.trim() || !role?.trim()) {
-      res.status(400).json({ message: 'Email, password, and role are required' });
-      return;
-    }
-
-    // Validate role
-    const validRoles = ['STUDENT', 'WORKER'];
-    if (!validRoles.includes(role.toUpperCase())) {
-      res.status(400).json({ message: 'Invalid role. Must be STUDENT or WORKER.' });
-      return;
-    }
-
-    const user = await User.findOne({ email, role: role.toUpperCase() });
-    if (!user) {
-      res.status(401).json({ message: 'Invalid email or password' });
-      return;
-    }
-
-    // Check if password is set
-    if (!user.isPasswordSet || !user.passwordHash) {
-      res.status(401).json({ message: 'Your account password has not been set yet. Please use QR code login or contact your admin.' });
-      return;
-    }
-
-    // Check if user is active
-    if (!user.isActive) {
+    if (user.isActive === false) {
       res.status(403).json({ message: 'Your account has been deactivated. Please contact your admin.' });
       return;
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash || '');
     if (!isPasswordValid) {
-      console.warn(`[AUTH] Login attempt failed - invalid password for ${role}: ${email}`);
-      res.status(401).json({ message: 'Invalid email or password' });
+      res.status(401).json({ message: 'Invalid username or password' });
       return;
     }
 
     const accessToken = generateAccessToken({
       userId: user._id.toString(),
-      email: user.email,
+      username: user.username,
       role: user.role,
       hostelId: user.hostelId.toString()
     });
-
     const refreshToken = await generateRefreshToken(user._id.toString());
-
-    console.log(`[AUTH] ${role} login successful: ${email} (ID: ${user._id})`);
 
     res.json({
       message: 'Login successful',
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, username: user.username, email: user.email, role: user.role },
       accessToken,
       refreshToken
     });
   } catch (error) {
-    console.error('[AUTH] User login error:', error);
+    logger.error('APP', '[AUTH] Login error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Login failed';
     res.status(500).json({ message: `Login failed: ${errorMessage}` });
   }
 };
 
-// GENERATE QR CODE FOR STUDENT/WORKER
-export const generateQRCode = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { userId } = req.params;
 
-    if (typeof userId !== 'string' || !userId.trim()) {
-      res.status(400).json({ message: 'User ID is required' });
-      return;
-    }
-
-    const user = await User.findById(userId);
-    if (!user || !['STUDENT', 'WORKER'].includes(user.role)) {
-      res.status(404).json({ message: 'User not found or invalid user role' });
-      return;
-    }
-
-    // Generate QR token if not exists
-    if (!user.qrToken) {
-      user.qrToken = crypto.randomBytes(32).toString('hex');
-      await user.save();
-    }
-
-    const qrCodeData = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/qr-login/${user.qrToken}`;
-    const qrCodeImage = await QRCode.toDataURL(qrCodeData);
-
-    res.json({ qrCode: qrCodeImage, qrToken: user.qrToken });
-  } catch (error) {
-    console.error('QR code generation error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to generate QR code';
-    res.status(500).json({ message: `QR code generation failed: ${errorMessage}` });
-  }
-};
-
-// QR CODE LOGIN
-export const loginViaQR = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { qrToken } = req.body;
-
-    if (!qrToken?.trim()) {
-      res.status(400).json({ message: 'QR token is required' });
-      return;
-    }
-
-    const user = await User.findOne({ qrToken });
-    if (!user) {
-      res.status(401).json({ message: 'Invalid or expired QR token' });
-      return;
-    }
-
-    // For first login, just generate login URL
-    if (!user.isPasswordSet) {
-      const loginToken = crypto.randomBytes(32).toString('hex');
-      user.loginURL = loginToken;
-      user.loginURLExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-      await user.save();
-
-      const setPasswordURL = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/set-password/${loginToken}`;
-      res.json({
-        message: 'First login detected',
-        setPasswordURL,
-        userId: user._id
-      });
-      return;
-    }
-
-    // Generate tokens
-    const accessToken = generateAccessToken({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-      hostelId: user.hostelId.toString()
-    });
-
-    const refreshToken = await generateRefreshToken(user._id.toString());
-
-    res.json({
-      message: 'QR login successful',
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
-      accessToken,
-      refreshToken
-    });
-  } catch (error) {
-    console.error('QR login error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Login failed';
-    res.status(500).json({ message: `QR login failed: ${errorMessage}` });
-  }
-};
-
-// TOKENIZED LOGIN URL
-export const loginViaURL = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { loginURL } = req.body;
-
-    if (!loginURL?.trim()) {
-      res.status(400).json({ message: 'Login URL token is required' });
-      return;
-    }
-
-    const user = await User.findOne({ loginURL });
-    if (!user) {
-      res.status(401).json({ message: 'Invalid or expired login link' });
-      return;
-    }
-
-    // Check if URL expired
-    if (!user.loginURLExpires || new Date() > user.loginURLExpires) {
-      res.status(401).json({ message: 'Login link has expired. Please request a new one.' });
-      return;
-    }
-
-    // Generate tokens
-    const accessToken = generateAccessToken({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-      hostelId: user.hostelId.toString()
-    });
-
-    const refreshToken = await generateRefreshToken(user._id.toString());
-
-    // Clear the login URL
-    user.loginURL = undefined;
-    user.loginURLExpires = undefined;
-    await user.save();
-
-    res.json({
-      message: 'Login successful',
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
-      accessToken,
-      refreshToken
-    });
-  } catch (error) {
-    console.error('URL login error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Login failed';
-    res.status(500).json({ message: `Login failed: ${errorMessage}` });
-  }
-};
-
-// SET PASSWORD (First login)
-export const setPassword = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { loginURL, password } = req.body;
-
-    if (!loginURL?.trim()) {
-      res.status(400).json({ message: 'Login URL token is required' });
-      return;
-    }
-
-    if (!password?.trim()) {
-      res.status(400).json({ message: 'Password is required' });
-      return;
-    }
-
-    if (password.length < 8) {
-      res.status(400).json({ message: 'Password must be at least 8 characters long' });
-      return;
-    }
-
-    const user = await User.findOne({ loginURL });
-    if (!user) {
-      res.status(401).json({ message: 'Invalid or expired login link' });
-      return;
-    }
-
-    // Check if URL expired
-    if (!user.loginURLExpires || new Date() > user.loginURLExpires) {
-      res.status(401).json({ message: 'Login link has expired. Please request a new one.' });
-      return;
-    }
-
-    // Hash and set password
-    const passwordHash = await bcrypt.hash(password, 10);
-    user.passwordHash = passwordHash;
-    user.isPasswordSet = true;
-    user.loginURL = undefined;
-    user.loginURLExpires = undefined;
-    await user.save();
-
-    // Generate tokens for immediate login
-    const accessToken = generateAccessToken({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-      hostelId: user.hostelId.toString()
-    });
-
-    const refreshToken = await generateRefreshToken(user._id.toString());
-
-    res.json({
-      message: 'Password set successfully',
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
-      accessToken,
-      refreshToken
-    });
-  } catch (error) {
-    console.error('Set password error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to set password';
-    res.status(500).json({ message: `Failed to set password: ${errorMessage}` });
-  }
-};
 
 // REFRESH TOKEN
 export const refresh = async (req: Request, res: Response): Promise<void> => {
@@ -439,13 +163,12 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
     }
 
     const { accessToken, refreshToken: newRefreshToken } = await refreshAccessToken(userId);
-
     res.json({
       message: 'Token refreshed',
       tokens: { accessToken, refreshToken: newRefreshToken }
     });
   } catch (error) {
-    console.error('Refresh token error:', error);
+    logger.error('APP', 'Refresh token error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Token refresh failed';
     res.status(500).json({ message: `Token refresh failed: ${errorMessage}` });
   }
@@ -455,14 +178,12 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
     const { refreshToken } = req.body;
-
     if (refreshToken) {
       await revokeRefreshToken(refreshToken);
     }
-
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
-    console.error('Logout error:', error);
+    logger.error('APP', 'Logout error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Logout failed';
     res.status(500).json({ message: `Logout failed: ${errorMessage}` });
   }

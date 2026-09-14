@@ -1,7 +1,5 @@
 # Dependencies (can be reinstalled with npm install)
 node_modules/
-package-lock.json
-
 # Environment variables (contain passwords, API keys - NEVER commit these!)
 .env
 .env.local
@@ -12,3 +10,6 @@ dist/
 build/
 
 .DS_Store
+docs/
+.agents/
+backend/seed.ts

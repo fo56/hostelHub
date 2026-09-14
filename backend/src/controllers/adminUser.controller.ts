@@ -2,54 +2,32 @@ import { Request, Response } from 'express';
 import { User } from '../models/User';
 import { ActivityLog } from '../models/ActivityLog';
 import { Hostel } from '../models/Hostel';
-import QRCode from 'qrcode';
 import crypto from 'crypto';
 import { StudentVote } from '../models/StudentVote';
 import { MealReview } from '../models/MealReview';
 import { Issue } from '../models/Issue';
 import { RefreshToken } from '../models/RefreshToken';
 import { Dish } from '../models/Dish';
-// Generate QR Code
-const generateQRCode = async (qrToken: string): Promise<string> => {
-  try {
-    return await QRCode.toDataURL(qrToken);
-  } catch (err) {
-    throw new Error('Failed to generate QR code');
-  }
-};
 
-// Generate unique QR token
-const generateQRToken = (): string => {
-  return crypto.randomBytes(32).toString('hex');
-};
-
-// Generate login token URL - Standardized to /set-password/
-const generateLoginToken = (): { token: string; url: string } => {
-  const token = crypto.randomBytes(32).toString('hex');
-  const url = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/set-password/${token}`;
-  return { token, url };
+// generate simple password
+const generatePassword = (): string => {
+  return crypto.randomBytes(4).toString('hex'); // 8 char hex
 };
 
 // Create User (Student/Worker)
 export const createUser = async (req: Request, res: Response) => {
   try {
     const adminId = (req as any).user?._id;
-    let { name, email, role, roomNo, jobType, registrationNo } = req.body;
+    let { username, password, name, role, roomNo } = req.body;
 
-    // Validate input
-    if (!name || !role) {
-      return res.status(400).json({ message: 'Name and role are required' });
+    if (!role) {
+      return res.status(400).json({ message: 'Role is required' });
     }
 
-    if (role === 'STUDENT' && !roomNo) {
-      return res.status(400).json({ message: 'Room number is required for students' });
+    if (role === 'STUDENT' && !roomNo && !username) {
+      return res.status(400).json({ message: 'Room number is required for students if username is not provided' });
     }
 
-    if (role === 'WORKER' && !jobType) {
-      return res.status(400).json({ message: 'Job type is required for workers' });
-    }
-
-    // Get admin's hostel first to get the domain
     const admin = await User.findById(adminId);
     if (!admin || admin.role !== 'ADMIN') {
       return res.status(403).json({ message: 'Only admins can create users' });
@@ -60,50 +38,50 @@ export const createUser = async (req: Request, res: Response) => {
       return res.status(500).json({ message: 'Hostel information not found' });
     }
 
-    // Auto-generate email if not provided
-    if (!email) {
-      if (role === 'STUDENT' && roomNo) {
-        email = `${name.toLowerCase().replace(/\s+/g, '_')}_${roomNo.toLowerCase()}@${hostel.domain}`;
-      } else if (role === 'WORKER') {
-        email = `${name.toLowerCase().replace(/\s+/g, '_')}@${hostel.domain}`;
+    // Generate or format username
+    if (username) {
+      const suffix = `@${hostel.domain}`;
+      if (!username.endsWith(suffix)) {
+        username = `${username}${suffix}`;
+      }
+    } else {
+      if (role === 'STUDENT') {
+         const existingInRoom = await User.countDocuments({ hostelId: hostel._id, roomNo });
+         const nextId = existingInRoom + 1;
+         username = `${roomNo}.${nextId}@${hostel.domain}`;
+      } else if (role === 'ADMIN') {
+         const existingAdmins = await User.countDocuments({ hostelId: hostel._id, role: 'ADMIN' });
+         const nextId = existingAdmins + 1;
+         username = nextId === 1 ? `admin@${hostel.domain}` : `admin${nextId}@${hostel.domain}`;
       } else {
-        return res.status(400).json({ message: 'Email is required' });
+         return res.status(400).json({ message: 'Username is required' });
       }
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ username });
     if (existingUser) {
-      return res.status(409).json({ message: 'User already exists' });
+      return res.status(409).json({ message: 'Generated username already exists' });
     }
 
-    // Generate tokens
-    const qrToken = generateQRToken();
-    const { token: loginToken, url: loginURL } = generateLoginToken();
+    const rawPassword = password || generatePassword();
+    const bcrypt = require('bcrypt');
+    const passwordHash = await bcrypt.hash(rawPassword, 10);
 
-    // Create user
     const newUser = new User({
       hostelId: admin.hostelId,
       name,
-      email,
-      registrationNo,
+      username,
       role,
-      roomNo: role === 'STUDENT' ? roomNo : undefined,
-      jobType: role === 'WORKER' ? jobType : undefined,
-      qrToken,
-      loginURL: loginToken, // STORE ONLY THE HEX TOKEN IN DB
-      loginURLExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      roomNo,
+      passwordHash
     });
 
     await newUser.save();
 
-    // Generate QR code
-    const qrCodeDataURL = await generateQRCode(qrToken);
-
-    // Log activity
     await ActivityLog.create({
+      hostelId: admin.hostelId,
       userId: adminId,
-      action: `Created ${role.toLowerCase()} - ${name} (${email})`,
+      action: `Created student - ${name || username} (${username})`,
       ip: req.ip,
     });
 
@@ -112,14 +90,99 @@ export const createUser = async (req: Request, res: Response) => {
       user: {
         id: newUser._id,
         name: newUser.name,
-        email: newUser.email,
+        username: newUser.username,
         role: newUser.role,
         roomNo: newUser.roomNo,
-        jobType: newUser.jobType,
       },
-      qrCode: qrCodeDataURL,
-      loginURL, // SEND THE FULL URL TO THE CLIENT
-      qrToken,
+      rawPassword
+    });
+  } catch (err) {
+    const error = err as Error;
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Bulk Create Users
+export const bulkCreateUsers = async (req: Request, res: Response) => {
+  try {
+    const adminId = (req as any).user?._id;
+    const { users } = req.body; // Array of { username, password, name?, role, roomNo? }
+
+    if (!Array.isArray(users)) {
+      return res.status(400).json({ message: 'Users must be an array' });
+    }
+
+    const admin = await User.findById(adminId);
+    if (!admin || admin.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can bulk create users' });
+    }
+
+    const hostel = await Hostel.findById(admin.hostelId);
+    if (!hostel) {
+      return res.status(500).json({ message: 'Hostel information not found' });
+    }
+
+    const createdUsers = [];
+    const bcrypt = require('bcrypt');
+
+    for (const u of users) {
+      let { username, password, name, role, roomNo } = u;
+      
+      // Generate or format username
+      if (username) {
+        const suffix = `@${hostel.domain}`;
+        if (!username.endsWith(suffix)) {
+          username = `${username}${suffix}`;
+        }
+      } else {
+        if (role === 'STUDENT' && roomNo) {
+          const existingInRoom = await User.countDocuments({ hostelId: hostel._id, roomNo });
+          const nextId = existingInRoom + 1;
+          username = `${roomNo}.${nextId}@${hostel.domain}`;
+        } else if (role === 'ADMIN') {
+          const existingAdmins = await User.countDocuments({ hostelId: hostel._id, role: 'ADMIN' });
+          const nextId = existingAdmins + 1;
+          username = nextId === 1 ? `admin@${hostel.domain}` : `admin${nextId}@${hostel.domain}`;
+        } else {
+          continue; // skip invalid user
+        }
+      }
+
+      const existingUser = await User.findOne({ username });
+      if (existingUser) continue; // skip duplicates
+
+      const rawPassword = password || generatePassword();
+      const passwordHash = await bcrypt.hash(rawPassword, 10);
+
+      const newUser = new User({
+        hostelId: admin.hostelId,
+        name,
+        username,
+        role: role || 'STUDENT',
+        roomNo,
+        passwordHash
+      });
+
+      await newUser.save();
+      createdUsers.push({
+        username: newUser.username,
+        rawPassword,
+        name: newUser.name,
+        role: newUser.role,
+        roomNo: newUser.roomNo
+      });
+    }
+
+    await ActivityLog.create({
+      hostelId: admin.hostelId,
+      userId: adminId,
+      action: `Bulk created ${createdUsers.length} users`,
+      ip: req.ip,
+    });
+
+    return res.status(201).json({
+      message: `${createdUsers.length} users created successfully`,
+      createdUsers
     });
   } catch (err) {
     const error = err as Error;
@@ -138,20 +201,12 @@ export const getUsers = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Only admins can view users' });
     }
 
-    const query: any = { hostelId: admin.hostelId, role: { $ne: 'ADMIN' } };
-
-    if (role) {
-      query.role = role;
-    }
-
-    if (status === 'inactive') {
-      query.isActive = false;
-    } else if (status === 'active') {
-      query.isActive = true;
-    }
+    const query: any = { hostelId: admin.hostelId };
+    if (role) query.role = role;
+    if (status === 'inactive') query.isActive = false;
+    else if (status === 'active') query.isActive = true;
 
     const users = await User.find(query).select('-passwordHash -emailVerificationToken');
-
     return res.status(200).json({ users });
   } catch (err) {
     const error = err as Error;
@@ -197,22 +252,21 @@ export const deactivateUser = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Only admins can deactivate users' });
     }
 
-    const user = await User.findOne({
-      _id: userId,
-      hostelId: admin.hostelId,
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    const user = await User.findOne({ _id: userId, hostelId: admin.hostelId }).populate('hostelId');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    const hostel = user.hostelId as any;
+    if (user.role === 'ADMIN' && user.username === `admin@${hostel.domain}`) {
+      return res.status(403).json({ message: 'The primary admin cannot be deactivated' });
     }
 
     user.isActive = false;
     await user.save();
 
-    // Log activity
     await ActivityLog.create({
+      hostelId: admin.hostelId,
       userId: adminId,
-      action: `Deactivated user - ${user.name} (${user.email})`,
+      action: `Deactivated user - ${user.name} (${user.username})`,
       ip: req.ip,
     });
 
@@ -234,22 +288,16 @@ export const reactivateUser = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Only admins can reactivate users' });
     }
 
-    const user = await User.findOne({
-      _id: userId,
-      hostelId: admin.hostelId,
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    const user = await User.findOne({ _id: userId, hostelId: admin.hostelId });
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     user.isActive = true;
     await user.save();
 
-    // Log activity
     await ActivityLog.create({
+      hostelId: admin.hostelId,
       userId: adminId,
-      action: `Reactivated user - ${user.name} (${user.email})`,
+      action: `Reactivated user - ${user.name} (${user.username})`,
       ip: req.ip,
     });
 
@@ -259,8 +307,6 @@ export const reactivateUser = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-// Delete user
 
 // Delete user
 export const deleteUser = async (req: Request, res: Response) => {
@@ -273,29 +319,25 @@ export const deleteUser = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Only admins can delete users' });
     }
 
-    const user = await User.findOne({
-      _id: userId,
-      hostelId: admin.hostelId,
-    });
+    const user = await User.findOne({ _id: userId, hostelId: admin.hostelId }).populate('hostelId');
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    const hostel = user.hostelId as any;
+    if (user.role === 'ADMIN' && user.username === `admin@${hostel.domain}`) {
+      return res.status(403).json({ message: 'The primary admin cannot be deleted' });
     }
 
-    // --- CASCADING DELETES ---
-    // Execute all deletion queries concurrently for maximum performance
     await Promise.all([
       StudentVote.deleteMany({ userId }),
       RefreshToken.deleteMany({ userId }),
     ]);
 
-    // Finally, delete the actual user document
     await User.deleteOne({ _id: userId });
 
-    // Log the admin's activity (Note: We do this AFTER deleting the user's own logs)
     await ActivityLog.create({
+      hostelId: admin.hostelId,
       userId: adminId,
-      action: `Deleted user - ${user.name} (${user.email}) and all associated records`,
+      action: `Deleted user - ${user.name} (${user.username}) and all associated records`,
       ip: req.ip,
     });
 
@@ -305,89 +347,5 @@ export const deleteUser = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
-// Regenerate QR code
-export const regenerateQRCode = async (req: Request, res: Response) => {
-  try {
-    const adminId = (req as any).user?._id;
-    const { userId } = req.params;
 
-    const admin = await User.findById(adminId);
-    if (!admin || admin.role !== 'ADMIN') {
-      return res.status(403).json({ message: 'Only admins can regenerate QR codes' });
-    }
-
-    const user = await User.findOne({
-      _id: userId,
-      hostelId: admin.hostelId,
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const newQRToken = generateQRToken();
-    user.qrToken = newQRToken;
-    await user.save();
-
-    const qrCodeDataURL = await generateQRCode(newQRToken);
-
-    // Log activity
-    await ActivityLog.create({
-      userId: adminId,
-      action: `Regenerated QR code for - ${user.name}`,
-      ip: req.ip,
-    });
-
-    return res.status(200).json({
-      message: 'QR code regenerated',
-      qrCode: qrCodeDataURL,
-      qrToken: newQRToken,
-    });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Regenerate login token/URL
-export const regenerateLoginToken = async (req: Request, res: Response) => {
-  try {
-    const adminId = (req as any).user?._id;
-    const { userId } = req.params;
-
-    const admin = await User.findById(adminId);
-    if (!admin || admin.role !== 'ADMIN') {
-      return res.status(403).json({ message: 'Only admins can regenerate login tokens' });
-    }
-
-    const user = await User.findOne({
-      _id: userId,
-      hostelId: admin.hostelId,
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const { token: newToken, url: newLoginURL } = generateLoginToken();
-    user.loginURL = newToken; // STORE ONLY THE HEX TOKEN IN DB
-    user.loginURLExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await user.save();
-
-    // Log activity
-    await ActivityLog.create({
-      userId: adminId,
-      action: `Regenerated login token for - ${user.name}`,
-      ip: req.ip,
-    });
-
-    return res.status(200).json({
-      message: 'Login token regenerated',
-      loginURL: newLoginURL, // SEND THE FULL URL TO THE CLIENT
-      expiresIn: '24 hours',
-    });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ message: error.message });
-  }
-};
+// TOKEN REGENERATION ROUTES DELETED

@@ -5,7 +5,7 @@ import { ActivityLog } from '../models/ActivityLog';
 // Admin can suggest/add a dish directly
 export const createAdminDish = async (req: Request, res: Response) => {
   try {
-    const { name, mealType, category, tags, priceScore, healthScore } = req.body;
+    const { name, mealType, category, tags, priceScore, healthScore, itemClass } = req.body;
     const adminId = req.user?._id;
     const hostelId = req.user?.hostelId;
 
@@ -36,6 +36,7 @@ export const createAdminDish = async (req: Request, res: Response) => {
       category,
       tags: tags || [],
       status: 'ACTIVE', 
+      itemClass: itemClass || 'ROTATING',
       priceScore: validPriceScore,
       healthScore: validHealthScore,
       suggestedBy: adminId,

@@ -5,8 +5,9 @@ declare global {
     interface Request {
       user?: {
         _id: Types.ObjectId;
-        role: 'STUDENT' | 'ADMIN' | 'WORKER';
-        hostelId: Types.ObjectId;
+        email?: string;
+        role: 'STUDENT' | 'ADMIN';
+        hostelId: string | Types.ObjectId;
       };
     }
   }

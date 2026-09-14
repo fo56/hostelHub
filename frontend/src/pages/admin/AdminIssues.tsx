@@ -1,12 +1,14 @@
+import { logger } from '../../lib/logger'
 import { useEffect, useState } from 'react';
 import { useApi } from '../../hooks/useApi';
-
-interface User {
-  _id: string;
-  name: string;
-  email: string;
-  jobType?: string;
-}
+import { Card } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
+import { Badge } from '../../components/ui/badge';
+import { Select } from '../../components/ui/select';
+import { Modal } from '../../components/ui/modal';
+import toast from 'react-hot-toast';
+import { CheckCircle, XCircle } from 'lucide-react';
 
 interface Issue {
   _id: string;
@@ -15,377 +17,299 @@ interface Issue {
   status: string;
   description: string;
   resolverNote?: string;
-  raisedBy: User;
-  assignedTo?: User;
+  raisedBy: string;
+  raisedByName: string;
+  roomNo: string;
   createdAt: string;
   updatedAt: string;
-}
-
-interface Worker {
-  _id: string;
-  name: string;
-  email: string;
-  role: string;
-  jobType?: string;
 }
 
 export default function AdminIssues() {
   const { request } = useApi();
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
-  const [assigningId, setAssigningId] = useState<string | null>(null);
-  const [selectedWorker, setSelectedWorker] = useState<{ [key: string]: string }>({});
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  
+  const [settings, setSettings] = useState<any>(null);
+  const [closePrompt, setClosePrompt] = useState<{ issueId: string, note: string } | null>(null);
+
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [filterPriority, setFilterPriority] = useState<string>('ALL');
+  const [filterStatus, setFilterStatus] = useState<string>('ACTIVE');
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   useEffect(() => {
-    Promise.all([fetchIssues(), fetchWorkers()]);
+    fetchIssues();
+    request('/admin/settings', 'GET').then(res => setSettings(res)).catch(err => logger.error('APP', 'Failed to fetch settings', err));
   }, []);
 
   const fetchIssues = async () => {
     try {
       const response = await request('/issues/admin/all', 'GET');
       setIssues(response.issues || []);
-    } catch (error) {
-      console.error('Failed to fetch issues:', error);
-      setError('Failed to load issues');
+    } catch (error: any) {
+      logger.error('APP', 'Failed to fetch issues:', error);
+      toast.error('Failed to load issues');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchWorkers = async () => {
+
+
+  const handleStatusUpdate = async (issueId: string, newStatus: string, resolverNote?: string) => {
     try {
-      const response = await request('/admin/users?role=WORKER', 'GET');
-      setWorkers(response.users || []);
-    } catch (error) {
-      console.error('Failed to fetch workers:', error);
-    }
-  };
+      const payload: any = { status: newStatus };
+      if (resolverNote !== undefined) payload.resolverNote = resolverNote;
 
-  const handleAssignIssue = async (issueId: string) => {
-    const workerId = selectedWorker[issueId];
-    
-    if (!workerId) {
-      setError('Please select a worker');
-      return;
-    }
-
-    try {
-      setAssigningId(issueId);
-      setError('');
-      setSuccess('');
-
-      await request(`/issues/${issueId}/assign`, 'PATCH', { workerId });
-
-      setSuccess('Issue assigned successfully');
-      setSelectedWorker(prev => {
-        const updated = { ...prev };
-        delete updated[issueId];
-        return updated;
-      });
-
-      // Refresh issues
+      await request(`/issues/${issueId}/status`, 'PATCH', payload);
+      toast.success('Issue status updated successfully');
       fetchIssues();
-    } catch (err) {
-      const message = err instanceof Error ? (err as Error).message : 'Failed to assign issue';
-      setError(message);
-    } finally {
-      setAssigningId(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update status');
     }
   };
 
-  const handleStatusUpdate = async (issueId: string, newStatus: string) => {
-    try {
-      setError('');
-      setSuccess('');
-
-      await request(`/issues/${issueId}/status`, 'PATCH', { status: newStatus });
-
-      setSuccess('Issue status updated successfully');
-      fetchIssues();
-    } catch (err) {
-      const message = err instanceof Error ? (err as Error).message : 'Failed to update status';
-      setError(message);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'OPEN':
-        return 'bg-red-100 text-red-800';
-      case 'IN_PROGRESS':
-        return 'bg-blue-100 text-blue-800';
-      case 'RESOLVED':
-        return 'bg-green-100 text-green-800';
-      case 'CLOSED':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'LOW':
-        return 'bg-green-100 text-green-800';
-      case 'MEDIUM':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'HIGH':
-        return 'bg-orange-100 text-orange-800';
-      case 'URGENT':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const statuses = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
-  
   const categories = Array.from(new Set(issues.map(i => i.category)));
 
   const filteredIssues = issues.filter(issue => {
     const matchCategory = filterCategory === 'ALL' || issue.category === filterCategory;
     const matchPriority = filterPriority === 'ALL' || issue.priority === filterPriority;
-    return matchCategory && matchPriority;
+    const matchStatus = filterStatus === 'ALL' ||
+      (filterStatus === 'ACTIVE' && issue.status === 'OPEN') ||
+      (filterStatus === 'CLOSED' && issue.status === 'CLOSED');
+    return matchCategory && matchPriority && matchStatus;
   });
 
-  const activeIssues = filteredIssues.filter(i => i.status === 'OPEN' || i.status === 'IN_PROGRESS');
-  const resolvedIssues = filteredIssues.filter(i => i.status === 'RESOLVED' || i.status === 'CLOSED');
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedIssues = [...filteredIssues].sort((a, b) => {
+    if (!sortConfig) return 0;
+    
+    const { key, direction } = sortConfig;
+    
+    let valA: any = a[key as keyof Issue];
+    let valB: any = b[key as keyof Issue];
+
+    if (key === 'priority') {
+      const pMap: Record<string, number> = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+      valA = pMap[a.priority] || 0;
+      valB = pMap[b.priority] || 0;
+    } else if (key === 'status') {
+      const sMap: Record<string, number> = { OPEN: 1, CLOSED: 2 };
+      valA = sMap[a.status] || 0;
+      valB = sMap[b.status] || 0;
+    } else if (key === 'createdAt') {
+      valA = new Date(a.createdAt).getTime();
+      valB = new Date(b.createdAt).getTime();
+    }
+    
+    if (valA === valB) return 0;
+    
+    if (typeof valA === 'string' && typeof valB === 'string') {
+      return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    }
+    
+    if (valA < valB) return direction === 'asc' ? -1 : 1;
+    if (valA > valB) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Issues Management</h1>
-          <p className="text-gray-600 mt-2">Review and manage student-raised issues</p>
-        </div>
-        <div className="flex gap-3">
-          <select 
-            value={filterCategory} 
-            onChange={e => setFilterCategory(e.target.value)}
-            className="border p-2 rounded-lg bg-white shadow-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 capitalize"
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-hairline mb-6 gap-4">
+        <div className="flex overflow-x-auto w-full md:w-auto scrollbar-hide">
+          <button
+            onClick={() => setFilterCategory('ALL')}
+            className={`whitespace-nowrap px-4 py-2 font-medium text-body transition-colors border-b-2 -mb-[1px] ${
+              filterCategory === 'ALL'
+                ? 'border-ink text-ink'
+                : 'border-transparent text-muted hover:text-ink'
+            }`}
           >
-            <option value="ALL">All Categories</option>
-            {categories.map(c => <option key={c} value={c} className="capitalize">{c}</option>)}
-          </select>
-          <select 
-            value={filterPriority} 
+            All
+          </button>
+          {categories.map(c => (
+            <button
+              key={c}
+              onClick={() => setFilterCategory(c)}
+              className={`whitespace-nowrap capitalize px-4 py-2 font-medium text-body transition-colors border-b-2 -mb-[1px] ${
+                filterCategory === c
+                  ? 'border-ink text-ink'
+                  : 'border-transparent text-muted hover:text-ink'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+        
+        <div className="flex items-center gap-3 pb-2 w-full md:w-auto">
+          <Select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            className="w-[140px]"
+          >
+            <option value="ACTIVE">Active</option>
+            <option value="CLOSED">Closed</option>
+            <option value="ALL">All Statuses</option>
+          </Select>
+          <Select
+            value={filterPriority}
             onChange={e => setFilterPriority(e.target.value)}
-            className="border p-2 rounded-lg bg-white shadow-sm font-medium outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-[140px]"
           >
             <option value="ALL">All Priorities</option>
             <option value="LOW">Low</option>
             <option value="MEDIUM">Medium</option>
             <option value="HIGH">High</option>
             <option value="URGENT">Urgent</option>
-          </select>
+          </Select>
         </div>
       </div>
 
-      {/* Alerts */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-          {success}
-        </div>
+      {loading && (
+        <div className="p-8 text-center text-body text-muted">Loading issues...</div>
       )}
 
-      {/* Active Issues */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Active Issues ({activeIssues.length})
-          </h2>
-        </div>
+      {!loading && filteredIssues.length === 0 && (
+        <div className="p-8 text-center text-body text-muted">No issues found matching your filters.</div>
+      )}
 
-        {loading ? (
-          <div className="px-6 py-12 text-center">
-            <p className="text-gray-500">Loading issues...</p>
-          </div>
-        ) : activeIssues.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <p className="text-gray-500">No active issues.</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {activeIssues.map((issue) => (
-              <div key={issue._id} className="p-6 hover:bg-gray-50 transition">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
-                  {/* Issue Details */}
-                  <div className="lg:col-span-2">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 capitalize">
-                        {issue.category}
-                      </h3>
-                      <div className="flex gap-2">
-                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(issue.status)}`}>
-                          {issue.status}
-                        </span>
-                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(issue.priority)}`}>
-                          {issue.priority}
-                        </span>
-                      </div>
+      {!loading && filteredIssues.length > 0 && (
+      <Card className="overflow-hidden shadow-none border-hairline">
+        <div className="overflow-x-auto w-full">
+          <Table>
+              <TableHeader>
+                <TableRow className="bg-surface-soft">
+                  <TableHead className="text-center cursor-pointer hover:bg-surface transition-colors" onClick={() => handleSort('category')}>
+                    <div className="flex items-center justify-center gap-1">
+                      Category <span className="w-3 inline-block text-center">{sortConfig?.key === 'category' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
                     </div>
-                    <p className="text-gray-600 text-sm mb-2">{issue.description}</p>
-                    <div className="text-sm text-gray-500">
-                      <p><span className="font-medium">Raised by:</span> {issue.raisedBy.name}</p>
-                      <p><span className="font-medium">Date:</span> {new Date(issue.createdAt).toLocaleDateString()}</p>
+                  </TableHead>
+                  <TableHead className="w-[300px] cursor-pointer hover:bg-surface transition-colors" onClick={() => handleSort('description')}>
+                    <div className="flex items-center gap-1">
+                      Issue <span className="w-3 inline-block text-center">{sortConfig?.key === 'description' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
                     </div>
-                  </div>
-
-                  {/* Status Update */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Update Status
-                    </label>
-                    <select
-                      value={issue.status}
-                      onChange={(e) => handleStatusUpdate(issue._id, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {statuses.map(status => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Assignment */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Assign to Worker
-                    </label>
-                    <div className="flex gap-2">
-                      <select
-                        value={selectedWorker[issue._id] !== undefined ? selectedWorker[issue._id] : (issue.assignedTo?._id || 'UNASSIGN')}
-                        onChange={(e) =>
-                          setSelectedWorker(prev => ({
-                            ...prev,
-                            [issue._id]: e.target.value
-                          }))
-                        }
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="UNASSIGN">Unassigned</option>
-                        {workers.map(worker => (
-                          <option key={worker._id} value={worker._id}>
-                            {worker.name} {worker.jobType ? `(${worker.jobType})` : ''}
-                          </option>
-                        ))}
-                      </select>
+                  </TableHead>
+                  <TableHead className="text-center cursor-pointer hover:bg-surface transition-colors" onClick={() => handleSort('raisedByName')}>
+                    <div className="flex items-center justify-center gap-1">
+                      Raised By <span className="w-3 inline-block text-center">{sortConfig?.key === 'raisedByName' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-center cursor-pointer hover:bg-surface transition-colors" onClick={() => handleSort('roomNo')}>
+                    <div className="flex items-center justify-center gap-1">
+                      Room No <span className="w-3 inline-block text-center">{sortConfig?.key === 'roomNo' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-center cursor-pointer hover:bg-surface transition-colors" onClick={() => handleSort('createdAt')}>
+                    <div className="flex items-center justify-center gap-1">
+                      Date <span className="w-3 inline-block text-center">{sortConfig?.key === 'createdAt' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-center cursor-pointer hover:bg-surface transition-colors" onClick={() => handleSort('status')}>
+                    <div className="flex items-center justify-center gap-1">
+                      Status <span className="w-3 inline-block text-center">{sortConfig?.key === 'status' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-center cursor-pointer hover:bg-surface transition-colors" onClick={() => handleSort('priority')}>
+                    <div className="flex items-center justify-center gap-1">
+                      Priority <span className="w-3 inline-block text-center">{sortConfig?.key === 'priority' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-center cursor-pointer hover:bg-surface transition-colors" onClick={() => handleSort('resolverNote')}>
+                    <div className="flex items-center justify-center gap-1">
+                      Note <span className="w-3 inline-block text-center">{sortConfig?.key === 'resolverNote' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                    </div>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedIssues.map((issue) => (
+                  <TableRow key={issue._id} className="transition-colors hover:bg-surface-soft">
+                    <TableCell className="text-center capitalize text-ink font-medium">
+                      {issue.category}
+                    </TableCell>
+                    <TableCell className="max-w-[300px] leading-tight">
+                      <p className={`${issue.status === 'CLOSED' ? 'line-through text-(--color-ink)/50' : 'text-(--color-ink)/80'}`}>
+                        {issue.description}
+                      </p>
+                    </TableCell>
+                    <TableCell className="text-center text-muted">
+                      {issue.raisedByName}
+                    </TableCell>
+                    <TableCell className="text-center text-muted font-mono text-sm">
+                      {issue.roomNo}
+                    </TableCell>
+                    <TableCell className="text-center text-muted whitespace-nowrap font-mono">
+                      {new Date(issue.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-center">
                       <button
-                        onClick={() => handleAssignIssue(issue._id)}
-                        disabled={assigningId === issue._id || selectedWorker[issue._id] === undefined || selectedWorker[issue._id] === (issue.assignedTo?._id || 'UNASSIGN')}
-                        className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 py-2 rounded-lg text-sm font-medium transition"
+                        onClick={() => {
+                          if (issue.status === 'CLOSED') {
+                            handleStatusUpdate(issue._id, 'OPEN');
+                          } else {
+                            setClosePrompt({
+                              issueId: issue._id,
+                              note: settings?.defaultResolverNote || "Fixed the issue as requested."
+                            });
+                          }
+                        }}
+                        className={`p-1.5 rounded transition-colors ${
+                          issue.status === 'CLOSED'
+                            ? 'text-(--color-semantic-success) hover:bg-(--color-semantic-success)/10'
+                            : 'text-muted hover:text-(--color-ink) hover:bg-surface'
+                        }`}
+                        title={issue.status === 'CLOSED' ? 'Reopen Issue' : 'Close Issue'}
                       >
-                        {assigningId === issue._id ? 'Saving...' : 'Save'}
+                        {issue.status === 'CLOSED' ? (
+                          <CheckCircle className="w-5 h-5" />
+                        ) : (
+                          <XCircle className="w-5 h-5" />
+                        )}
                       </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={issue.priority === 'URGENT' || issue.priority === 'HIGH' ? 'error' : 'warning'} className="px-2 py-1 rounded uppercase tracking-wider">
+                        {issue.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center text-muted max-w-[200px] truncate" title={issue.resolverNote || ''}>
+                      {issue.resolverNote ? issue.resolverNote : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-        )}
-      </div>
+      </Card>
+      )}
 
-      {/* Resolved Issues */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Resolved Issues ({resolvedIssues.length})
-          </h2>
+      <Modal isOpen={!!closePrompt} onClose={() => setClosePrompt(null)} title="Resolve Issue">
+        <div className="p-4">
+          <p className="text-body text-ink mb-4">Please provide a closing remark for the student.</p>
+          <textarea
+            value={closePrompt?.note || ''}
+            onChange={(e) => closePrompt && setClosePrompt({ ...closePrompt, note: e.target.value })}
+            className="w-full bg-surface-soft border border-hairline rounded p-3 text-body text-ink focus:outline-none focus:border-ink transition-colors"
+            rows={3}
+          />
+          <div className="flex justify-end gap-3 mt-6">
+            <Button variant="secondary" onClick={() => setClosePrompt(null)}>Cancel</Button>
+            <Button variant="primary" onClick={() => {
+              if (closePrompt) {
+                handleStatusUpdate(closePrompt.issueId, 'CLOSED', closePrompt.note);
+                setClosePrompt(null);
+              }
+            }}>Resolve Issue</Button>
+          </div>
         </div>
-
-        {loading ? (
-          <div className="px-6 py-12 text-center">
-            <p className="text-gray-500">Loading issues...</p>
-          </div>
-        ) : resolvedIssues.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <p className="text-gray-500">No resolved issues yet.</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {resolvedIssues.map((issue) => (
-              <div key={issue._id} className="p-6 hover:bg-gray-50 transition">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
-                  {/* Issue Details */}
-                  <div className="lg:col-span-2">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 capitalize">
-                        {issue.category}
-                      </h3>
-                      <div className="flex gap-2">
-                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(issue.status)}`}>
-                          {issue.status}
-                        </span>
-                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(issue.priority)}`}>
-                          {issue.priority}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-gray-600 text-sm mb-2 line-through">{issue.description}</p>
-                    <div className="text-sm text-gray-500">
-                      <p><span className="font-medium">Raised by:</span> {issue.raisedBy.name}</p>
-                      <p><span className="font-medium">Date:</span> {new Date(issue.createdAt).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-
-                  {/* Status Update */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Update Status
-                    </label>
-                    <select
-                      value={issue.status}
-                      onChange={(e) => handleStatusUpdate(issue._id, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {statuses.map(status => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Worker & Note */}
-                  <div>
-                    {issue.assignedTo && (
-                      <div className="mb-3">
-                        <p className="text-sm font-medium text-gray-700 mb-1">Resolved by:</p>
-                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-2 text-sm text-gray-800">
-                          {issue.assignedTo.name} {issue.assignedTo.jobType ? `(${issue.assignedTo.jobType})` : ''}
-                        </div>
-                      </div>
-                    )}
-                    {issue.resolverNote && (
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 mb-1">Worker Note:</p>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-sm text-gray-800 italic">
-                          "{issue.resolverNote}"
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      </Modal>
     </div>
   );
 }

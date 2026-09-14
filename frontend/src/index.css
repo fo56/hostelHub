@@ -1,61 +1,184 @@
 @import "tailwindcss";
 
+@theme {
+  --color-canvas: var(--theme-canvas);
+  --color-inverse-canvas: var(--theme-inverse-canvas);
+  --color-surface: var(--theme-surface);
+  --color-surface-soft: var(--theme-surface-soft);
+  --color-hairline: var(--theme-hairline);
+  --color-hairline-soft: var(--theme-hairline-soft);
+
+  --color-primary: var(--theme-primary);
+  --color-on-primary: var(--theme-on-primary);
+
+  --color-ink: var(--theme-ink);
+  --color-muted: var(--theme-text-muted);
+  --color-inverse-ink: var(--theme-inverse-ink);
+
+  --color-semantic-success: #1ea64a;
+  --color-semantic-error: #d43f3f;
+  --color-semantic-warning: #b8860b;
+  --color-overlay-scrim: #000000;
+
+  --font-sans: var(--font-primary);
+  --font-mono: var(--font-secondary);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-full: 9999px;
+}
+
+@layer base {
+  :root {
+    --theme-canvas: #ffffff;
+    --theme-inverse-canvas: #000000;
+    --theme-surface: #f7f7f7;
+    --theme-surface-soft: #fafafa;
+    --theme-hairline: #e6e6e6;
+    --theme-hairline-soft: #f0f0f0;
+
+    --theme-primary: #000000;
+    --theme-on-primary: #ffffff;
+
+    --theme-ink: #000000;
+    --theme-text-muted: #5a5a5a;
+    --theme-inverse-ink: #ffffff;
+
+    --font-primary: "Inter", "Noto Sans Devanagari", system-ui, sans-serif;
+    --font-secondary: "JetBrains Mono", monospace;
+  }
+
+  [data-theme='dark'] {
+    color-scheme: dark;
+    --theme-canvas: #222222;
+    --theme-inverse-canvas: #ffffff;
+    --theme-surface: #2a2a2a;
+    --theme-surface-soft: #333333;
+    --theme-hairline: #444444;
+    --theme-hairline-soft: #333333;
+
+    --theme-primary: #ffffff;
+    --theme-on-primary: #222222;
+
+    --theme-ink: #eaeaea;
+    --theme-text-muted: #999999;
+    --theme-inverse-ink: #222222;
+  }
+
+  body {
+    background-color: var(--theme-canvas);
+    color: var(--theme-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1;
+  }
+
+  option {
+    background-color: var(--theme-canvas);
+    color: var(--theme-ink);
+  }
+}
+
 @layer components {
-  .animate-slide-up {
-    animation: slideUp 0.5s ease-out;
+
+  /* Typography scales */
+  .text-headline {
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: -0.26px;
   }
 
-  .animate-bounce-slow {
-    animation: bounce 3s ease-in-out infinite;
+  .text-card-title {
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: -0.18px;
   }
 
-  .animate-pulse-slow {
-    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  .text-body {
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.45;
+    letter-spacing: -0.16px;
   }
 
-  .animate-pulse-alert {
-    animation: pulse-alert 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  .text-body-sm {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.45;
+    letter-spacing: -0.14px;
   }
 
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .text-caption {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.0;
+    letter-spacing: 0.60px;
+    text-transform: uppercase;
   }
 
-  @keyframes bounce {
-    0%, 100% {
-      transform: translateY(-25%);
-      animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
-    }
-    50% {
-      transform: none;
-      animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
-    }
+  .text-data {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+}
+
+@layer base {
+
+  /* Remove scrollbars to prevent layout shift (buffer) between pages while retaining scroll functionality */
+  ::-webkit-scrollbar {
+    display: none;
   }
 
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.7;
-    }
+  * {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
   }
 
-  @keyframes pulse-alert {
-    0%, 100% {
-      opacity: 1;
-      box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
-    }
-    50% {
-      opacity: 0.9;
-      box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
-    }
+  /* Reset browser autofill styles to match minimal monochrome theme */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active{
+      -webkit-box-shadow: 0 0 0 30px var(--theme-canvas) inset !important;
+      -webkit-text-fill-color: var(--theme-ink) !important;
+      transition: background-color 5000s ease-in-out 0s;
+  }
+
+  /* Disable transitions temporarily when toggling theme to prevent color-inversion muddying */
+  .disable-transitions,
+  .disable-transitions * {
+    transition: none !important;
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar {
+    -ms-overflow-style: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--theme-hairline) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--theme-hairline);
+    border-radius: 6px;
+  }
+
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background-color: var(--theme-text-muted);
   }
 }

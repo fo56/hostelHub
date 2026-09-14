@@ -1,8 +1,11 @@
+import { logger } from './utils/logger';
 // server.ts
 import express, { Express } from 'express';
 import http from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
+
+dotenv.config();
 import helmet from 'helmet';
 
 import { connectDB } from './config/db';
@@ -20,12 +23,13 @@ import adminMenuRoutes from './routes/adminMenu.routes';
 import adminUserRoutes from './routes/adminUser.routes';
 import adminReviewRoutes from './routes/adminReview.routes';
 import adminDashboardRoutes from './routes/adminDashboard.routes';
+import adminSettingsRoutes from './routes/adminSettings.routes';
 
 import { verifyToken } from './middlewares/verifyToken.middleware';
 import { requireRole } from './middlewares/requireRole.middleware';
 import { errorHandler } from './middlewares/errorHandler';
 
-dotenv.config();
+
 
 const app: Express = express();
 
@@ -65,6 +69,7 @@ app.use('/api/admin/users', verifyToken, requireRole('ADMIN'), adminUserRoutes);
 app.use('/api/admin/dishes', verifyToken, requireRole('ADMIN'), adminDishRoutes);
 app.use('/api/admin/reviews', verifyToken, requireRole('ADMIN'), adminReviewRoutes);
 app.use('/api/admin/dashboard', verifyToken, requireRole('ADMIN'), adminDashboardRoutes);
+app.use('/api/admin/settings', verifyToken, requireRole('ADMIN'), adminSettingsRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
@@ -74,10 +79,10 @@ const startServer = async () => {
     await connectDB();
 
     httpServer.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      logger.info('APP', `Server running on http://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error('Startup failed:', error);
+    logger.error('APP', 'Startup failed:', error);
     process.exit(1);
   }
 };

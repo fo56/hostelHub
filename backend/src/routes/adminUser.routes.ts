@@ -1,13 +1,12 @@
 import { Router } from 'express';
 import {
   createUser,
+  bulkCreateUsers,
   getUsers,
   getUser,
   deactivateUser,
   reactivateUser,
   deleteUser,
-  regenerateQRCode,
-  regenerateLoginToken,
 } from '../controllers/adminUser.controller';
 import { verifyToken } from '../middlewares/verifyToken.middleware';
 import { requireRole } from '../middlewares/requireRole.middleware';
@@ -20,6 +19,9 @@ router.use(requireRole('ADMIN'));
 
 // Create user
 router.post('/', createUser);
+
+// Bulk create users
+router.post('/bulk', bulkCreateUsers);
 
 // Get all users
 router.get('/', getUsers);
@@ -36,10 +38,6 @@ router.patch('/:userId/reactivate', reactivateUser);
 // Delete user
 router.delete('/:userId', deleteUser);
 
-// Regenerate QR code
-router.post('/:userId/qr-code', regenerateQRCode);
-
-// Regenerate login token
-router.post('/:userId/login-token', regenerateLoginToken);
+// Deleted setup url regeneration
 
 export default router;

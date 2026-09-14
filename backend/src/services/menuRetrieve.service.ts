@@ -7,13 +7,14 @@ export async function getCurrentMenu(hostelId: string) {
     hostelId,
     published: true
   })
+    .populate('meals.slots.fixedItems', 'name mealType priceScore healthScore category')
     .populate({
-      path: 'breakfast lunch dinner',
+      path: 'meals.slots.rotatingItems.item',
       populate: {
         path: 'dishId',
-        select: 'name mealType priceScore healthScore weeklyVotes'
+        select: 'name mealType priceScore healthScore category'
       }
-    })
+    });
 
   return menu
 }
@@ -26,12 +27,15 @@ export async function getTodayMenu(hostelId: string) {
   const jsDay = new Date().getDay()
   const dayIndex = jsDay === 0 ? 6 : jsDay - 1
 
+  const todayMeals = menu.meals.map(meal => ({
+    mealName: meal.mealName,
+    slot: meal.slots[dayIndex]
+  }));
+
   const todayMenu = {
     date: new Date().toISOString().split('T')[0],
     dayIndex,
-    breakfast: formatMeal(menu.breakfast)[dayIndex],
-    lunch: formatMeal(menu.lunch)[dayIndex],
-    dinner: formatMeal(menu.dinner)[dayIndex]
+    meals: todayMeals
   }
 
   return todayMenu

@@ -15,7 +15,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     // 1. Fetch Summary Counts
     const totalStudentsPromise = User.countDocuments({ hostelId, role: 'STUDENT', isActive: true });
     const activeDishesPromise = Dish.countDocuments({ hostelId, status: 'ACTIVE' });
-    const openIssuesPromise = Issue.countDocuments({ hostelId, status: { $in: ['OPEN', 'IN_PROGRESS'] } });
+    const openIssuesPromise = Issue.countDocuments({ hostelId, status: 'OPEN' });
     const totalVotesPromise = StudentVote.countDocuments({ hostelId });
 
     const [totalStudents, activeDishes, openIssues, totalVotes] = await Promise.all([
@@ -25,12 +25,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       totalVotesPromise
     ]);
 
-    // 2. Fetch Recent Activity Logs for this hostel
-    // First find all user IDs in this hostel to filter activity logs
-    const usersInHostel = await User.find({ hostelId }).select('_id');
-    const userIds = usersInHostel.map(u => u._id);
-
-    const recentActivity = await ActivityLog.find({ userId: { $in: userIds } })
+    // 2. Fetch Recent Activity Logs for this hostel directly via denormalized hostelId
+    const recentActivity = await ActivityLog.find({ hostelId })
       .sort({ timestamp: -1 })
       .limit(15)
       .populate('userId', 'name role')

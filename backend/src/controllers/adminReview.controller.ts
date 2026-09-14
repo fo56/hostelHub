@@ -107,26 +107,39 @@ export const getReviewStats = async (req: Request, res: Response) => {
       { $sort: { totalReviews: -1 } }
     ]);
 
-    // 2. Date-wise Trend
-    const trendStats = await MealReview.aggregate([
+    // 2. Date-wise Trend broken down by mealType
+    const rawTrendStats = await MealReview.aggregate([
       { $match: { hostelId: hostelId } },
       {
         $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$servedOn' } },
-          averageRating: { $avg: '$rating' },
-          totalReviews: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } },
-      {
-        $project: {
-          date: '$_id',
-          averageRating: 1,
-          totalReviews: 1,
-          _id: 0
+          _id: {
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$servedOn' } },
+            mealType: '$mealType'
+          },
+          averageRating: { $avg: '$rating' }
         }
       }
     ]);
+
+    const trendMap = new Map<string, any>();
+    for (const item of rawTrendStats) {
+      const date = item._id.date;
+      const mealType = item._id.mealType;
+      
+      if (!date) continue; // Skip invalid dates
+      
+      if (!trendMap.has(date)) {
+        trendMap.set(date, { date });
+      }
+      
+      trendMap.get(date)[mealType] = Number(item.averageRating.toFixed(2));
+    }
+
+    // Sort by date ascending
+    const trendStats = Array.from(trendMap.values()).sort((a, b) => {
+      if (!a.date || !b.date) return 0;
+      return a.date.localeCompare(b.date);
+    });
 
     return res.status(200).json({
       dishStats,
@@ -139,3 +152,5 @@ export const getReviewStats = async (req: Request, res: Response) => {
     });
   }
 };
+// Trigger nodemon restart
+// Trigger nodemon restart 2

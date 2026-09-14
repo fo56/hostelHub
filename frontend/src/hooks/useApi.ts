@@ -1,11 +1,13 @@
 import { useCallback } from 'react';
-import { authService } from '../services/authService';
+import { authService } from '../services/auth.service';
+import toast from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 interface RequestOptions {
   headers?: Record<string, string>;
   body?: unknown;
+  skipToast?: boolean;
 }
 
 export const useApi = () => {
@@ -67,7 +69,7 @@ export const useApi = () => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.message || errorData.error || `HTTP Error: ${response.status}`;
+        let errorMessage = errorData.message || errorData.error || `HTTP Error: ${response.status}`;
 
         // Provide better error messages
         if (response.status === 403) {
@@ -75,9 +77,12 @@ export const useApi = () => {
         } else if (response.status === 404) {
           throw new Error('The requested resource was not found.');
         } else if (response.status === 500) {
-          throw new Error('Server error. Please try again later.');
+          errorMessage = 'Server error. Please try again later.';
         }
 
+        if (!options?.skipToast) {
+          toast.error(errorMessage);
+        }
         throw new Error(errorMessage);
       }
 

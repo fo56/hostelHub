@@ -1,42 +1,28 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../../hooks/useApi'
+import { logger } from '../../lib/logger'
 import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
+import { Card } from '../../components/ui/card'
+import { Input } from '../../components/ui/input'
+import { ChevronDown } from 'lucide-react'
 
-interface Notification {
-  type: 'APPROVED' | 'REJECTED'
-  dishName: string
-  priceScore?: number
-  healthScore?: number
-  reason?: string
-  date: string
-}
-
-interface IssueStats {
-  open: number
-  resolved: number
-}
-
-interface ServedDish {
-  dishId: {
-    _id: string
-    name: string
-  }
-}
+const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 export default function StudentDashboard() {
   const { request } = useApi()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
 
-  // Data states
-  const [issueStats, setIssueStats] = useState<IssueStats>({ open: 0, resolved: 0 })
-  const [todayDishes, setTodayDishes] = useState<Record<'breakfast' | 'lunch' | 'dinner', ServedDish | null>>({
-    breakfast: null,
-    lunch: null,
-    dinner: null
-  })
+  const [menu, setMenu] = useState<any>(null)
+  const [todayDishes, setTodayDishes] = useState<any[]>([])
   
-  // Rating states
   const [ratings, setRatings] = useState<Record<string, number>>({})
+  const [comments, setComments] = useState<Record<string, string>>({})
+  const [expandedDishes, setExpandedDishes] = useState<Record<string, boolean>>({})
+  const [expandedMeal, setExpandedMeal] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -47,95 +33,72 @@ export default function StudentDashboard() {
     try {
       setLoading(true)
       
-      // 1. Fetch My Issues for Stats
-      const issuesRes = await request('/issues/my-issues', 'GET')
-      if (issuesRes && issuesRes.issues) {
-        const open = issuesRes.issues.filter((i: Record<string, unknown>) => i.status === 'OPEN' || i.status === 'IN_PROGRESS').length
-        const resolved = issuesRes.issues.filter((i: Record<string, unknown>) => i.status === 'RESOLVED' || i.status === 'CLOSED').length
-        setIssueStats({ open, resolved })
+      const menuRes = await request('/student/menu/current', 'GET', undefined, { skipToast: true })
+      if (menuRes) {
+        setMenu(menuRes)
+        
+        let dayIndex = new Date().getDay() - 1
+        if (dayIndex === -1) dayIndex = 6 
+        
+        setTodayDishes(
+          menuRes.meals.map((meal: any) => ({
+            mealName: meal.mealName,
+            slot: meal.slots?.[dayIndex] || null
+          }))
+        )
+      } else {
+        setMenu(null)
+        setTodayDishes([])
       }
-
-      // 2. Fetch Today's Menu
-      try {
-        const menuRes = await request('/student/menu/current', 'GET')
-        if (menuRes) {
-          // Toast for menu generation
-          if (menuRes.generatedAt) {
-            toast(`A menu is active, generated on ${new Date(menuRes.generatedAt).toLocaleDateString()}`, {
-              duration: 6000,
-              id: 'menu-toast'
-            })
-          }
-          
-          // Get today's index (0 = Monday, 6 = Sunday)
-          // JS getDay(): 0 = Sunday, 1 = Monday.
-          let dayIndex = new Date().getDay() - 1
-          if (dayIndex === -1) dayIndex = 6 // Sunday is 6 in our array
-          
-          setTodayDishes({
-            breakfast: menuRes.breakfast?.[dayIndex] || null,
-            lunch: menuRes.lunch?.[dayIndex] || null,
-            dinner: menuRes.dinner?.[dayIndex] || null
-          })
-        }
-      } catch (e) {
-        console.error("Menu not found or error fetching menu", e)
-      }
-
-      // 3. Fetch Notifications and Toast them
-      const notifRes = await request('/student/notifications', 'GET')
-      if (notifRes && Array.isArray(notifRes)) {
-        notifRes.forEach((n: Notification) => {
-          if (n.type === 'APPROVED') {
-            toast.success(`Your dish suggestion "${n.dishName}" was ACCEPTED!`, { 
-              duration: 8000,
-              id: `notif-app-${n.dishName}` 
-            })
-          } else {
-            toast.error(`Your dish suggestion "${n.dishName}" was REJECTED.`, { 
-              duration: 8000,
-              id: `notif-rej-${n.dishName}`
-            })
-          }
-        })
-      }
-
-    } catch (err) {
-      console.error('Failed to load dashboard data:', err)
-      toast.error('Failed to load some dashboard data')
+    } catch (err: any) {
+      logger.error('APP', 'Failed to load dashboard data:', err)
+      toast.error('Failed to load menu data')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleRate = (mealType: string, star: number) => {
+  const handleRate = (dishId: string, star: number) => {
     setRatings(prev => ({
       ...prev,
-      [mealType]: star
+      [dishId]: star
     }))
   }
 
   const submitRating = async (mealType: string, dishId: string) => {
-    const rating = ratings[mealType]
+    const rating = ratings[dishId]
+    const comment = comments[dishId] || ''
     if (!rating) return
 
     try {
       setSubmitting(true)
+      
       await request('/reviews/submit', 'POST', {
         dishId,
         mealType: mealType.charAt(0).toUpperCase() + mealType.slice(1),
         rating,
-        comment: '',
+        comment,
         servedOn: new Date().toISOString().split('T')[0]
+      }).catch(err => {
+         if (err.message !== 'You have already reviewed this meal') throw err;
       })
-      toast.success(`Rating submitted for ${mealType}!`)
       
-      // Clear that rating so they know it submitted
+      toast.success(`Rating submitted successfully!`)
+      
       setRatings(prev => {
         const next = { ...prev }
-        delete next[mealType]
+        delete next[dishId]
         return next
       })
+      setComments(prev => {
+        const next = { ...prev }
+        delete next[dishId]
+        return next
+      })
+      setExpandedDishes(prev => ({
+        ...prev,
+        [dishId]: false
+      }))
     } catch (err: unknown) {
       toast.error((err as Error).message || 'Failed to submit rating')
     } finally {
@@ -144,97 +107,191 @@ export default function StudentDashboard() {
   }
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading Dashboard...</div>
+    return <div className="p-4 text-center text-muted">Loading Dashboard...</div>
+  }
+
+  if (!menu) {
+    return (
+      <div className="space-y-6 pb-6 w-full">
+        <div className="bg-canvas sm:rounded border-y sm:border-x border-(--color-hairline) p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
+          <div className="text-4xl mb-4 opacity-80">🍽️</div>
+          <h2 className="text-card-title md:text-headline mb-2 text-ink">No Menu Published Yet</h2>
+          <p className="text-body text-muted max-w-md mx-auto">
+            The mess admin hasn't published this week's menu yet. Please check back later once it's finalized!
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Student Dashboard</h1>
-        <p className="text-gray-600 mt-2">Welcome to your hostel overview.</p>
-      </div>
-
-      {/* Issue Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-md transition">
-          <div className="flex justify-between items-start">
-            <h3 className="text-gray-500 font-semibold">My Open Issues</h3>
-          </div>
-          <p className="text-4xl font-black mt-4 text-red-600">{issueStats.open}</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-md transition">
-          <div className="flex justify-between items-start">
-            <h3 className="text-gray-500 font-semibold">My Resolved Issues</h3>
-          </div>
-          <p className="text-4xl font-black mt-4 text-green-600">{issueStats.resolved}</p>
-        </div>
-      </div>
-
+    <div className="space-y-6 pb-6 w-full">
+      
       {/* Today's Menu & Rating Section */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <div className="p-6 border-b bg-gray-50">
-          <h2 className="text-xl font-bold text-gray-900">Today's Menu & Ratings</h2>
-          <p className="text-sm text-gray-500 mt-1">Rate the dishes you eat today to improve future menus!</p>
+      <Card className="overflow-hidden shadow-none border-hairline">
+        <div className="p-4 border-b bg-surface-soft flex items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-card-title text-ink leading-tight">Today's Menu & Ratings</h2>
+            <p className="text-caption text-muted mt-1">Rate dishes to improve future menus</p>
+          </div>
+          <Button 
+            variant="secondary" 
+            onClick={() => navigate('/student/voting/status')}
+            className="whitespace-nowrap flex-shrink-0"
+          >
+            <span className="hidden sm:inline">Vote for Menu →</span>
+            <span className="sm:hidden px-1 text-caption font-medium tracking-wide">VOTE</span>
+          </Button>
         </div>
         
-        <div className="p-0">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-white border-b">
-              <tr>
-                <th className="p-4 font-semibold text-gray-600 w-1/4">Meal</th>
-                <th className="p-4 font-semibold text-gray-600 w-1/3">Dish</th>
-                <th className="p-4 font-semibold text-gray-600">Rate</th>
-                <th className="p-4 font-semibold text-gray-600 w-1/5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {(['breakfast', 'lunch', 'dinner'] as const).map(meal => {
-                const served = todayDishes[meal]
-                if (!served) {
-                  return (
-                    <tr key={meal}>
-                      <td className="p-4 capitalize font-medium text-gray-900">{meal}</td>
-                      <td className="p-4 text-gray-500 italic" colSpan={3}>Not scheduled</td>
-                    </tr>
-                  )
-                }
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 bg-canvas">
+          {todayDishes.map((mealData: any) => {
+            const served = mealData.slot
+            if (!served) return null
 
-                return (
-                  <tr key={meal} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-4 capitalize font-medium text-gray-900">{meal}</td>
-                    <td className="p-4 font-medium text-blue-700">{served.dishId.name}</td>
-                    <td className="p-4">
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            onClick={() => handleRate(meal, star)}
-                            className={`text-2xl transition-colors ${
-                              star <= (ratings[meal] || 0) ? 'text-yellow-400' : 'text-gray-300 hover:text-gray-400'
-                            }`}
-                          >
-                            ★
-                          </button>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="p-4 text-right">
-                      <button
-                        onClick={() => submitRating(meal, served.dishId._id)}
-                        disabled={!ratings[meal] || submitting}
-                        className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded disabled:bg-gray-300 transition-colors"
-                      >
-                        Submit
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+            const rotatingItems = served.rotatingItems?.map((r: any) => r.item?.dishId).filter(Boolean) || []
+
+            return (
+              <div key={mealData.mealName} className="flex flex-col bg-canvas sm:bg-surface/30 border border-hairline rounded-xl overflow-hidden hover:border-ink/20 transition-all">
+                <div 
+                  className="flex items-center justify-between p-4 shrink-0 cursor-pointer sm:cursor-default border-b border-hairline bg-surface-soft/50 sm:bg-transparent"
+                  onClick={() => setExpandedMeal(expandedMeal === mealData.mealName ? '' : mealData.mealName)}
+                >
+                  <h3 className="text-body font-medium m-0 flex items-center gap-2 text-ink capitalize">
+                    {mealData.mealName}
+                    <ChevronDown className={`w-4 h-4 text-muted transition-transform sm:hidden ${expandedMeal === mealData.mealName ? 'rotate-180' : ''}`} />
+                  </h3>
+                  {served.status === 'CLOSED' && (
+                    <span className="text-[10px] font-medium tracking-wide bg-(--color-semantic-error)/10 text-(--color-semantic-error) px-2 py-1 rounded uppercase">CLOSED</span>
+                  )}
+                </div>
+
+                <div className={`p-4 flex-grow flex-col ${expandedMeal === mealData.mealName ? 'flex' : 'hidden sm:flex'}`}>
+                  {served.status === 'CLOSED' ? (
+                     <p className="text-body text-muted italic flex-grow">Mess is closed for this meal.</p>
+                  ) : rotatingItems.length === 0 ? (
+                     <p className="text-body text-muted italic flex-grow">Fixed menu items only.</p>
+                  ) : (
+                    <div className="flex flex-col gap-3 flex-grow">
+                      {rotatingItems.map((dish: any, index: number) => {
+                        const isExpanded = expandedDishes[dish._id]
+                        return (
+                          <div key={dish._id} className={index > 0 ? "pt-3 border-t border-hairline" : ""}>
+                            <button 
+                              onClick={() => setExpandedDishes(prev => ({ ...prev, [dish._id]: !prev[dish._id] }))}
+                              className="w-full flex justify-between items-center text-left focus:outline-none group"
+                            >
+                              <p className="text-body font-medium text-ink/90 leading-tight group-hover:text-ink transition-colors">
+                                {dish.name}
+                              </p>
+                              <span className="text-caption font-medium tracking-wide px-2 py-1 rounded bg-surface-soft group-hover:bg-hairline transition-colors ml-2 shrink-0">
+                                {isExpanded ? 'CLOSE' : 'RATE'}
+                              </span>
+                            </button>
+                            
+                            {isExpanded && (
+                              <div className="space-y-4 mt-4 animate-in slide-in-from-top-2 duration-200 fade-in">
+                                <div>
+                                  <div className="flex gap-2 justify-between">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <button
+                                        key={star}
+                                        onClick={() => handleRate(dish._id, star)}
+                                        className={`flex-1 h-9 rounded border flex items-center justify-center font-mono text-data transition-all focus:outline-none ${star <= (ratings[dish._id] || 0) ? 'bg-ink text-canvas border-ink scale-105' : 'bg-surface-soft text-ink border-hairline hover:border-ink/50'}`}
+                                      >
+                                        {star}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col gap-2">
+                                  <Input
+                                    type="text"
+                                    placeholder="Write a review..."
+                                    value={comments[dish._id] || ''}
+                                    onChange={(e) => setComments(prev => ({ ...prev, [dish._id]: e.target.value }))}
+                                    className="w-full text-body-sm h-9 bg-surface-soft"
+                                  />
+                                  <Button
+                                    variant="primary"
+                                    onClick={() => submitRating(mealData.mealName, dish._id)}
+                                    disabled={!ratings[dish._id] || submitting}
+                                    className="w-full justify-center transition-all h-9 text-caption"
+                                  >
+                                    Submit Review
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
-      </div>
+      </Card>
+
+      {/* Full Weekly Menu */}
+      {menu && (
+        <Card className="overflow-hidden shadow-none border-hairline">
+           <div className="p-4 border-b bg-surface-soft">
+            <h2 className="text-card-title text-ink leading-tight">Weekly Menu</h2>
+            {menu.generatedAt && (
+              <p className="text-caption text-muted mt-1">Generated: <span className="font-mono text-data">{new Date(menu.generatedAt).toLocaleDateString()}</span></p>
+            )}
+          </div>
+          <div className="overflow-x-auto w-full">
+            <Table className="table-fixed min-w-[800px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px] lg:w-[120px] sticky left-0 bg-surface-soft z-10 border-r border-hairline">Day</TableHead>
+                  {menu.meals.map((m: any) => (
+                    <TableHead key={m.mealName}>{m.mealName}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {days.map((day, index) => (
+                  <TableRow key={day}>
+                    <TableCell className="text-body text-ink font-medium sticky left-0 bg-canvas z-10 border-r border-hairline">{day}</TableCell>
+                    {menu.meals.map((meal: any) => {
+                      const item = meal.slots?.[index]
+                      const rotatingNames = item?.rotatingItems?.map((r: any) => r.item?.dishId?.name).filter(Boolean) || []
+                      const fixedNames = item?.fixedItems?.map((d: any) => d.name).filter(Boolean) || []
+
+                      return (
+                        <TableCell key={meal.mealName} className="text-body text-ink align-top py-2">
+                          {(rotatingNames.length > 0 || fixedNames.length > 0) ? (
+                            <div className="whitespace-normal leading-tight">
+                              {rotatingNames.length > 0 && (
+                                <span className="text-ink">{rotatingNames.join(', ')}</span>
+                              )}
+                              {rotatingNames.length > 0 && fixedNames.length > 0 && (
+                                <span className="text-ink">, </span>
+                              )}
+                              {fixedNames.length > 0 && (
+                                <span className="text-muted opacity-80">{fixedNames.join(', ')}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="opacity-50 text-muted">{item?.status === 'CLOSED' ? 'Closed' : '-'}</span>
+                          )}
+                        </TableCell>
+                      )
+                    })}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      )}
+
     </div>
   )
 }

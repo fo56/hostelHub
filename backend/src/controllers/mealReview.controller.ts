@@ -1,9 +1,10 @@
+import { logger } from '../utils/logger';
 import { Request, Response } from 'express';
 import { MealReview } from '../models/MealReview';
 import { Dish } from '../models/Dish';
 import mongoose from 'mongoose';
 
-const VALID_MEALS = ['Breakfast', 'Lunch', 'Dinner'];
+const VALID_MEALS = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
 
 export const submitMealReview = async (req: Request, res: Response) => {
   try {
@@ -122,7 +123,7 @@ export const submitMealReview = async (req: Request, res: Response) => {
     });
 
   } catch (error: any) {
-    console.error('MEAL REVIEW ERROR:', error);
+    logger.error('APP', 'MEAL REVIEW ERROR:', error);
 
     return res.status(500).json({
       message: 'Failed to submit review'

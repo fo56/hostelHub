@@ -4,7 +4,7 @@ import { RefreshToken } from '../models/RefreshToken';
 import { User } from '../models/User';
 
 const ACCESS_TOKEN_EXPIRY = '15m';
-const REFRESH_TOKEN_EXPIRY = '7d';
+const REFRESH_TOKEN_EXPIRY = '30d';
 
 const getSecretKey = (): string => {
   const secret = process.env.JWT_SECRET;
@@ -21,7 +21,7 @@ const hashToken = (token: string): string => {
 
 export interface JWTPayload {
   userId: string;
-  email: string;
+  username: string;
   role: string;
   hostelId: string;
 }
@@ -39,7 +39,7 @@ export const generateRefreshToken = async (userId: string): Promise<string> => {
   
   // Store the hashed refresh token in database
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7);
+  expiresAt.setDate(expiresAt.getDate() + 30);
   
   await RefreshToken.create({
     userId,
@@ -100,7 +100,7 @@ export const refreshAccessToken = async (userId: string): Promise<{ accessToken:
   
   const payload: JWTPayload = {
     userId: user._id.toString(),
-    email: user.email,
+    username: user.username,
     role: user.role,
     hostelId: user.hostelId.toString()
   };

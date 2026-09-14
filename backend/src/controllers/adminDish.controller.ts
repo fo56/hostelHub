@@ -43,7 +43,7 @@ export const approveDish = async (req: Request, res: Response) => {
     const dish = await Dish.findOneAndUpdate(
       { _id: id, hostelId, status: 'UNDER_REVIEW' },
       { status: 'ACTIVE', priceScore, healthScore, approvedBy: adminId },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!dish) return res.status(404).json({ message: 'Dish not found, already reviewed, or unauthorized' });
@@ -69,7 +69,7 @@ export const rejectDish = async (req: Request, res: Response) => {
     const dish = await Dish.findOneAndUpdate(
       { _id: id, hostelId, status: 'UNDER_REVIEW' },
       { status: 'INACTIVE', rejectionReason: reason },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!dish) return res.status(404).json({ message: 'Dish not found, already reviewed, or unauthorized' });
@@ -85,7 +85,7 @@ export const rejectDish = async (req: Request, res: Response) => {
 export const updateDish = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, mealType, category, tags, priceScore, healthScore } = req.body;
+    const { name, mealType, category, tags, priceScore, healthScore, itemClass } = req.body;
     const adminId = req.user?._id;
     const hostelId = req.user?.hostelId;
 
@@ -100,7 +100,7 @@ export const updateDish = async (req: Request, res: Response) => {
 
     const dish = await Dish.findOneAndUpdate(
       { _id: id, hostelId },
-      { name, mealType, category, tags, priceScore, healthScore },
+      { name, mealType, category, tags, priceScore, healthScore, itemClass },
       { new: true }
     );
 

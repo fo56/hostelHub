@@ -12,26 +12,24 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
+    "@google/genai": "^2.22.0",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^7.0.4",
-    "@types/qrcode": "^1.5.6",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
+    "javascript-lp-solver": "^1.0.3",
+    "json-logic-js": "^2.0.5",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.0.1",
-    "nodemailer": "^9.0.3",
-    "qrcode": "^1.5.4",
-    "redis": "^5.10.0",
-    "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3"
+    "mongoose": "^9.0.1"
   },
   "devDependencies": {
+    "@types/json-logic-js": "^2.0.8",
     "concurrently": "^9.2.1",
     "mongodb": "^7.5.0",
     "nodemon": "^3.1.11",

@@ -1,31 +1,26 @@
 import * as React from "react"
 
+export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'icon' | 'icon-inverse'
+
 const Button = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    variant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'destructive'
-    size?: 'sm' | 'md' | 'lg'
+    variant?: ButtonVariant
   }
->(({ className, variant = 'default', size = 'md', ...props }, ref) => {
-  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2'
+>(({ className, variant = 'primary', ...props }, ref) => {
+  const baseStyles = 'inline-flex items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2'
   
   const variants = {
-    default: 'bg-black text-white hover:bg-black/90 focus-visible:ring-black',
-    outline: 'border-2 border-black text-black hover:bg-black/10 focus-visible:ring-black',
-    secondary: 'bg-black/20 text-black hover:bg-black/30 focus-visible:ring-black',
-    ghost: 'text-black hover:bg-black/10 focus-visible:ring-black',
-    destructive: 'bg-black text-white hover:bg-black/90 focus-visible:ring-black'
-  }
-
-  const sizes = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-6 py-3 text-base'
+    primary: 'bg-(--color-primary) text-(--color-on-primary) text-body-sm rounded px-3 py-1.5 min-h-[36px]',
+    secondary: 'bg-(--color-canvas) text-(--color-ink) border border-(--color-hairline) text-body-sm rounded px-3 py-1.5 min-h-[36px]',
+    tertiary: 'bg-(--color-canvas) text-(--color-ink) text-body-sm underline rounded px-2 py-1.5 min-h-[36px]',
+    icon: 'bg-(--color-surface-soft) text-(--color-ink) rounded-full w-9 h-9 min-h-[36px]',
+    'icon-inverse': 'bg-(--color-on-inverse-soft) text-(--color-inverse-ink) rounded-full w-9 h-9 min-h-[36px]',
   }
 
   return (
     <button
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className || ''}`}
+      className={`${baseStyles} ${variants[variant]} ${className || ''}`}
       ref={ref}
       {...props}
     />
