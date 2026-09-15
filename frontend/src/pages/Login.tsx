@@ -70,7 +70,7 @@ export default function Login() {
   const errorDisplay = error || authError;
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center -mt-16">
+    <div className="flex-1 flex flex-col items-center justify-start pt-12 md:justify-center md:pt-0 md:-mt-16">
       <div className="w-full max-w-md space-y-4">
         <div className="text-center mb-6">
           <h1 className="text-headline text-ink mb-1">Sign in</h1>

@@ -2,6 +2,21 @@ import React, { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: any) {
+    if (error?.message?.includes('dynamically imported module') || error?.name === 'ChunkLoadError' || error?.message?.includes('fetch')) {
+      window.location.reload();
+    }
+  }
+  render() {
+    if (this.state.hasError) return <div className="p-8 text-center text-muted">Failed to load page content. Please <button onClick={() => window.location.reload()} className="underline text-ink hover:text-ink/80 transition-colors">refresh</button>.</div>;
+    return this.props.children;
+  }
+}
+
+
 // App Layout (Keep synchronous)
 import AppLayout from '../components/common/AppLayout'
 
@@ -58,38 +73,40 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
 
 export default function AppRoutes() {
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        {/* ───── PUBLIC / AUTH ───── */}
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<PublicOnlyRoute><Home /></PublicOnlyRoute>} />
-          <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
-          <Route path="/admin/register" element={<PublicOnlyRoute><AdminRegister /></PublicOnlyRoute>} />
-        </Route>
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* ───── PUBLIC / AUTH ───── */}
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<PublicOnlyRoute><Home /></PublicOnlyRoute>} />
+            <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+            <Route path="/admin/register" element={<PublicOnlyRoute><AdminRegister /></PublicOnlyRoute>} />
+          </Route>
 
-        {/* ───── ADMIN ───── */}
-        <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout /></ProtectedRoute>}>
-          <Route path="dashboard" element={<AdminDashboard />} /> 
-          <Route path="users" element={<AdminUsers />} />
-          <Route path="menu" element={<AdminMessMenu />} />
-          <Route path="issues" element={<AdminIssues />} />
-          <Route path="dishes" element={<AdminDishes />} />
-          <Route path="settings" element={<AdminSettings />} />
-          <Route index element={<Navigate to="dashboard" replace />} />
-        </Route>
+          {/* ───── ADMIN ───── */}
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout /></ProtectedRoute>}>
+            <Route path="dashboard" element={<AdminDashboard />} /> 
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="menu" element={<AdminMessMenu />} />
+            <Route path="issues" element={<AdminIssues />} />
+            <Route path="dishes" element={<AdminDishes />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route index element={<Navigate to="dashboard" replace />} />
+          </Route>
 
-        {/* ───── STUDENT ───── */}
-        <Route path="/student" element={<ProtectedRoute allowedRoles={['student']}><AppLayout /></ProtectedRoute>}>
-          <Route path="dashboard" element={<StudentDashboard />} /> 
-          <Route path="voting/status" element={<StudentVoting />} />
-          <Route path="issues" element={<StudentIssues />} />
-          <Route index element={<Navigate to="dashboard" replace />} />
-        </Route>
+          {/* ───── STUDENT ───── */}
+          <Route path="/student" element={<ProtectedRoute allowedRoles={['student']}><AppLayout /></ProtectedRoute>}>
+            <Route path="dashboard" element={<StudentDashboard />} /> 
+            <Route path="voting/status" element={<StudentVoting />} />
+            <Route path="issues" element={<StudentIssues />} />
+            <Route index element={<Navigate to="dashboard" replace />} />
+          </Route>
 
 
-        {/* ───── DEFAULT ───── */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+          {/* ───── DEFAULT ───── */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   )
 }

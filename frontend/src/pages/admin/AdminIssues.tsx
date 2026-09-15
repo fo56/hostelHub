@@ -121,7 +121,7 @@ export default function AdminIssues() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-hairline mb-6 gap-4">
+      <div className="flex flex-col-reverse md:flex-row justify-between items-start md:items-end border-b border-hairline mb-6 gap-4">
         <div className="flex overflow-x-auto w-full md:w-auto scrollbar-hide">
           <button
             onClick={() => setFilterCategory('ALL')}

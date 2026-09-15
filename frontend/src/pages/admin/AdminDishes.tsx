@@ -220,7 +220,7 @@ export default function AdminDishManagement() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-hairline gap-3 sm:gap-0">
+      <div className="flex flex-col-reverse sm:flex-row justify-between items-start sm:items-end border-b border-hairline gap-3 sm:gap-0">
         <div className="flex overflow-x-auto w-full sm:w-auto no-scrollbar">
           <button 
             onClick={() => setActiveTab('ACTIVE')}

@@ -117,7 +117,7 @@ export default function StudentVoting() {
   const [initialSelections, setInitialSelections] = useState<Record<string, string[]>>({})
   const [wantsNewMenu, setWantsNewMenu] = useState(false)
   const [initialWantsNewMenu, setInitialWantsNewMenu] = useState(false)
-  
+
   const [isConfirmToggleOpen, setIsConfirmToggleOpen] = useState(false)
   const [pendingToggleState, setPendingToggleState] = useState(false)
 
@@ -245,10 +245,10 @@ export default function StudentVoting() {
               Select your preferred dishes and save the choices.
             </p>
           </div>
-          
+
           <div className="flex flex-row flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto mt-2 xl:mt-0">
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setIsSortOpen(!isSortOpen)}
                 className="flex items-center justify-between gap-2 text-body-sm text-ink px-3 py-1.5 rounded border border-hairline bg-surface hover:bg-surface-soft transition-colors w-auto"
               >
@@ -259,14 +259,14 @@ export default function StudentVoting() {
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsSortOpen(false)} />
                   <div className="absolute top-full mt-1 right-auto left-0 xl:right-0 xl:left-auto w-40 bg-canvas border border-hairline rounded shadow-sm z-50 py-1 flex flex-col">
-                    <button 
-                      className="w-full text-left px-3 py-2 text-body-sm text-ink hover:bg-surface transition-colors" 
+                    <button
+                      className="w-full text-left px-3 py-2 text-body-sm text-ink hover:bg-surface transition-colors"
                       onClick={() => { setSortBy('name_asc'); setIsSortOpen(false) }}
                     >
                       Sort by Name
                     </button>
-                    <button 
-                      className="w-full text-left px-3 py-2 text-body-sm text-ink hover:bg-surface transition-colors" 
+                    <button
+                      className="w-full text-left px-3 py-2 text-body-sm text-ink hover:bg-surface transition-colors"
                       onClick={() => { setSortBy('health_desc'); setIsSortOpen(false) }}
                     >
                       Sort by Health
@@ -279,11 +279,10 @@ export default function StudentVoting() {
             <button
               type="button"
               onClick={handleToggleClick}
-              className={`px-3 py-1.5 min-h-[36px] rounded text-body-sm font-medium transition-all border flex items-center justify-center gap-2 whitespace-nowrap w-auto ${
-                wantsNewMenu 
-                  ? 'bg-(--color-semantic-error)/10 border-(--color-semantic-error)/30 text-(--color-semantic-error) shadow-sm' 
-                  : 'bg-surface border-hairline text-ink hover:border-ink/30'
-              }`}
+              className={`px-3 py-1.5 min-h-[36px] rounded text-body-sm font-medium transition-all border flex items-center justify-center gap-2 whitespace-nowrap w-auto ${wantsNewMenu
+                ? 'bg-(--color-semantic-error)/10 border-(--color-semantic-error)/30 text-(--color-semantic-error) shadow-sm'
+                : 'bg-surface border-hairline text-ink hover:border-ink/30'
+                }`}
             >
               <div className={`w-2 h-2 rounded-full ${wantsNewMenu ? 'bg-(--color-semantic-error) animate-pulse' : 'bg-muted'}`} />
               {wantsNewMenu ? 'Menu Request Active' : 'Request New Menu'}
@@ -301,8 +300,8 @@ export default function StudentVoting() {
           })
 
           return (
-            <div key={meal.mealName} className={`flex flex-col bg-canvas sm:bg-surface/30 sm:border sm:border-hairline rounded-xl overflow-hidden transition-all ${expandedMeal === meal.mealName ? 'h-[500px]' : 'h-auto'} md:!h-[calc(100vh-280px)] md:max-h-[650px] md:min-h-[400px]`}>
-              <div 
+            <div key={meal.mealName} className={`flex flex-col bg-canvas sm:bg-surface/30 border border-hairline rounded-xl overflow-hidden transition-all ${expandedMeal === meal.mealName ? 'h-[500px]' : 'h-auto'} md:!h-[calc(100vh-280px)] md:max-h-[650px] md:min-h-[400px]`}>
+              <div
                 className="flex items-center justify-between p-4 shrink-0 cursor-pointer md:cursor-default border-b border-hairline group bg-surface-soft/50 sm:bg-transparent hover:bg-surface-soft/80 transition-colors"
                 onClick={() => setExpandedMeal(meal.mealName === expandedMeal ? '' : meal.mealName)}
               >
@@ -321,6 +320,8 @@ export default function StudentVoting() {
                   const selectedCount = selections[key]?.length || 0
                   const availableForCategory = dishes.filter(d => d.mealType === meal.mealName && d.category === cat.categoryName)
 
+                  if (availableForCategory.length === 0) return null;
+
                   return (
                     <div key={key} className="shrink-0 mb-6 last:mb-0">
                       <div className="flex justify-between items-center px-4 py-3 bg-surface/50 sticky top-0 z-10 backdrop-blur-sm border-b border-hairline/50">
@@ -328,7 +329,7 @@ export default function StudentVoting() {
                         {selectedCount > 0 && <span className="text-[11px] text-muted">{selectedCount} picked</span>}
                       </div>
 
-                      <div className="flex flex-col divide-y divide-hairline/50">
+                      <div className="flex flex-col gap-2 pb-4 px-3 md:px-2 pt-2">
                         {[...availableForCategory].sort((a, b) => {
                           if (sortBy === 'health_desc') {
                             const aScore = a.healthScore || 0
@@ -342,13 +343,12 @@ export default function StudentVoting() {
                             <button
                               key={dish._id}
                               onClick={() => toggleDish(meal.mealName, cat.categoryName, dish._id)}
-                              className={`w-full px-4 py-3 text-left transition-colors flex flex-col items-start h-auto min-h-0 group relative ${
-                                isSelected
-                                  ? 'bg-ink/5'
-                                  : 'bg-transparent hover:bg-surface-soft'
+                              className={`w-full px-4 py-3 text-left transition-colors flex flex-col items-start h-auto min-h-0 group relative border border-hairline rounded-lg ${isSelected
+                                ? 'bg-ink/5 border-ink/20'
+                                : 'bg-transparent hover:bg-surface-soft'
                                 }`}
                             >
-                              {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-ink rounded-r-full" />}
+                              {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-ink rounded-l-lg" />}
                               <div className="flex justify-between w-full items-start gap-2">
                                 <span className={`leading-tight text-body whitespace-normal transition-colors ${isSelected ? 'font-medium text-ink' : 'font-normal text-ink/90 group-hover:text-ink'}`}>
                                   {dish.name}
@@ -359,15 +359,14 @@ export default function StudentVoting() {
                                   </div>
                                 )}
                               </div>
-                              
+
                               {(dish.healthScore !== undefined) && (
                                 <div className="flex items-center gap-1.5 w-full mt-1.5 opacity-80">
-                                  <div 
-                                    className={`w-1.5 h-1.5 rounded-full ${
-                                      dish.healthScore >= 4 ? 'bg-(--color-semantic-success)' : 
-                                      dish.healthScore >= 2.5 ? 'bg-(--color-semantic-warning)' : 
-                                      'bg-(--color-semantic-error)'
-                                    }`}
+                                  <div
+                                    className={`w-1.5 h-1.5 rounded-full ${dish.healthScore >= 4 ? 'bg-(--color-semantic-success)' :
+                                      dish.healthScore >= 2.5 ? 'bg-(--color-semantic-warning)' :
+                                        'bg-(--color-semantic-error)'
+                                      }`}
                                   />
                                   <span className="text-[10px] text-muted font-medium tracking-wide">
                                     HEALTH {dish.healthScore}/5
@@ -378,11 +377,7 @@ export default function StudentVoting() {
                           )
                         })}
 
-                        {availableForCategory.length === 0 && (
-                          <div className="text-left px-4 py-3 text-muted text-body-sm italic opacity-70">
-                            No rotating dishes available.
-                          </div>
-                        )}
+                        {/* empty check removed as we now hide the category entirely */}
                       </div>
                     </div>
                   )
@@ -394,7 +389,7 @@ export default function StudentVoting() {
       </div>
 
       {/* Suggest Floating Action Button */}
-      <button 
+      <button
         onClick={() => setIsSuggestModalOpen(true)}
         className="fixed bottom-20 right-4 sm:bottom-24 sm:right-8 z-40 bg-ink text-canvas rounded-full w-14 h-14 shadow-lg flex items-center justify-center hover:scale-105 hover:bg-ink/90 active:scale-95 transition-all"
         title="Suggest New Dish"
@@ -404,9 +399,9 @@ export default function StudentVoting() {
 
       {/* Frozen Save Bar */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-canvas/90 backdrop-blur-md border-t border-hairline z-30 flex justify-center shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)]">
-        <Button 
-          onClick={handleSavePreferences} 
-          disabled={submitting || !hasChanges} 
+        <Button
+          onClick={handleSavePreferences}
+          disabled={submitting || !hasChanges}
           className="w-full sm:w-auto sm:min-w-[200px] text-body font-medium shadow-sm"
         >
           {submitting ? 'Saving...' : 'Save Choices'}
@@ -418,7 +413,7 @@ export default function StudentVoting() {
       <Modal isOpen={isConfirmToggleOpen} onClose={() => setIsConfirmToggleOpen(false)} title="Confirm Action">
         <div className="p-6">
           <p className="text-body text-ink mb-6">
-            {pendingToggleState 
+            {pendingToggleState
               ? 'Are you sure you want to request a new menu? If 50% of voting students do this, the current menu will be discarded and a new one will be generated instantly.'
               : 'Are you sure you want to cancel your request for a new menu?'}
           </p>

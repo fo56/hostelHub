@@ -7,9 +7,18 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Card } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, ExternalLink } from 'lucide-react'
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+const formatDate = (date: Date) => {
+  const day = date.getDate();
+  const suffix = ["th", "st", "nd", "rd"][day % 10 > 3 ? 0 : (day % 100 - day % 10 !== 10) ? day % 10 : 0] || "th";
+  const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+  const month = date.toLocaleDateString('en-US', { month: 'long' });
+  const year = date.toLocaleDateString('en-US', { year: '2-digit' });
+  return `${weekday}, ${day}${suffix} ${month} '${year}`;
+};
 
 export default function StudentDashboard() {
   const { request } = useApi()
@@ -18,7 +27,7 @@ export default function StudentDashboard() {
 
   const [menu, setMenu] = useState<any>(null)
   const [todayDishes, setTodayDishes] = useState<any[]>([])
-  
+
   const [ratings, setRatings] = useState<Record<string, number>>({})
   const [comments, setComments] = useState<Record<string, string>>({})
   const [expandedDishes, setExpandedDishes] = useState<Record<string, boolean>>({})
@@ -32,14 +41,14 @@ export default function StudentDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
-      
+
       const menuRes = await request('/student/menu/current', 'GET', undefined, { skipToast: true })
       if (menuRes) {
         setMenu(menuRes)
-        
+
         let dayIndex = new Date().getDay() - 1
-        if (dayIndex === -1) dayIndex = 6 
-        
+        if (dayIndex === -1) dayIndex = 6
+
         setTodayDishes(
           menuRes.meals.map((meal: any) => ({
             mealName: meal.mealName,
@@ -72,7 +81,7 @@ export default function StudentDashboard() {
 
     try {
       setSubmitting(true)
-      
+
       await request('/reviews/submit', 'POST', {
         dishId,
         mealType: mealType.charAt(0).toUpperCase() + mealType.slice(1),
@@ -80,11 +89,11 @@ export default function StudentDashboard() {
         comment,
         servedOn: new Date().toISOString().split('T')[0]
       }).catch(err => {
-         if (err.message !== 'You have already reviewed this meal') throw err;
+        if (err.message !== 'You have already reviewed this meal') throw err;
       })
-      
+
       toast.success(`Rating submitted successfully!`)
-      
+
       setRatings(prev => {
         const next = { ...prev }
         delete next[dishId]
@@ -126,24 +135,24 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-6 pb-6 w-full">
-      
+
       {/* Today's Menu & Rating Section */}
       <Card className="overflow-hidden shadow-none border-hairline">
         <div className="p-4 border-b bg-surface-soft flex items-start sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-card-title text-ink leading-tight">Today's Menu & Ratings</h2>
-            <p className="text-caption text-muted mt-1">Rate dishes to improve future menus</p>
+            <p className="text-caption text-muted mt-1">{formatDate(new Date())}</p>
           </div>
-          <Button 
-            variant="secondary" 
+          <Button
             onClick={() => navigate('/student/voting/status')}
-            className="whitespace-nowrap flex-shrink-0"
+            className="whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all bg-ink text-canvas hover:bg-ink/90"
           >
-            <span className="hidden sm:inline">Vote for Menu →</span>
+            <span className="hidden sm:inline font-medium">Vote for Menu</span>
             <span className="sm:hidden px-1 text-caption font-medium tracking-wide">VOTE</span>
+            <ExternalLink className="w-3.5 h-3.5" />
           </Button>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 bg-canvas">
           {todayDishes.map((mealData: any) => {
             const served = mealData.slot
@@ -153,7 +162,7 @@ export default function StudentDashboard() {
 
             return (
               <div key={mealData.mealName} className="flex flex-col bg-canvas sm:bg-surface/30 border border-hairline rounded-xl overflow-hidden hover:border-ink/20 transition-all">
-                <div 
+                <div
                   className="flex items-center justify-between p-4 shrink-0 cursor-pointer sm:cursor-default border-b border-hairline bg-surface-soft/50 sm:bg-transparent"
                   onClick={() => setExpandedMeal(expandedMeal === mealData.mealName ? '' : mealData.mealName)}
                 >
@@ -168,16 +177,16 @@ export default function StudentDashboard() {
 
                 <div className={`p-4 flex-grow flex-col ${expandedMeal === mealData.mealName ? 'flex' : 'hidden sm:flex'}`}>
                   {served.status === 'CLOSED' ? (
-                     <p className="text-body text-muted italic flex-grow">Mess is closed for this meal.</p>
+                    <p className="text-body text-muted italic flex-grow">Mess is closed for this meal.</p>
                   ) : rotatingItems.length === 0 ? (
-                     <p className="text-body text-muted italic flex-grow">Fixed menu items only.</p>
+                    <p className="text-body text-muted italic flex-grow">Fixed menu items only.</p>
                   ) : (
                     <div className="flex flex-col gap-3 flex-grow">
                       {rotatingItems.map((dish: any, index: number) => {
                         const isExpanded = expandedDishes[dish._id]
                         return (
                           <div key={dish._id} className={index > 0 ? "pt-3 border-t border-hairline" : ""}>
-                            <button 
+                            <button
                               onClick={() => setExpandedDishes(prev => ({ ...prev, [dish._id]: !prev[dish._id] }))}
                               className="w-full flex justify-between items-center text-left focus:outline-none group"
                             >
@@ -188,7 +197,7 @@ export default function StudentDashboard() {
                                 {isExpanded ? 'CLOSE' : 'RATE'}
                               </span>
                             </button>
-                            
+
                             {isExpanded && (
                               <div className="space-y-4 mt-4 animate-in slide-in-from-top-2 duration-200 fade-in">
                                 <div>
@@ -239,7 +248,7 @@ export default function StudentDashboard() {
       {/* Full Weekly Menu */}
       {menu && (
         <Card className="overflow-hidden shadow-none border-hairline">
-           <div className="p-4 border-b bg-surface-soft">
+          <div className="p-4 border-b bg-surface-soft">
             <h2 className="text-card-title text-ink leading-tight">Weekly Menu</h2>
             {menu.generatedAt && (
               <p className="text-caption text-muted mt-1">Generated: <span className="font-mono text-data">{new Date(menu.generatedAt).toLocaleDateString()}</span></p>
@@ -251,7 +260,12 @@ export default function StudentDashboard() {
                 <TableRow>
                   <TableHead className="w-[100px] lg:w-[120px] sticky left-0 bg-surface-soft z-10 border-r border-hairline">Day</TableHead>
                   {menu.meals.map((m: any) => (
-                    <TableHead key={m.mealName}>{m.mealName}</TableHead>
+                    <TableHead key={m.mealName}>
+                      <div className="flex flex-col">
+                        <span>{m.mealName}</span>
+                        {m.startTime && m.endTime && <span className="text-[10px] font-normal text-muted tracking-wide">({m.startTime} - {m.endTime})</span>}
+                      </div>
+                    </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>

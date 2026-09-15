@@ -210,7 +210,12 @@ export default function AdminMessMenu() {
                 <TableRow className="bg-surface-soft">
                   <TableHead className="w-[100px] lg:w-[120px]">Day</TableHead>
                   {menu.meals.map((meal: any) => (
-                    <TableHead key={meal.mealName}>{meal.mealName}</TableHead>
+                    <TableHead key={meal.mealName}>
+                      <div className="flex flex-col">
+                        <span>{meal.mealName}</span>
+                        {meal.startTime && meal.endTime && <span className="text-[10px] font-normal text-muted tracking-wide">({meal.startTime} - {meal.endTime})</span>}
+                      </div>
+                    </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
