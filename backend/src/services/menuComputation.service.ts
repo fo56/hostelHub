@@ -148,15 +148,14 @@ export const computeMenuRecommendations = async (hostelId: string) => {
         costEfficiency: {
           $cond: [
             { $gt: ['$priceScore', 0] },
-            { $divide: [5, '$priceScore'] },
-            { $sub: [1, '$priceScore'] },
+            { $subtract: [1, { $divide: ['$priceScore', 5] }] },
             0
           ]
         },
         healthEfficiency: {
           $cond: [
             { $gt: ['$healthScore', 0] },
-            { $divide: [5, '$healthScore'] },
+            { $divide: ['$healthScore', 5] },
             0
           ]
         }

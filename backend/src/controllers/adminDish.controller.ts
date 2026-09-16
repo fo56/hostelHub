@@ -48,7 +48,7 @@ export const approveDish = async (req: Request, res: Response) => {
 
     if (!dish) return res.status(404).json({ message: 'Dish not found, already reviewed, or unauthorized' });
 
-    await ActivityLog.create({ userId: adminId, action: `APPROVED_DISH:${dish.name}`, ip: req.ip });
+    await ActivityLog.create({ hostelId, userId: adminId, action: `APPROVED_DISH:${dish.name}`, ip: req.ip });
 
     return res.status(200).json({ message: 'Dish approved successfully', dish });
   } catch (error: any) {
@@ -74,7 +74,7 @@ export const rejectDish = async (req: Request, res: Response) => {
 
     if (!dish) return res.status(404).json({ message: 'Dish not found, already reviewed, or unauthorized' });
 
-    await ActivityLog.create({ userId: adminId, action: `REJECTED_DISH:${dish.name} | Reason: ${reason}`, ip: req.ip });
+    await ActivityLog.create({ hostelId, userId: adminId, action: `REJECTED_DISH:${dish.name} | Reason: ${reason}`, ip: req.ip });
 
     return res.status(200).json({ message: 'Dish rejected successfully' });
   } catch (error: any) {
@@ -106,7 +106,7 @@ export const updateDish = async (req: Request, res: Response) => {
 
     if (!dish) return res.status(404).json({ message: 'Dish not found or unauthorized' });
 
-    await ActivityLog.create({ userId: adminId, action: `UPDATED_DISH:${dish.name}`, ip: req.ip });
+    await ActivityLog.create({ hostelId, userId: adminId, action: `UPDATED_DISH:${dish.name}`, ip: req.ip });
 
     return res.status(200).json({ message: 'Dish updated successfully', dish });
   } catch (error: any) {
@@ -126,7 +126,7 @@ export const deleteDish = async (req: Request, res: Response) => {
 
     if (!dish) return res.status(404).json({ message: 'Dish not found or unauthorized' });
 
-    await ActivityLog.create({ userId: adminId, action: `DELETED_DISH:${dish.name}`, ip: req.ip });
+    await ActivityLog.create({ hostelId, userId: adminId, action: `DELETED_DISH:${dish.name}`, ip: req.ip });
 
     return res.status(200).json({ message: 'Dish deleted successfully' });
   } catch (error: any) {

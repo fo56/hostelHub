@@ -199,8 +199,8 @@ function solveMealAssignment(
 
 export const buildMessMenu = async (hostelId: string, isPublished = false, publishMethod: 'MANUAL' | 'AUTO' = 'MANUAL') => {
   const now = new Date();
-  const dayOfWeek = now.getDay() || 7; 
-  now.setHours(0, 0, 0, 0);
+  const dayOfWeek = now.getUTCDay() || 7; 
+  now.setUTCHours(0, 0, 0, 0);
   const weekOf = new Date(now.getTime() - (dayOfWeek - 1) * 24 * 60 * 60 * 1000);
 
   const hostel = await Hostel.findById(hostelId);
@@ -296,12 +296,25 @@ export const buildMessMenu = async (hostelId: string, isPublished = false, publi
       // Filter rules for this specific category (if specified)
       const catRules = rules.filter(r => !r.appliesTo?.categoryName || r.appliesTo.categoryName === catName);
 
+      if (candidates.length === 0) {
+        continue;
+      }
+
       const assignment = solveMealAssignment(candidates, openDays, mealName, catRules, historyMap);
 
       if (assignment.size === 0 && openDays.length > 0) {
           const warnMsg = `Solver infeasible for meal ${mealName}, category ${catName}. Fell back to naive assignment.`;
           console.warn(`[WARN] ${warnMsg}`);
           solverFailures.push(warnMsg);
+          
+          if (candidates.length > 0) {
+              const sorted = [...candidates].sort((a, b) => b.finalScore - a.finalScore);
+              for (let i = 0; i < openDays.length; i++) {
+                  const day = openDays[i];
+                  const c = sorted[i % sorted.length];
+                  assignment.set(day, c.dishId);
+              }
+          }
       }
 
       // Map assignment back to daySlots
