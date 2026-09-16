@@ -148,7 +148,15 @@ export const computeMenuRecommendations = async (hostelId: string) => {
         costEfficiency: {
           $cond: [
             { $gt: ['$priceScore', 0] },
-            { $divide: [1, '$priceScore'] },
+            { $divide: [5, '$priceScore'] },
+            { $sub: [1, '$priceScore'] },
+            0
+          ]
+        },
+        healthEfficiency: {
+          $cond: [
+            { $gt: ['$healthScore', 0] },
+            { $divide: [5, '$healthScore'] },
             0
           ]
         }
@@ -161,7 +169,7 @@ export const computeMenuRecommendations = async (hostelId: string) => {
           $add: [
             { $multiply: [0.4, '$voteScore'] },
             { $multiply: [0.2, '$reviewScore'] },
-            { $multiply: [0.2, '$healthScore'] },
+            { $multiply: [0.2, '$healthEfficiency'] },
             { $multiply: [0.2, '$costEfficiency'] }
           ]
         }
@@ -174,7 +182,7 @@ export const computeMenuRecommendations = async (hostelId: string) => {
         mealName: '$mealType',
         categoryName: '$category',
         voteScore: 1,
-        healthScore: 1,
+        healthEfficiency: 1,
         costEfficiency: 1,
         finalScore: 1,
         _id: 0 // Exclude original Dish _id
@@ -186,7 +194,7 @@ export const computeMenuRecommendations = async (hostelId: string) => {
 
   // Clear previous recommendations and save new ones
   await MenuRecommendation.deleteMany({ hostelId });
-  
+
   await MenuRecommendation.insertMany(
     computedResults.map(item => ({
       ...item,
