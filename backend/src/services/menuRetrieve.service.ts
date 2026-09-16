@@ -29,7 +29,7 @@ export async function getTodayMenu(hostelId: string) {
 
   const todayMeals = menu.meals.map(meal => ({
     mealName: meal.mealName,
-    slot: meal.slots[dayIndex]
+    slot: meal.slots?.[dayIndex] || null
   }));
 
   const todayMenu = {

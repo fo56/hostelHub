@@ -44,25 +44,29 @@ dishSchema.post('findOneAndDelete', async function (doc) {
     await mongoose.model('MenuRecommendation').deleteMany({ dishId });
 
     // 5. Remove from MessMenu (fixedItems & rotatingItems)
-    if (recIds.length > 0) {
-      await mongoose.model('MessMenu').updateMany(
-        { hostelId },
-        {
-          $pull: {
-            'meals.$[].slots.$[].fixedItems': dishId,
-            'meals.$[].slots.$[].rotatingItems': { item: { $in: recIds } }
+    const menus = await mongoose.model('MessMenu').find({ hostelId });
+    for (const menu of menus) {
+      let modified = false;
+      menu.meals?.forEach((meal: any) => {
+        meal.slots?.forEach((slot: any) => {
+          if (slot.fixedItems && slot.fixedItems.length > 0) {
+            const initialLength = slot.fixedItems.length;
+            slot.fixedItems = slot.fixedItems.filter((id: any) => id.toString() !== dishId.toString());
+            if (slot.fixedItems.length !== initialLength) modified = true;
           }
-        }
-      );
-    } else {
-      await mongoose.model('MessMenu').updateMany(
-        { hostelId },
-        {
-          $pull: {
-            'meals.$[].slots.$[].fixedItems': dishId
+          if (recIds.length > 0 && slot.rotatingItems && slot.rotatingItems.length > 0) {
+            const initialLength = slot.rotatingItems.length;
+            slot.rotatingItems = slot.rotatingItems.filter((ri: any) => {
+               return !recIds.some(rId => rId.toString() === ri.item?.toString());
+            });
+            if (slot.rotatingItems.length !== initialLength) modified = true;
           }
-        }
-      );
+        });
+      });
+      if (modified) {
+         menu.markModified('meals');
+         await menu.save();
+      }
     }
 
     // 6. Remove from Hostel menuConstraints

@@ -87,18 +87,35 @@ export default function AdminMessMenu() {
   }
 
   const swapDish = (mealIndex: number, dayIndex: number, itemIndex: number, direction: 'up' | 'down') => {
-    const targetDayIndex = direction === 'up' ? dayIndex - 1 : dayIndex + 1;
-    if (targetDayIndex < 0 || targetDayIndex > 6) return;
+    const slots = menu.meals[mealIndex].slots;
+    
+    let targetDayIndex = dayIndex;
+    let found = false;
+    
+    while (true) {
+      targetDayIndex = direction === 'up' ? targetDayIndex - 1 : targetDayIndex + 1;
+      if (targetDayIndex < 0 || targetDayIndex > 6) break;
+      
+      if (slots[targetDayIndex] && slots[targetDayIndex].rotatingItems && slots[targetDayIndex].rotatingItems.length > itemIndex) {
+        found = true;
+        break;
+      }
+    }
+    
+    if (!found) {
+      toast.error('No valid day to swap with in that direction');
+      return;
+    }
     
     setMenu((prev: any) => {
       const newMenu = JSON.parse(JSON.stringify(prev));
-      const slots = newMenu.meals[mealIndex].slots;
+      const newSlots = newMenu.meals[mealIndex].slots;
       
-      const currentItem = slots[dayIndex].rotatingItems[itemIndex];
-      const targetItem = slots[targetDayIndex].rotatingItems[itemIndex];
+      const currentItem = newSlots[dayIndex].rotatingItems[itemIndex];
+      const targetItem = newSlots[targetDayIndex].rotatingItems[itemIndex];
       
-      slots[dayIndex].rotatingItems[itemIndex] = targetItem;
-      slots[targetDayIndex].rotatingItems[itemIndex] = currentItem;
+      newSlots[dayIndex].rotatingItems[itemIndex] = targetItem;
+      newSlots[targetDayIndex].rotatingItems[itemIndex] = currentItem;
       
       return newMenu;
     });

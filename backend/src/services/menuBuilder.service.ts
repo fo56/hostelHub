@@ -130,8 +130,11 @@ function solveMealAssignment(
           // Intra-week reuse penalty
           const reusePenalty = occ * 40;
 
+          // Scale finalScore (0-1) up to heavily prioritize student votes (0-200)
+          const scaledFinalScore = c.finalScore * 200;
+
           model.variables[varKey] = {
-            score: c.finalScore - historyPenalty - reusePenalty,
+            score: scaledFinalScore - historyPenalty - reusePenalty,
             [slotConstraintKey]: 1,
           };
           model.ints[varKey] = 1;

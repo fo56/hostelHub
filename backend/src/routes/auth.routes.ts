@@ -14,7 +14,7 @@ router.post('/admin/register', registerAdmin);
 router.post('/login', login);
 router.post('/refresh', refresh);
 
-// Protected routes
-router.post('/logout', verifyToken, logout);
+// Protected routes (Logout should be accessible even if token is expired to clear cookies)
+router.post('/logout', logout);
 
 export default router;

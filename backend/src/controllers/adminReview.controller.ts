@@ -141,9 +141,32 @@ export const getReviewStats = async (req: Request, res: Response) => {
       return a.date.localeCompare(b.date);
     });
 
+    // 3. Voting Stats per Dish
+    const totalVoters = await mongoose.model('StudentVote').countDocuments({ hostelId: hostelId });
+    
+    const votingStats = await mongoose.model('StudentVote').aggregate([
+      { $match: { hostelId: hostelId } },
+      { $unwind: '$votes' },
+      { $unwind: '$votes.dishes' },
+      {
+        $group: {
+          _id: '$votes.dishes',
+          totalVotes: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Merge votingStats into dishStats
+    for (const dStat of dishStats) {
+       const vStat = votingStats.find(v => v._id.toString() === dStat._id.toString());
+       dStat.totalVotes = vStat ? vStat.totalVotes : 0;
+    }
+
     return res.status(200).json({
       dishStats,
-      trendStats
+      trendStats,
+      totalVoters,
+      votingStats
     });
   } catch (error: any) {
     return res.status(500).json({

@@ -16,6 +16,8 @@ export default function AdminDishManagement() {
   const [activeTab, setActiveTab] = useState<TabType>('ACTIVE')
   const [dishes, setDishes] = useState<any[]>([])
   const [dishStats, setDishStats] = useState<any[]>([])
+  const [totalVoters, setTotalVoters] = useState(0)
+  const [mealPlan, setMealPlan] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
 
@@ -23,21 +25,43 @@ export default function AdminDishManagement() {
   const [editingDishId, setEditingDishId] = useState<string | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [reviewsModal, setReviewsModal] = useState<{ isOpen: boolean, dish: any, reviews: any[], loading: boolean } | null>(null)
-  
+
   const [approveConfirmId, setApproveConfirmId] = useState<string | null>(null)
   const [approveScores, setApproveScores] = useState({ priceScore: 3, healthScore: 3 })
-  
+
   const [rejectConfirmId, setRejectConfirmId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     mealType: 'Lunch',
-    category: 'Veg',
+    category: 'Main Course',
     tags: '',
     priceScore: 3,
     healthScore: 3,
-    itemClass: 'ROTATING'
+    itemClass: 'ROTATING',
+    defaultQuantity: ''
   })
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const data = await request('/admin/settings')
+        if (data?.mealPlan) {
+          setMealPlan(data.mealPlan)
+          if (data.mealPlan.length > 0) {
+            setFormData(prev => ({
+              ...prev,
+              mealType: data.mealPlan[0].mealName,
+              category: data.mealPlan[0].categories?.[0]?.categoryName || ''
+            }))
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load settings', err)
+      }
+    }
+    fetchSettings()
+  }, [])
 
   useEffect(() => {
     loadDishes()
@@ -52,7 +76,26 @@ export default function AdminDishManagement() {
           request('/admin/reviews/stats')
         ])
         setDishes(dishesData || [])
-        setDishStats(statsData?.dishStats || [])
+
+        // statsData contains dishStats and votingStats, but we mapped totalVotes into dishStats in the backend.
+        // Wait, what if a dish has NO reviews but HAS votes? It won't be in dishStats from the aggregate!
+        // We should map it using votingStats and dishStats independently.
+        const stats = statsData?.dishStats || []
+        const votes = statsData?.votingStats || []
+
+        // Let's attach votes to dishes directly so we can sort them
+        setTotalVoters(statsData?.totalVoters || 0)
+        setDishStats(stats.map((s: any) => {
+          const v = votes.find((v: any) => v._id === s._id);
+          return { ...s, totalVotes: v ? v.totalVotes : 0 };
+        }))
+
+        // Also map votes to the dishes state directly so they show up even if there are no reviews
+        const mappedDishes = (dishesData || []).map((d: any) => {
+          const v = votes.find((v: any) => v._id === d._id);
+          return { ...d, totalVotes: v ? v.totalVotes : 0 };
+        })
+        setDishes(mappedDishes)
       } else {
         const data = await request(`/admin/dishes?status=${activeTab}`)
         setDishes(data || [])
@@ -79,17 +122,17 @@ export default function AdminDishManagement() {
       const m1 = mealOrder[a.mealType] || 99;
       const m2 = mealOrder[b.mealType] || 99;
       if (m1 !== m2) return m1 - m2;
-      
+
       const classOrder: Record<string, number> = { FIXED: 1, ROTATING: 2 };
       const c1 = classOrder[a.itemClass] || 99;
       const c2 = classOrder[b.itemClass] || 99;
       if (c1 !== c2) return c1 - c2;
-      
+
       return (a.name || '').localeCompare(b.name || '');
     }
 
     const { key, direction } = sortConfig
-    
+
     let valA = key === 'suggestedBy' ? (a.suggestedBy?.name || '') : a[key]
     let valB = key === 'suggestedBy' ? (b.suggestedBy?.name || '') : b[key]
 
@@ -113,7 +156,8 @@ export default function AdminDishManagement() {
       tags: dish.tags ? dish.tags.join(', ') : '',
       priceScore: dish.priceScore || 3,
       healthScore: dish.healthScore || 3,
-      itemClass: dish.itemClass || 'ROTATING'
+      itemClass: dish.itemClass || 'ROTATING',
+      defaultQuantity: dish.defaultQuantity || ''
     })
     setEditingDishId(dish._id)
     setShowModal(true)
@@ -163,7 +207,16 @@ export default function AdminDishManagement() {
 
       setShowModal(false)
       setEditingDishId(null)
-      setFormData({ name: '', mealType: 'Lunch', category: 'Veg', tags: '', priceScore: 3, healthScore: 3, itemClass: 'ROTATING' })
+      setFormData({
+        name: '',
+        mealType: mealPlan[0]?.mealName || 'Lunch',
+        category: mealPlan[0]?.categories?.[0]?.categoryName || 'Main Course',
+        tags: '',
+        priceScore: 3,
+        healthScore: 3,
+        itemClass: 'ROTATING',
+        defaultQuantity: ''
+      })
       loadDishes()
     } catch (err: unknown) {
       toast.error((err as Error).message || 'Failed to save dish')
@@ -222,33 +275,30 @@ export default function AdminDishManagement() {
     <div className="space-y-4">
       <div className="flex flex-col-reverse sm:flex-row justify-between items-start sm:items-end border-b border-hairline gap-3 sm:gap-0">
         <div className="flex overflow-x-auto w-full sm:w-auto no-scrollbar">
-          <button 
+          <button
             onClick={() => setActiveTab('ACTIVE')}
-            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${
-              activeTab === 'ACTIVE'
-              ? 'border-ink text-ink'
-              : 'border-transparent text-muted hover:text-ink hover:border-hairline'
-            }`}
+            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'ACTIVE'
+                ? 'border-ink text-ink'
+                : 'border-transparent text-muted hover:text-ink hover:border-hairline'
+              }`}
           >
             Approved Dishes
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('UNDER_REVIEW')}
-            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${
-              activeTab === 'UNDER_REVIEW'
-              ? 'border-ink text-ink'
-              : 'border-transparent text-muted hover:text-ink hover:border-hairline'
-            }`}
+            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'UNDER_REVIEW'
+                ? 'border-ink text-ink'
+                : 'border-transparent text-muted hover:text-ink hover:border-hairline'
+              }`}
           >
             Pending Dishes
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('INACTIVE')}
-            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${
-              activeTab === 'INACTIVE'
-              ? 'border-ink text-ink'
-              : 'border-transparent text-muted hover:text-ink hover:border-hairline'
-            }`}
+            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'INACTIVE'
+                ? 'border-ink text-ink'
+                : 'border-transparent text-muted hover:text-ink hover:border-hairline'
+              }`}
           >
             Rejected Dishes
           </button>
@@ -257,7 +307,16 @@ export default function AdminDishManagement() {
           <Button variant="primary" className="h-9 w-full sm:w-auto"
             onClick={() => {
               setEditingDishId(null)
-              setFormData({ name: '', mealType: 'Lunch', category: 'Veg', tags: '', priceScore: 3, healthScore: 3, itemClass: 'ROTATING' })
+              setFormData({
+                name: '',
+                mealType: mealPlan[0]?.mealName || 'Lunch',
+                category: mealPlan[0]?.categories?.[0]?.categoryName || 'Main Course',
+                tags: '',
+                priceScore: 3,
+                healthScore: 3,
+                itemClass: 'ROTATING',
+                defaultQuantity: ''
+              })
               setShowModal(true)
             }}
           >
@@ -274,11 +333,11 @@ export default function AdminDishManagement() {
         </div>
       ) : (
         <Card className="overflow-hidden shadow-none border-hairline">
-          <div className="overflow-x-auto w-full">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-surface-soft">
-                  <TableHead className="text-center cursor-pointer hover:bg-surface transition-colors w-1/4" onClick={() => handleSort('name')}>
+          <div className="overflow-auto w-full max-h-[75vh] custom-scrollbar">
+            <table className="w-full text-left border-collapse">
+              <TableHeader className="sticky top-0 z-20 bg-surface-soft shadow-sm">
+                <TableRow className="bg-surface-soft hover:bg-surface-soft">
+                  <TableHead className="text-center cursor-pointer hover:bg-surface transition-colors w-1/4 sticky left-0 z-30 bg-surface-soft shadow-[1px_0_0_0_var(--color-hairline)]" onClick={() => handleSort('name')}>
                     <div className="flex items-center justify-center gap-1">
                       Name <span className="w-3 inline-block text-center">{sortConfig?.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
                     </div>
@@ -312,6 +371,11 @@ export default function AdminDishManagement() {
                       </TableHead>
                       <TableHead className="text-center">Tags</TableHead>
                       <TableHead className="text-center">Rating</TableHead>
+                      <TableHead className="text-center cursor-pointer hover:bg-surface transition-colors" onClick={() => handleSort('totalVotes')}>
+                        <div className="flex items-center justify-center gap-1">
+                          Votes <span className="w-3 inline-block text-center">{sortConfig?.key === 'totalVotes' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                        </div>
+                      </TableHead>
                       <TableHead className="text-center">Reviews</TableHead>
                       <TableHead className="text-center">Actions</TableHead>
                     </>
@@ -336,17 +400,16 @@ export default function AdminDishManagement() {
               </TableHeader>
               <TableBody>
                 {sortedDishes.map((d) => (
-                  <TableRow 
-                    key={d._id} 
+                  <TableRow
+                    key={d._id}
                     className={`transition-colors hover:bg-surface-soft ${activeTab === 'ACTIVE' ? 'cursor-pointer' : ''}`}
                     onClick={() => { if (activeTab === 'ACTIVE') openReviewsModal(d) }}
                   >
-                    <TableCell className="font-medium text-ink text-center">{d.name}</TableCell>
-                    <TableCell className="text-muted text-center">{d.mealType}</TableCell>
+                    <TableCell className="font-medium text-ink text-center whitespace-nowrap sticky left-0 z-10 bg-canvas group-hover:bg-surface-soft shadow-[1px_0_0_0_var(--color-hairline)]">{d.name}</TableCell>
+                    <TableCell className="text-muted text-center whitespace-nowrap">{d.mealType}</TableCell>
                     <TableCell className="text-muted text-center">
-                      <span className={`inline-flex px-2 py-1 rounded text-caption uppercase font-bold tracking-wider border ${
-                        d.itemClass === 'FIXED' ? 'bg-ink border-ink text-canvas' : 'bg-transparent border-hairline text-muted'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 rounded text-caption uppercase font-bold tracking-wider border ${d.itemClass === 'FIXED' ? 'bg-ink border-ink text-canvas' : 'bg-transparent border-hairline text-muted'
+                        }`}>
                         {d.itemClass || 'ROTATING'}
                       </span>
                     </TableCell>
@@ -357,9 +420,9 @@ export default function AdminDishManagement() {
                           {d.priceScore !== undefined && d.priceScore !== null ? (
                             <div className="flex items-center justify-center gap-2" title={`Price: ${d.priceScore}/5`}>
                               <div className="w-12 h-1.5 bg-hairline rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-ink" 
-                                  style={{ width: `${(d.priceScore / 5) * 100}%` }} 
+                                <div
+                                  className="h-full bg-ink"
+                                  style={{ width: `${(d.priceScore / 5) * 100}%` }}
                                 />
                               </div>
                             </div>
@@ -369,9 +432,9 @@ export default function AdminDishManagement() {
                           {d.healthScore !== undefined && d.healthScore !== null ? (
                             <div className="flex items-center justify-center gap-2" title={`Health: ${d.healthScore}/5`}>
                               <div className="w-12 h-1.5 bg-hairline rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-ink" 
-                                  style={{ width: `${(d.healthScore / 5) * 100}%` }} 
+                                <div
+                                  className="h-full bg-ink"
+                                  style={{ width: `${(d.healthScore / 5) * 100}%` }}
                                 />
                               </div>
                             </div>
@@ -385,6 +448,12 @@ export default function AdminDishManagement() {
                               <span>{dishStats.find(s => s._id === d._id)?.averageRating.toFixed(1)}</span>
                             </div>
                           ) : <span className="text-muted">No ratings</span>}
+                        </TableCell>
+                        <TableCell className="text-center font-medium">
+                          <span className={d.totalVotes > 0 ? "text-ink" : "text-muted"}>
+                            {d.totalVotes || 0}
+                          </span>
+                          <span className="text-muted text-body-sm font-normal"> / {totalVoters}</span>
                         </TableCell>
                         <TableCell className="text-center text-muted">
                           {dishStats.find(s => s._id === d._id)?.totalReviews || 0}
@@ -431,7 +500,7 @@ export default function AdminDishManagement() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </table>
           </div>
         </Card>
       )}
@@ -455,13 +524,17 @@ export default function AdminDishManagement() {
                 <label className="block text-body-sm text-muted mb-1">Meal Type</label>
                 <Select
                   value={formData.mealType}
-                  onChange={(e) => setFormData({ ...formData, mealType: e.target.value })}
+                  onChange={(e) => {
+                    const newMeal = e.target.value;
+                    const mealData = mealPlan.find(m => m.mealName === newMeal);
+                    const firstCat = mealData?.categories?.[0]?.categoryName || '';
+                    setFormData({ ...formData, mealType: newMeal, category: firstCat })
+                  }}
                   className="w-full"
                 >
-                  <option value="Breakfast">Breakfast</option>
-                  <option value="Lunch">Lunch</option>
-                  <option value="Snack">Snack</option>
-                  <option value="Dinner">Dinner</option>
+                  {mealPlan.map((m: any) => (
+                    <option key={m.mealName} value={m.mealName}>{m.mealName}</option>
+                  ))}
                 </Select>
               </div>
 
@@ -486,12 +559,12 @@ export default function AdminDishManagement() {
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   className="w-full"
                 >
-                  <option value="Veg">Veg</option>
-                  <option value="Non-Veg">Non-Veg</option>
-                  <option value="Egg">Egg</option>
+                  {mealPlan.find(m => m.mealName === formData.mealType)?.categories?.map((cat: any) => (
+                    <option key={cat.categoryName} value={cat.categoryName}>{cat.categoryName}</option>
+                  )) || <option value="">Select Meal Type</option>}
                 </Select>
               </div>
-              
+
               <div>
                 <label className="block text-body-sm text-muted mb-1">Tags (comma separated)</label>
                 <Input
@@ -500,6 +573,20 @@ export default function AdminDishManagement() {
                   onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                   placeholder="spicy, North Indian"
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-body-sm text-muted mb-1">Default Quantity</label>
+                <Input
+                  type="text"
+                  value={formData.defaultQuantity}
+                  onChange={(e) => setFormData({ ...formData, defaultQuantity: e.target.value })}
+                  placeholder="e.g. 1 bowl, 2 pieces"
+                />
+              </div>
+              <div>
               </div>
             </div>
 
@@ -527,7 +614,7 @@ export default function AdminDishManagement() {
             </div>
 
             <div className="flex justify-end space-x-2 pt-4 border-t border-hairline mt-6">
-              <Button variant="secondary" 
+              <Button variant="secondary"
                 type="button"
                 onClick={() => {
                   setShowModal(false)
