@@ -27,14 +27,14 @@ jobs:
           backend/package-lock.json
 
     - name: Install Frontend Dependencies
-      run: npm install
+      # Uses strictly your package-lock.json so nothing is uninstalled
+      run: npm ci
       working-directory: ./frontend
 
-    # --- NEW STEP ADDED HERE ---
-    - name: Rebuild esbuild for Linux
-      run: npm rebuild esbuild
+    - name: Force esbuild Linux binary download
+      # Manually runs esbuild's fallback downloader to get the missing Linux file
+      run: node node_modules/esbuild/install.js
       working-directory: ./frontend
-    # ---------------------------
 
     - name: Type Check Frontend
       run: npx tsc --noEmit
