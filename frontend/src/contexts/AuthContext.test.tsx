@@ -1,16 +1,17 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom'; // Ensure DOM matchers like toHaveTextContent work
 import { AuthProvider, useAuth } from './AuthContext';
-import React from 'react';
 
 // A simple test component that consumes AuthContext
 const TestComponent = () => {
-  const { user, isLoading, login, logout } = useAuth();
-  
+  const { user, isLoading } = useAuth();
+
   return (
     <div>
-      <div data-testid="loading">{isLoading.toString()}</div>
       <div data-testid="user">{user ? user.username : 'null'}</div>
+      <div data-testid="loading">{String(isLoading)}</div>
     </div>
   );
 };
@@ -19,8 +20,8 @@ describe('AuthContext', () => {
   beforeEach(() => {
     // Clear localStorage before each test
     localStorage.clear();
-    // Mock global fetch
-    global.fetch = vi.fn();
+    // Mock global fetch using globalThis instead of global
+    globalThis.fetch = vi.fn();
   });
 
   afterEach(() => {
@@ -44,8 +45,8 @@ describe('AuthContext', () => {
 
   it('should restore session if a valid token exists in localStorage', async () => {
     localStorage.setItem('accessToken', 'mock-valid-token');
-    
-    (global.fetch as any).mockResolvedValueOnce({
+
+    (globalThis.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ user: { _id: '1', username: 'john_doe', role: 'STUDENT' } })
     });
@@ -60,11 +61,11 @@ describe('AuthContext', () => {
     await waitFor(() => {
       expect(screen.getByTestId('loading')).toHaveTextContent('false');
     });
-    
+
     // User should be populated from the mocked fetch response
     expect(screen.getByTestId('user')).toHaveTextContent('john_doe');
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/auth/me'),
       expect.objectContaining({
         headers: expect.objectContaining({
@@ -76,8 +77,8 @@ describe('AuthContext', () => {
 
   it('should clear token and user if session restore fails (e.g. invalid token)', async () => {
     localStorage.setItem('accessToken', 'mock-invalid-token');
-    
-    (global.fetch as any).mockResolvedValueOnce({
+
+    (globalThis.fetch as any).mockResolvedValueOnce({
       ok: false,
       status: 401,
       json: async () => ({ message: 'Invalid token' })
