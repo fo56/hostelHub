@@ -27,7 +27,7 @@ jobs:
           backend/package-lock.json
 
     - name: Install Frontend Dependencies
-      run: npm ci
+      run: npm install
       working-directory: ./frontend
 
     # --- NEW STEP ADDED HERE ---
