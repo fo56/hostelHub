@@ -30,6 +30,12 @@ jobs:
       run: npm ci
       working-directory: ./frontend
 
+    # --- NEW STEP ADDED HERE ---
+    - name: Rebuild esbuild for Linux
+      run: npm rebuild esbuild
+      working-directory: ./frontend
+    # ---------------------------
+
     - name: Type Check Frontend
       run: npx tsc --noEmit
       working-directory: ./frontend
