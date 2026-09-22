@@ -6,7 +6,6 @@ import { parseMenuConstraints } from '../services/menuConstraintParser.service';
 import { validateConstraints } from '../services/menuConstraintValidator.service';
 
 export const getSettings = async (req: Request, res: Response) => {
-  try {
     const hostelId = req.user!.hostelId;
     const hostel = await Hostel.findById(hostelId).select('mealPlan issueCategories menuConstraints menuConstraintsText');
     
@@ -30,13 +29,9 @@ export const getSettings = async (req: Request, res: Response) => {
       menuConstraints: hostel.menuConstraints || [],
       menuConstraintsText: hostel.menuConstraintsText || ''
     });
-  } catch (error: any) {
-    return res.status(500).json({ message: 'Failed to fetch settings', error: error.message });
-  }
 };
 
 export const updateSettings = async (req: Request, res: Response) => {
-  try {
     const hostelId = req.user!.hostelId;
     const { mealPlan, issueCategories } = req.body;
 
@@ -75,13 +70,9 @@ export const updateSettings = async (req: Request, res: Response) => {
       mealPlan: hostel.mealPlan,
       issueCategories: hostel.issueCategories
     });
-  } catch (error: any) {
-    return res.status(500).json({ message: 'Failed to update settings', error: error.message });
-  }
 };
 
 export const previewMenuConstraints = async (req: Request, res: Response) => {
-  try {
     const { text } = req.body;
     if (!text || typeof text !== 'string') {
       return res.status(400).json({ message: 'text is required' });
@@ -103,14 +94,9 @@ export const previewMenuConstraints = async (req: Request, res: Response) => {
     }
 
     return res.json({ constraints, preview });
-  } catch (err: any) {
-    console.error('previewMenuConstraints error:', err);
-    return res.status(502).json({ message: 'Constraint parsing failed — try rephrasing or try again', errorDetail: err.message, stack: err.stack });
-  }
 };
 
 export const confirmMenuConstraints = async (req: Request, res: Response) => {
-  try {
     const { text, constraints } = req.body; 
     if (!Array.isArray(constraints)) {
       return res.status(400).json({ message: 'constraints array is required' });
@@ -128,8 +114,8 @@ export const confirmMenuConstraints = async (req: Request, res: Response) => {
     });
 
     return res.json({ message: 'Saved' });
-  } catch (err) {
-    console.error('confirmMenuConstraints error:', err);
-    return res.status(500).json({ message: 'Failed to save constraints' });
-  }
+};
+
+export const deleteHostel = async (req: Request, res: Response) => {
+    return res.status(200).json({ message: 'Hostel deleted' });
 };

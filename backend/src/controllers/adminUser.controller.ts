@@ -8,6 +8,7 @@ import { MealReview } from '../models/MealReview';
 import { Issue } from '../models/Issue';
 import { RefreshToken } from '../models/RefreshToken';
 import { Dish } from '../models/Dish';
+import { asyncHandler } from '../utils/asyncHandler';
 
 // generate simple password
 const generatePassword = (): string => {
@@ -16,7 +17,6 @@ const generatePassword = (): string => {
 
 // Create User (Student/Worker)
 export const createUser = async (req: Request, res: Response) => {
-  try {
     const adminId = (req as any).user?._id;
     let { username, password, name, role, roomNo } = req.body;
 
@@ -81,9 +81,7 @@ export const createUser = async (req: Request, res: Response) => {
     await ActivityLog.create({
       hostelId: admin.hostelId,
       userId: adminId,
-      action: `Created student - ${name || username} (${username})`,
-      ip: req.ip,
-    });
+      action: `Created student - ${name || username} (${username})`,});
 
     return res.status(201).json({
       message: 'User created successfully',
@@ -96,15 +94,10 @@ export const createUser = async (req: Request, res: Response) => {
       },
       rawPassword
     });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ message: error.message });
-  }
 };
 
 // Bulk Create Users
 export const bulkCreateUsers = async (req: Request, res: Response) => {
-  try {
     const adminId = (req as any).user?._id;
     const { users } = req.body; // Array of { username, password, name?, role, roomNo? }
 
@@ -176,23 +169,16 @@ export const bulkCreateUsers = async (req: Request, res: Response) => {
     await ActivityLog.create({
       hostelId: admin.hostelId,
       userId: adminId,
-      action: `Bulk created ${createdUsers.length} users`,
-      ip: req.ip,
-    });
+      action: `Bulk created ${createdUsers.length} users`,});
 
     return res.status(201).json({
       message: `${createdUsers.length} users created successfully`,
       createdUsers
     });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ message: error.message });
-  }
 };
 
 // Get all users for hostel (with filters)
 export const getUsers = async (req: Request, res: Response) => {
-  try {
     const adminId = (req as any).user?._id;
     const { role, status } = req.query;
 
@@ -208,15 +194,10 @@ export const getUsers = async (req: Request, res: Response) => {
 
     const users = await User.find(query).select('-passwordHash -emailVerificationToken');
     return res.status(200).json({ users });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ message: error.message });
-  }
 };
 
 // Get single user
 export const getUser = async (req: Request, res: Response) => {
-  try {
     const adminId = (req as any).user?._id;
     const { userId } = req.params;
 
@@ -235,15 +216,10 @@ export const getUser = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({ user });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ message: error.message });
-  }
 };
 
 // Deactivate user
 export const deactivateUser = async (req: Request, res: Response) => {
-  try {
     const adminId = (req as any).user?._id;
     const { userId } = req.params;
 
@@ -266,20 +242,13 @@ export const deactivateUser = async (req: Request, res: Response) => {
     await ActivityLog.create({
       hostelId: admin.hostelId,
       userId: adminId,
-      action: `Deactivated user - ${user.name} (${user.username})`,
-      ip: req.ip,
-    });
+      action: `Deactivated user - ${user.name} (${user.username})`,});
 
     return res.status(200).json({ message: 'User deactivated successfully' });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ message: error.message });
-  }
 };
 
 // Reactivate user
 export const reactivateUser = async (req: Request, res: Response) => {
-  try {
     const adminId = (req as any).user?._id;
     const { userId } = req.params;
 
@@ -297,20 +266,13 @@ export const reactivateUser = async (req: Request, res: Response) => {
     await ActivityLog.create({
       hostelId: admin.hostelId,
       userId: adminId,
-      action: `Reactivated user - ${user.name} (${user.username})`,
-      ip: req.ip,
-    });
+      action: `Reactivated user - ${user.name} (${user.username})`,});
 
     return res.status(200).json({ message: 'User reactivated successfully' });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ message: error.message });
-  }
 };
 
 // Delete user
 export const deleteUser = async (req: Request, res: Response) => {
-  try {
     const adminId = (req as any).user?._id;
     const { userId } = req.params;
 
@@ -337,15 +299,26 @@ export const deleteUser = async (req: Request, res: Response) => {
     await ActivityLog.create({
       hostelId: admin.hostelId,
       userId: adminId,
-      action: `Deleted user - ${user.name} (${user.username}) and all associated records`,
-      ip: req.ip,
-    });
+      action: `Deleted user - ${user.name} (${user.username}) and all associated records`,});
 
     return res.status(200).json({ message: 'User and all associated records deleted successfully' });
-  } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ message: error.message });
-  }
 };
 
 // TOKEN REGENERATION ROUTES DELETED
+
+export const updateUser = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { name, roomNo, permissions } = req.body;
+    const userToUpdate = await User.findById(id);
+    if (!userToUpdate) return res.status(404).json({ message: 'User not found' });
+
+    if (name !== undefined) userToUpdate.name = name;
+    if (permissions !== undefined) userToUpdate.permissions = permissions;
+    
+    if (roomNo !== undefined && userToUpdate.role === 'STUDENT') {
+        userToUpdate.roomNo = roomNo;
+    }
+
+    await userToUpdate.save();
+    return res.status(200).json({ user: userToUpdate });
+});

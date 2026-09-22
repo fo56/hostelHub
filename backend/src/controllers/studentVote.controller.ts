@@ -10,7 +10,6 @@ import { Hostel } from '../models/Hostel';
  * - The student's current saved votes
  */
 export const getStudentVotes = async (req: Request, res: Response) => {
-  try {
     const userId = req.user?._id;
     const hostelId = req.user?.hostelId;
 
@@ -41,19 +40,12 @@ export const getStudentVotes = async (req: Request, res: Response) => {
       votes: voteRecord?.votes || [],
       wantsNewMenu: voteRecord?.wantsNewMenu || false
     });
-  } catch (error: any) {
-    return res.status(500).json({
-      message: 'Failed to fetch voting options',
-      error: error.message
-    });
-  }
 };
 
 /**
  * UPSERT student preferences (Save / Edit anytime)
  */
 export const saveStudentVotes = async (req: Request, res: Response) => {
-  try {
     const { votes, wantsNewMenu } = req.body; 
     const userId = req.user?._id;
     const hostelId = req.user?.hostelId;
@@ -125,10 +117,4 @@ export const saveStudentVotes = async (req: Request, res: Response) => {
       message: 'Preferences saved successfully',
       votes: updatedVotes
     });
-  } catch (error: any) {
-    return res.status(500).json({
-      message: 'Failed to save votes',
-      error: error.message
-    });
-  }
 };

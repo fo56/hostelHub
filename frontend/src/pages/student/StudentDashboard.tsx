@@ -8,17 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Card } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
 import { ChevronDown, ExternalLink } from 'lucide-react'
+import { formatDate } from '../../lib/utils'
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
-const formatDate = (date: Date) => {
-  const day = date.getDate();
-  const suffix = ["th", "st", "nd", "rd"][day % 10 > 3 ? 0 : (day % 100 - day % 10 !== 10) ? day % 10 : 0] || "th";
-  const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
-  const month = date.toLocaleDateString('en-US', { month: 'long' });
-  const year = date.toLocaleDateString('en-US', { year: '2-digit' });
-  return `${weekday}, ${day}${suffix} ${month} '${year}`;
-};
 
 export default function StudentDashboard() {
   const { request } = useApi()
@@ -158,7 +151,7 @@ export default function StudentDashboard() {
             const served = mealData.slot
             if (!served) return null
 
-            const rotatingItems = served.rotatingItems?.map((r: any) => r.item?.dishId).filter(Boolean) || []
+            const rotatingItems = served.rotatingItems?.map((r: any) => r.item).filter(Boolean) || []
 
             return (
               <div key={mealData.mealName} className="flex flex-col bg-canvas sm:bg-surface/30 border border-hairline rounded-xl overflow-hidden hover:border-ink/20 transition-all">
@@ -251,7 +244,7 @@ export default function StudentDashboard() {
           <div className="p-4 border-b bg-surface-soft">
             <h2 className="text-card-title text-ink leading-tight">Weekly Menu</h2>
             {menu.generatedAt && (
-              <p className="text-caption text-muted mt-1">Generated: <span className="font-mono text-data">{new Date(menu.generatedAt).toLocaleDateString()}</span></p>
+              <p className="text-caption text-muted mt-1">Generated: <span className="font-mono text-data">{formatDate(menu.generatedAt)}</span></p>
             )}
           </div>
           <div className="overflow-x-auto w-full">
@@ -275,7 +268,7 @@ export default function StudentDashboard() {
                     <TableCell className="text-body text-ink font-medium sticky left-0 bg-canvas z-10 border-r border-hairline">{day}</TableCell>
                     {menu.meals.map((meal: any) => {
                       const item = meal.slots?.[index]
-                      const rotatingNames = item?.rotatingItems?.map((r: any) => r.item?.dishId?.name).filter(Boolean) || []
+                      const rotatingNames = item?.rotatingItems?.map((r: any) => r.item?.name).filter(Boolean) || []
                       const fixedNames = item?.fixedItems?.map((d: any) => d.name).filter(Boolean) || []
 
                       return (

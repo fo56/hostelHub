@@ -26,7 +26,6 @@
 - **Resolution Tracking**: Provides administrators and workers with dedicated tools to assign, monitor, and resolve maintenance tickets efficiently.
 
 ### 4. Advanced Security & Authentication
-- **Passwordless Onboarding**: Facilitates rapid user onboarding via secure QR codes and Magic Links.
 - **Robust JWT Implementation**: Ensures session security with automated refresh token rotation and comprehensive cryptographic hashing.
 
 ---
@@ -46,42 +45,73 @@
    ```
 
 2. **Install dependencies:**
+   Open two terminals, one for the frontend and one for the backend.
    ```bash
+   # Terminal 1 (Backend)
    cd backend && npm install
-   cd ../frontend && npm install
+   
+   # Terminal 2 (Frontend)
+   cd frontend && npm install
    ```
 
 3. **Configure Environment Variables:**
-   Create a `.env` file in the `backend` directory:
+   We have provided `.env.example` files in both the frontend and backend directories. 
+   
+   Copy `.env.example` to `.env` in the `backend` directory:
+   ```bash
+   cp backend/.env.example backend/.env
+   ```
+   **Backend `.env` configuration:**
    ```env
    MONGODB_URI=mongodb://localhost:27017/hostelHub
    JWT_SECRET=your_secure_jwt_secret_key
    PORT=8000
-   NODE_ENV=development
    FRONTEND_URL=http://localhost:5173
+   GEMINI_API_KEY=your_gemini_api_key
    ```
-   Create a `.env` file in the `frontend` directory:
+   *(Note: Ensure you put your valid MongoDB URI and Gemini API key here)*
+
+   Copy `.env.example` to `.env` in the `frontend` directory:
+   ```bash
+   cp frontend/.env.example frontend/.env
+   ```
+   **Frontend `.env` configuration:**
    ```env
    VITE_API_URL=http://localhost:8000/api
+   VITE_APP_NAME=HostelHub
+   VITE_APP_ENVIRONMENT=development
    ```
 
-4. **Initialize the application:**
+4. **Seed the Database (Optional but Recommended):**
+   To easily generate initial admin and student accounts, you can seed the database.
+   ```bash
+   # In the backend directory
+   npm run seed
+   ```
+
+5. **Start the application:**
    In Terminal 1 (Backend):
    ```bash
-   cd backend && npm run dev
+   npm run dev
    ```
    In Terminal 2 (Frontend):
    ```bash
-   cd frontend && npm run dev
+   npm run dev
    ```
+
+The application will now be running. The frontend operates on `http://localhost:5173` and the backend operates on `http://localhost:8000`.
 
 ---
 
 ## Technical Stack
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS v4, React Router v7
-- **Backend**: Node.js, Express.js, TypeScript
-- **Database**: MongoDB & Mongoose ODM
-- **Algorithms**: javascript-lp-solver (MILP constraint engine), json-logic-js
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS v4, React Router v7, Lucide React (Icons), React Hot Toast (Notifications).
+- **Backend**: Node.js, Express.js, TypeScript, jsonwebtoken.
+- **Database**: MongoDB & Mongoose ODM.
+- **Algorithms**: javascript-lp-solver (MILP constraint engine), json-logic-js.
+
+## System Architecture Principles
+- **Single Responsibility Principle:** Code is highly modularized into logical layers: `controllers`, `services`, `middlewares`, and `models`.
+- **Centralized Error Handling:** Global error catching safely parses Duplicate Key errors and Validation failures centrally.
 
 ## API Documentation
 The platform utilizes a secure REST API architecture. All protected routes require a valid JWT via the `Authorization: Bearer <token>` header. Comprehensive routing logic is maintained within the `backend/src/routes` directory.

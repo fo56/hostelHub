@@ -5,7 +5,6 @@ const activityLogSchema = new mongoose.Schema(
     hostelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hostel', required: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     action: { type: String, required: true },
-    ip: { type: String },
   },
   { timestamps: true }
 );

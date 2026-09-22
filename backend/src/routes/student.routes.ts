@@ -3,6 +3,7 @@ import express from 'express';
 import { getActiveDishesForVoting } from '../controllers/studentDish.controller';
 import { getCurrentMessMenu, getServedDishesToday } from '../controllers/studentMenu.controller';
 import { getStudentVotes, saveStudentVotes } from '../controllers/studentVote.controller';
+import { getStudentStats } from '../controllers/studentStats.controller';
 
 const router = express.Router();
 
@@ -13,5 +14,7 @@ router.get('/dishes/active', getActiveDishesForVoting);
 // Continuous preference management routes
 router.get('/votes', getStudentVotes);
 router.post('/votes', saveStudentVotes);
+
+router.get('/stats', getStudentStats);
 
 export default router;

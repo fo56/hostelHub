@@ -2,7 +2,6 @@ import { Request, Response } from 'express'
 import { Dish } from '../models/Dish'
 
 export const getActiveDishesForVoting = async (req: Request, res: Response) => {
-  try {
     const hostelId = req.user!.hostelId
 
     const dishes = await Dish.find({
@@ -23,10 +22,4 @@ export const getActiveDishesForVoting = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json(grouped)
-  } catch (error: any) {
-    return res.status(500).json({
-      message: 'Failed to fetch active dishes',
-      error: error.message
-    })
-  }
 }

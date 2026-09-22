@@ -4,11 +4,16 @@ import toast from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
+let refreshPromise: Promise<any> | null = null;
+
 interface RequestOptions {
   headers?: Record<string, string>;
   body?: unknown;
   skipToast?: boolean;
 }
+
+const apiCache = new Map<string, { data: any, timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export const useApi = () => {
   const getToken = () => {
@@ -20,8 +25,19 @@ export const useApi = () => {
       endpoint: string,
       method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
       body?: unknown,
-      options?: RequestOptions
+      options?: RequestOptions & { skipCache?: boolean }
     ) => {
+      const isGet = method === 'GET';
+      const cacheKey = endpoint;
+      
+      // Check cache for GET requests
+      if (isGet && !options?.skipCache) {
+        const cached = apiCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+          return cached.data;
+        }
+      }
+
       let token = getToken();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -50,7 +66,12 @@ export const useApi = () => {
           // Try to refresh token
           const refreshToken = localStorage.getItem('refreshToken');
           if (refreshToken) {
-            await authService.refreshToken();
+            if (!refreshPromise) {
+              refreshPromise = authService.refreshToken().finally(() => {
+                refreshPromise = null;
+              });
+            }
+            await refreshPromise;
             // Retry with new token
             token = getToken();
             if (token) {
@@ -86,10 +107,23 @@ export const useApi = () => {
         throw new Error(errorMessage);
       }
 
-      return response.json();
+      const responseData = await response.json();
+
+      // Save to cache if GET
+      if (isGet) {
+        apiCache.set(cacheKey, { data: responseData, timestamp: Date.now() });
+      } else {
+        // Invalidate cache for relevant endpoints if it's a mutation
+        // Simple approach: clear all cache on mutation to ensure fresh data
+        apiCache.clear();
+      }
+
+      return responseData;
     },
     []
   );
 
-  return { request };
+  const fetchApi = request; // Alias for compatibility with some components
+
+  return { request, fetchApi };
 };

@@ -3,7 +3,6 @@ import { Dish } from '../models/Dish';
 import { ActivityLog } from '../models/ActivityLog';
 
 export const fetchDishes = async (req: Request, res: Response) => {
-  try {
     const { status } = req.query;
     const hostelId = req.user?.hostelId;
 
@@ -19,13 +18,9 @@ export const fetchDishes = async (req: Request, res: Response) => {
       .lean(); 
 
     return res.status(200).json(dishes);
-  } catch (error: any) {
-    return res.status(500).json({ message: 'Failed to fetch dishes', error: error.message });
-  }
 };
 
 export const approveDish = async (req: Request, res: Response) => {
-  try {
     const { id } = req.params;
     const { priceScore, healthScore } = req.body;
     const adminId = req.user?._id;
@@ -48,16 +43,12 @@ export const approveDish = async (req: Request, res: Response) => {
 
     if (!dish) return res.status(404).json({ message: 'Dish not found, already reviewed, or unauthorized' });
 
-    await ActivityLog.create({ hostelId, userId: adminId, action: `APPROVED_DISH:${dish.name}`, ip: req.ip });
+    await ActivityLog.create({ hostelId, userId: adminId, action: `APPROVED_DISH:${dish.name}`,});
 
     return res.status(200).json({ message: 'Dish approved successfully', dish });
-  } catch (error: any) {
-    return res.status(500).json({ message: 'Failed to approve dish', error: error.message });
-  }
 };
 
 export const rejectDish = async (req: Request, res: Response) => {
-  try {
     const { id } = req.params;
     const { reason } = req.body;
     const adminId = req.user?._id;
@@ -74,16 +65,12 @@ export const rejectDish = async (req: Request, res: Response) => {
 
     if (!dish) return res.status(404).json({ message: 'Dish not found, already reviewed, or unauthorized' });
 
-    await ActivityLog.create({ hostelId, userId: adminId, action: `REJECTED_DISH:${dish.name} | Reason: ${reason}`, ip: req.ip });
+    await ActivityLog.create({ hostelId, userId: adminId, action: `REJECTED_DISH:${dish.name} | Reason: ${reason}`,});
 
     return res.status(200).json({ message: 'Dish rejected successfully' });
-  } catch (error: any) {
-    return res.status(500).json({ message: 'Failed to reject dish', error: error.message });
-  }
 };
 
 export const updateDish = async (req: Request, res: Response) => {
-  try {
     const { id } = req.params;
     const { name, mealType, category, tags, priceScore, healthScore, itemClass } = req.body;
     const adminId = req.user?._id;
@@ -106,16 +93,12 @@ export const updateDish = async (req: Request, res: Response) => {
 
     if (!dish) return res.status(404).json({ message: 'Dish not found or unauthorized' });
 
-    await ActivityLog.create({ hostelId, userId: adminId, action: `UPDATED_DISH:${dish.name}`, ip: req.ip });
+    await ActivityLog.create({ hostelId, userId: adminId, action: `UPDATED_DISH:${dish.name}`,});
 
     return res.status(200).json({ message: 'Dish updated successfully', dish });
-  } catch (error: any) {
-    return res.status(500).json({ message: 'Failed to update dish', error: error.message });
-  }
 };
 
 export const deleteDish = async (req: Request, res: Response) => {
-  try {
     const { id } = req.params;
     const adminId = req.user?._id;
     const hostelId = req.user?.hostelId;
@@ -126,10 +109,14 @@ export const deleteDish = async (req: Request, res: Response) => {
 
     if (!dish) return res.status(404).json({ message: 'Dish not found or unauthorized' });
 
-    await ActivityLog.create({ hostelId, userId: adminId, action: `DELETED_DISH:${dish.name}`, ip: req.ip });
+    await ActivityLog.create({ hostelId, userId: adminId, action: `DELETED_DISH:${dish.name}`,});
 
     return res.status(200).json({ message: 'Dish deleted successfully' });
-  } catch (error: any) {
-    return res.status(500).json({ message: 'Failed to delete dish', error: error.message });
-  }
+};
+export const toggleDishStatus = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { status, note } = req.body;
+    const dish = await Dish.findByIdAndUpdate(id, { status, rejectionReason: note || '' }, { new: true });
+    if (!dish) return res.status(404).json({ message: 'Dish not found' });
+    return res.status(200).json(dish);
 };

@@ -3,6 +3,7 @@ import { useApi } from '../../hooks/useApi';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
+import { formatDate } from '../../lib/utils';
 
 export default function AdminDashboard() {
   const { request } = useApi();
@@ -34,7 +35,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto sm:p-4 space-y-6 pb-6">
+    <div className="w-full max-w-7xl mx-auto sm:p-4 space-y-6 pb-6">
       <div className="flex justify-between items-center">
         <h1 className="text-card-title">Admin Dashboard</h1>
         <Button variant="secondary" 
@@ -90,33 +91,30 @@ export default function AdminDashboard() {
         </div>
         <div className="p-0">
           {stats.recentActivity && stats.recentActivity.length > 0 ? (
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-72 overflow-y-auto border-t border-hairline">
               <Table>
-                <TableHeader className="sticky top-0 z-10">
+                <TableHeader className="sticky top-0 z-10 bg-canvas">
                   <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Time</TableHead>
+                    <TableHead className="py-2 h-auto text-xs">User</TableHead>
+                    <TableHead className="py-2 h-auto text-xs">Role</TableHead>
+                    <TableHead className="py-2 h-auto text-xs">Action</TableHead>
+                    <TableHead className="py-2 h-auto text-xs">Time</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {stats.recentActivity.map((log: any) => (
                     <TableRow key={log._id}>
-                      <TableCell className="text-ink">
-                        {log.userId?.name || 'Unknown User'}
+                      <TableCell className="text-ink py-2 text-sm">
+                        {log.userId?.name ? `${log.userId.name} (${log.userId.username})` : (log.userId?.username || 'Unknown User')}
                       </TableCell>
-                      <TableCell className="text-muted">
+                      <TableCell className="text-muted py-2 text-sm">
                         {log.userId?.role || 'UNKNOWN'}
                       </TableCell>
-                      <TableCell className="text-muted">
+                      <TableCell className="text-muted py-2 text-sm">
                         {log.action}
                       </TableCell>
-                      <TableCell className="text-muted font-mono text-data whitespace-nowrap">
-                        {new Date(log.timestamp).toLocaleString(undefined, {
-                          dateStyle: 'short',
-                          timeStyle: 'short'
-                        })}
+                      <TableCell className="text-muted font-mono text-xs whitespace-nowrap py-2">
+                        {formatDate(log.createdAt, true)}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -18,7 +18,8 @@ const adminLinks = [
 const studentLinks = [
   { label: 'Dashboard', to: '/student/dashboard' },
   { label: 'Menu Voting', to: '/student/voting/status' },
-  { label: 'Issues', to: '/student/issues' }
+  { label: 'Issues', to: '/student/issues' },
+  { label: 'Stats', to: '/student/stats' }
 ]
 
 export default function AppTopbar() {
@@ -29,7 +30,7 @@ export default function AppTopbar() {
 
   // Auto-pop ProfileModal for onboarding if student name is unset (defaults to email)
   useEffect(() => {
-    if (user && user.role === 'student' && user.name === user.email) {
+    if (user && user.role === 'STUDENT' && user.name === user.email) {
       setIsProfileOpen(true)
     }
   }, [user?.name, user?.email, user?.role])
@@ -43,10 +44,10 @@ export default function AppTopbar() {
   let activeLinks: { label: string; to: string }[] = []
   let homeRoute = '/'
   
-  if (user?.role === 'admin') {
+  if (user?.role === 'ADMIN') {
     activeLinks = adminLinks
     homeRoute = '/admin/dashboard'
-  } else if (user?.role === 'student') {
+  } else if (user?.role === 'STUDENT') {
     activeLinks = studentLinks
     homeRoute = '/student/dashboard'
   }
@@ -69,7 +70,7 @@ export default function AppTopbar() {
 
   const rightActions = isAuthenticated ? (
     <div className="flex items-center gap-2">
-      {user?.role === 'student' && (
+      {user?.role === 'STUDENT' && (
         <Button 
           variant="tertiary" 
           onClick={() => setIsProfileOpen(true)}
@@ -83,13 +84,13 @@ export default function AppTopbar() {
       <Button 
         variant="tertiary" 
         onClick={handleLogout}
-        className={user?.role === 'admin' 
+        className={user?.role === 'ADMIN' 
           ? "text-body-sm text-(--color-semantic-error) hover:bg-(--color-canvas) hover:text-(--color-semantic-error) h-8 px-3"
           : "text-muted hover:text-ink gap-2 px-2"}
         title="Logout"
       >
         <LogOut className="w-5 h-5 mr-2" />
-        {user?.role === 'admin' && <span className="hidden sm:inline-block">Logout</span>}
+        {user?.role === 'ADMIN' && <span className="hidden sm:inline-block">Logout</span>}
       </Button>
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </div>

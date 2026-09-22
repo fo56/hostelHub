@@ -9,6 +9,12 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     passwordChangedAt: { type: Date, default: Date.now },
     role: { type: String, enum: ['ADMIN', 'STUDENT'], required: true },
+    isPrimaryAdmin: { type: Boolean, default: false },
+    permissions: {
+      type: [String],
+      enum: ['MANAGE_USERS', 'MANAGE_MENU', 'MANAGE_ISSUES', 'MANAGE_SETTINGS'],
+      default: []
+    },
     roomNo: { type: String },
     isActive: { type: Boolean, default: true },
   },

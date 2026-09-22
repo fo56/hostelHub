@@ -1,3 +1,5 @@
+import toast from 'react-hot-toast';
+
 type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
 
 const getTimestamp = () => new Date().toISOString();
@@ -9,6 +11,7 @@ const logMessage = (level: LogLevel, context: string, message: string, data?: an
     switch (level) {
       case 'ERROR':
         console.error(formattedMessage, data);
+        toast.error(message);
         break;
       case 'WARN':
         console.warn(formattedMessage, data);
@@ -24,6 +27,7 @@ const logMessage = (level: LogLevel, context: string, message: string, data?: an
     switch (level) {
       case 'ERROR':
         console.error(formattedMessage);
+        toast.error(message);
         break;
       case 'WARN':
         console.warn(formattedMessage);

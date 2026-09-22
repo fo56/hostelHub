@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "nodemon",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "@google/genai": "^2.22.0",
@@ -17,24 +18,29 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/nodemailer": "^7.0.4",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
+    "date-fns": "^4.4.0",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "javascript-lp-solver": "^1.0.3",
     "json-logic-js": "^2.0.5",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.0.1"
+    "mongoose": "^9.0.1",
+    "pdfkit": "^0.20.2"
   },
   "devDependencies": {
     "@types/json-logic-js": "^2.0.8",
+    "@types/pdfkit": "^0.17.6",
+    "@types/supertest": "^7.2.1",
     "concurrently": "^9.2.1",
     "mongodb": "^7.5.0",
     "nodemon": "^3.1.11",
     "rimraf": "^6.1.2",
+    "supertest": "^7.2.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9"
   }
 }

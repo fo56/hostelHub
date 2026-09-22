@@ -3,7 +3,6 @@ import { MealReview } from '../models/MealReview';
 import mongoose from 'mongoose';
 
 export const getMealReviews = async (req: Request, res: Response) => {
-  try {
     const hostelId = req.user!.hostelId;
 
     // Query params
@@ -64,16 +63,9 @@ export const getMealReviews = async (req: Request, res: Response) => {
       }
     });
 
-  } catch (error: any) {
-    return res.status(500).json({
-      message: 'Failed to fetch reviews',
-      error: error.message
-    });
-  }
 };
 
 export const getReviewStats = async (req: Request, res: Response) => {
-  try {
     const hostelId = new mongoose.Types.ObjectId(req.user!.hostelId);
 
     // 1. Cumulative Stats per Dish
@@ -168,12 +160,6 @@ export const getReviewStats = async (req: Request, res: Response) => {
       totalVoters,
       votingStats
     });
-  } catch (error: any) {
-    return res.status(500).json({
-      message: 'Failed to fetch review statistics',
-      error: error.message
-    });
-  }
 };
 // Trigger nodemon restart
 // Trigger nodemon restart 2

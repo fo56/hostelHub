@@ -7,13 +7,11 @@ import mongoose from 'mongoose';
 const VALID_MEALS = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
 
 export const submitMealReview = async (req: Request, res: Response) => {
-  try {
     const {
       dishId,
       mealType,
       rating,
       comment,
-      images = [],
       servedOn
     } = req.body;
 
@@ -98,13 +96,6 @@ export const submitMealReview = async (req: Request, res: Response) => {
       });
     }
 
-    // Validate images
-    if (!Array.isArray(images) || images.length > 3) {
-      return res.status(400).json({
-        message: 'Images must be an array (max 3)'
-      });
-    }
-
     // Create review
     const review = await MealReview.create({
       hostelId,
@@ -113,8 +104,7 @@ export const submitMealReview = async (req: Request, res: Response) => {
       mealType,
       servedOn: servedDate,
       rating,
-      comment,
-      images
+      comment
     });
 
     return res.status(201).json({
@@ -122,11 +112,8 @@ export const submitMealReview = async (req: Request, res: Response) => {
       reviewId: review._id
     });
 
-  } catch (error: any) {
-    logger.error('APP', 'MEAL REVIEW ERROR:', error);
+};
 
-    return res.status(500).json({
-      message: 'Failed to submit review'
-    });
-  }
+export const getDishReviews = async (req: Request, res: Response) => {
+    return res.status(200).json({ reviews: [] });
 };

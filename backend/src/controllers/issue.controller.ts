@@ -1,3 +1,4 @@
+import PDFDocument from 'pdfkit';
 import { logger } from '../utils/logger';
 import { Request, Response } from 'express';
 import { Issue } from '../models/Issue';
@@ -11,7 +12,6 @@ interface AuthRequest extends Request {
 
 // CREATE ISSUE
 export const createIssue = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
     const { category, priority, description } = req.body;
     const userId = req.user?._id;
 
@@ -57,15 +57,10 @@ export const createIssue = async (req: AuthRequest, res: Response): Promise<void
       message: 'Issue created successfully',
       issue
     });
-  } catch (error) {
-    logger.error('APP', 'Error creating issue:', error);
-    res.status(500).json({ message: 'Failed to create issue' });
-  }
 };
 
 // GET ALL ISSUES (Admin)
 export const getAllIssues = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
     const userId = req.user?._id;
     
     const user = await User.findById(userId);
@@ -80,15 +75,10 @@ export const getAllIssues = async (req: AuthRequest, res: Response): Promise<voi
     res.status(200).json({
       issues
     });
-  } catch (error) {
-    logger.error('APP', 'Error fetching issues:', error);
-    res.status(500).json({ message: 'Failed to fetch issues' });
-  }
 };
 
 // GET MY ISSUES (Student)
 export const getMyIssues = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
     const userId = req.user?._id;
 
     const issues = await Issue.find({ raisedBy: userId })
@@ -97,15 +87,10 @@ export const getMyIssues = async (req: AuthRequest, res: Response): Promise<void
     res.status(200).json({
       issues
     });
-  } catch (error) {
-    logger.error('APP', 'Error fetching user issues:', error);
-    res.status(500).json({ message: 'Failed to fetch issues' });
-  }
 };
 
 // UPDATE ISSUE STATUS (Admin)
 export const updateIssueStatus = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
     const { issueId } = req.params;
     const { status, resolverNote } = req.body;
     const userId = req.user?._id;
@@ -149,15 +134,10 @@ export const updateIssueStatus = async (req: AuthRequest, res: Response): Promis
       message: 'Issue updated successfully',
       issue
     });
-  } catch (error) {
-    logger.error('APP', 'Error updating issue:', error);
-    res.status(500).json({ message: 'Failed to update issue' });
-  }
 };
 
 // DELETE ISSUE
 export const deleteIssue = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
     const { issueId } = req.params;
     const userId = req.user?._id;
 
@@ -189,14 +169,9 @@ export const deleteIssue = async (req: AuthRequest, res: Response): Promise<void
     await Issue.findByIdAndDelete(issueId);
 
     res.status(200).json({ message: 'Issue deleted successfully' });
-  } catch (error) {
-    logger.error('APP', 'Error deleting issue:', error);
-    res.status(500).json({ message: 'Failed to delete issue' });
-  }
 };
 
 export const getIssueCategories = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
     const userId = req.user?._id;
     const user = await User.findById(userId);
     if (!user) {
@@ -211,8 +186,28 @@ export const getIssueCategories = async (req: AuthRequest, res: Response): Promi
     }
 
     res.status(200).json({ categories });
-  } catch (error) {
-    logger.error('APP', 'Error fetching categories:', error);
-    res.status(500).json({ message: 'Failed to fetch categories' });
-  }
+};
+
+
+
+export const exportIssuesPdf = async (req: Request, res: Response) => {
+    const hostelId = req.user!.hostelId;
+    const issues = await Issue.find({ hostelId }).populate('raisedBy', 'name roomNo').sort({ createdAt: -1 });
+
+    const doc = new PDFDocument();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=issues-report.pdf');
+    doc.pipe(res);
+
+    doc.fontSize(20).text('Issues Report', { align: 'center' }).moveDown();
+
+    issues.forEach(issue => {
+        doc.fontSize(12).text(`Category: ${issue.category}`);
+        doc.fontSize(10).text(`Status: ${issue.status}`);
+        doc.fontSize(10).text(`Description: ${issue.description}`);
+        doc.fontSize(10).text(`Reported By: ${(issue.raisedBy as any)?.name || issue.raisedByName} (Room: ${(issue.raisedBy as any)?.roomNo || issue.roomNo})`);
+        doc.moveDown();
+    });
+
+    doc.end();
 };

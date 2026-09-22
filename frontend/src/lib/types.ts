@@ -1,5 +1,5 @@
 export type MealType = 'Breakfast' | 'Lunch' | 'Snack' | 'Dinner';
-export type Role = 'student' | 'admin' | 'worker';
+export type Role = 'STUDENT' | 'ADMIN' | 'WORKER';
 
 export interface Dish {
   _id: string;

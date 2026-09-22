@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useApi } from '../../hooks/useApi';
+import { useAuth } from '../../hooks/useAuth';
+import toast from 'react-hot-toast';
 import { Button } from '../../components/ui/button';
 import { Select } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { Badge } from '../../components/ui/badge';
 import { Modal } from '../../components/ui/modal';
 import { Plus, MessageSquare, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { formatDate } from '../../lib/utils';
 
 interface RaiseIssueFormProps {
   onSuccess: () => void;
@@ -110,6 +113,15 @@ export default function StudentIssuesPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { user } = useAuth();
+
+  const handleOpenModal = () => {
+    if (!user?.name || !user.name.trim()) {
+      toast.error('Please update your profile with your full name before raising an issue.');
+      return;
+    }
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     fetchIssues();
@@ -167,7 +179,7 @@ export default function StudentIssuesPage() {
         </div>
         <Button
           variant="secondary"
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenModal}
           className="whitespace-nowrap flex items-center gap-2 border-hairline hover:bg-surface-soft"
         >
           <Plus className="w-4 h-4" />
@@ -186,7 +198,7 @@ export default function StudentIssuesPage() {
             </div>
             <h3 className="text-card-title text-ink mb-2">No Issues Found</h3>
             <p className="text-body text-muted max-w-md mx-auto mb-6">You haven't reported any issues yet. If you face any problems with the mess or hostel facilities, let us know.</p>
-            <Button variant="secondary" onClick={() => setIsModalOpen(true)}>
+            <Button variant="secondary" onClick={handleOpenModal}>
               Raise an Issue
             </Button>
           </div>
@@ -212,7 +224,7 @@ export default function StudentIssuesPage() {
                   </div>
                   <div className="text-[11px] font-mono text-muted tracking-wide flex items-center gap-1.5 opacity-70">
                     <Clock className="w-3.5 h-3.5" />
-                    {new Date(issue.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {formatDate(issue.createdAt)}
                   </div>
                 </div>
 

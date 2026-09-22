@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react'
 import { useApi } from '../../hooks/useApi'
 import { Card } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
+import { formatDate } from '../../lib/utils'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { Modal } from '../../components/ui/modal'
+import { Trash2, Calendar } from 'lucide-react'
+import { MenuSlotsTable } from './components/MenuSlotsTable'
 import toast from 'react-hot-toast'
 
 const days = [
@@ -19,6 +22,7 @@ const days = [
 
 export default function AdminMessMenu() {
   const { request } = useApi()
+  const [menuVariants, setMenuVariants] = useState<any[]>([])
   const [menu, setMenu] = useState<any>(null)
   const [publishing, setPublishing] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -33,11 +37,37 @@ export default function AdminMessMenu() {
   // Reviews stats
   const [trendStats, setTrendStats] = useState<any[]>([])
 
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [historyMenus, setHistoryMenus] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [viewingPastMenu, setViewingPastMenu] = useState<any>(null)
+  const [menuToDelete, setMenuToDelete] = useState<string | null>(null)
+
   const fetchMenuData = () => {
-    request('/admin/menu/preview').then((res) => {
-      setMenu(res)
+    request('/admin/menu/preview').then((res: any) => {
+      if (Array.isArray(res)) {
+        setMenuVariants(res)
+        if (res.length > 0) {
+          setMenu((prev: any) => {
+            const m = res.find((m: any) => m._id === prev?._id) || res[0];
+            if (m.solverFailures && m.solverFailures.length > 0) {
+              setTimeout(() => toast.error(`Solver Warnings:\n${m.solverFailures.join('\n')}`, { duration: 6000 }), 500);
+            }
+            return m;
+          });
+        } else {
+          setMenu(null)
+        }
+      } else {
+        // Fallback if backend hasn't updated or returns single menu
+        setMenuVariants(res ? [res] : [])
+        setMenu(res)
+        if (res?.solverFailures && res.solverFailures.length > 0) {
+           setTimeout(() => toast.error(`Solver Warnings:\n${res.solverFailures.join('\n')}`, { duration: 6000 }), 500);
+        }
+      }
       setHasUnsavedChanges(false)
-    }).catch(err => {
+    }).catch((err: any) => {
       toast.error(err.message || 'Failed to fetch menu')
     })
   }
@@ -73,12 +103,13 @@ export default function AdminMessMenu() {
     try {
       setPublishing(true)
       if (hasUnsavedChanges) {
-        await request('/admin/menu/update', 'PUT', { meals: menu.meals })
+        await request('/admin/menu/update', 'PUT', { menuId: menu._id, meals: menu.meals })
         setHasUnsavedChanges(false)
       }
-      await request('/admin/menu/publish', 'POST')
-      setMenu((prev: any) => ({ ...prev, published: true }))
+      await request('/admin/menu/publish', 'POST', { menuId: menu._id })
+      setMenu((prev: any) => ({ ...prev, status: 'PUBLISHED' }))
       toast.success('Menu published successfully!')
+      fetchMenuData() // Refresh to clear old drafts
     } catch (err: any) {
       toast.error(err.message || 'Failed to publish menu')
     } finally {
@@ -135,11 +166,218 @@ export default function AdminMessMenu() {
     }
   }
 
+  const fetchHistory = async () => {
+    try {
+      setLoadingHistory(true)
+      const res = await request('/admin/menu/history')
+      setHistoryMenus(res)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to fetch history')
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  const openHistory = () => {
+    setShowHistoryModal(true)
+    setViewingPastMenu(null)
+    fetchHistory()
+  }
+
+  const handleDeleteMenu = async (id: string) => {
+    try {
+      await request(`/admin/menu/${id}`, 'DELETE')
+      toast.success('Menu deleted successfully')
+      // Update locally to avoid loading buffer
+      setHistoryMenus(prev => prev.filter(m => m._id !== id))
+      // If the currently viewed menu was deleted, refresh preview
+      if (menu && menu._id === id) {
+        fetchMenuData()
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete menu')
+    } finally {
+      setMenuToDelete(null)
+    }
+  }
+
   return (
+    <>
     <div className="space-y-6">
 
+      {/* HISTORY MODAL */}
+      <Modal 
+        isOpen={showHistoryModal} 
+        onClose={() => { 
+          if (viewingPastMenu) {
+            setViewingPastMenu(null);
+          } else {
+            setShowHistoryModal(false);
+          }
+        }} 
+        title={viewingPastMenu ? "Past Menu Details" : "Menu History"} 
+        maxWidth="max-w-4xl"
+      >
+        <div className="flex flex-col">
+          {loadingHistory ? (
+            <div className="text-center p-8 text-muted">Loading history...</div>
+          ) : viewingPastMenu ? (
+            <div className="flex flex-col gap-4 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-card-title text-ink">{viewingPastMenu.variantLabel || 'Standard Menu'}</h3>
+                  <span className="text-body text-muted flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-primary" />
+                    Effective From: {formatDate(viewingPastMenu.effectiveFrom)} 
+                    {viewingPastMenu.effectiveTo ? ` - ${formatDate(viewingPastMenu.effectiveTo)}` : ' - Present'}
+                  </span>
+                </div>
+                <Button variant="secondary" onClick={() => setViewingPastMenu(null)}>Back to History</Button>
+              </div>
+              
+              <div className="overflow-x-auto overflow-y-auto max-h-[65vh] w-full border border-hairline rounded-lg mt-2">
+                <Table className="table-fixed min-w-[800px]">
+                  <TableHeader>
+                    <TableRow className="bg-surface-soft">
+                      <TableHead className="w-[100px] lg:w-[120px]">Day</TableHead>
+                      {viewingPastMenu.meals.map((meal: any) => (
+                        <TableHead key={meal.mealName}>
+                          <div className="flex flex-col">
+                            <span>{meal.mealName}</span>
+                            {meal.startTime && meal.endTime && <span className="text-[10px] font-normal text-muted tracking-wide">({meal.startTime} - {meal.endTime})</span>}
+                          </div>
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {days.map((day, index) => (
+                      <TableRow key={day} className="transition-colors hover:bg-surface-soft">
+                        <TableCell className="font-medium text-ink">{day}</TableCell>
+                        {viewingPastMenu.meals.map((meal: any) => {
+                          const slot = meal.slots?.[index];
+                          if (!slot) return <TableCell key={meal.mealName} className="text-muted"><span className="opacity-30">-</span></TableCell>;
+                          
+                          const fixedNames = slot.fixedItems?.map((d: any) => d.name) || [];
+                          
+                          return (
+                            <TableCell key={meal.mealName} className="text-sm border-l border-hairline align-top py-2">
+                              {(fixedNames.length > 0 || (slot.rotatingItems && slot.rotatingItems.length > 0)) ? (
+                                <div className="flex flex-col gap-1">
+                                  {slot.rotatingItems?.map((r: any, i: number) => {
+                                    const name = r.item?.name || r.item?.dishId?.name;
+                                    if (!name) return null;
+                                    return <span key={`rot-${i}`} className="text-ink whitespace-normal text-body">{name}</span>
+                                  })}
+                                  {fixedNames.map((name: string, i: number) => (
+                                    <span key={`fix-${i}`} className="text-body whitespace-normal text-muted opacity-80">{name}</span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="opacity-30 text-muted">-</span>
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 flex flex-col gap-4">
+              <p className="text-body-sm text-muted">
+                View past published menus or delete old ones to reset generation history.
+              </p>
+              <div className="flex flex-col">
+                <div className="overflow-x-auto overflow-y-auto max-h-[60vh] w-full border border-hairline rounded-lg bg-canvas">
+                  <Table>
+                        <TableHeader className="bg-surface-soft">
+                          <TableRow>
+                            <TableHead>Effective Period</TableHead>
+                            <TableHead>Variant Name</TableHead>
+                            <TableHead className="text-center">Status</TableHead>
+                            <TableHead className="text-center">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {historyMenus.length > 0 ? (
+                            historyMenus.map(hMenu => (
+                              <TableRow 
+                                key={hMenu._id} 
+                                className="transition-colors hover:bg-surface-soft cursor-pointer"
+                                onClick={(e) => {
+                                  // Don't trigger if clicking delete button
+                                  if ((e.target as HTMLElement).closest('button')) return;
+                                  setViewingPastMenu(hMenu);
+                                }}
+                              >
+                                <TableCell className="font-medium text-ink whitespace-nowrap">
+                                  <div className="text-caption text-muted flex items-center gap-2">
+                                    <span className="bg-canvas px-1.5 py-0.5 rounded border border-hairline">
+                                      {hMenu.effectiveFrom ? formatDate(hMenu.effectiveFrom) : 'N/A'}
+                                    </span>
+                                    to
+                                    <span className="bg-canvas px-1.5 py-0.5 rounded border border-hairline">
+                                      {hMenu.effectiveTo ? formatDate(hMenu.effectiveTo) : 'Present'}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-muted text-sm">
+                                  {hMenu.variantLabel || 'Standard Menu'}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                                    hMenu.status === 'PUBLISHED' ? 'border-[var(--color-semantic-success)] text-[var(--color-semantic-success)] bg-[var(--color-semantic-success)]/10' :
+                                    'border-muted text-muted bg-surface-soft'
+                                  }`}>
+                                    {hMenu.status}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {hMenu.status !== 'PUBLISHED' && (
+                                    <button
+                                      title="Delete from History"
+                                      onClick={() => setMenuToDelete(hMenu._id)}
+                                      className="p-1.5 text-muted hover:text-(--color-semantic-error) hover:bg-(--color-semantic-error)/10 rounded transition-colors inline-block"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center py-8 text-muted">
+                                No published history found.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+            </div>
+          )}
+        </div>
+      </Modal>
 
-
+      {/* DELETE CONFIRMATION MODAL */}
+      <Modal isOpen={!!menuToDelete} onClose={() => setMenuToDelete(null)} title="Confirm Deletion" maxWidth="max-w-md">
+        <div className="p-4 flex flex-col gap-4">
+          <p className="text-body text-ink">
+            Are you sure you want to delete this menu from history? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="secondary" onClick={() => setMenuToDelete(null)}>Cancel</Button>
+            <Button variant="primary" className="bg-[var(--color-semantic-error)] text-white hover:bg-[var(--color-semantic-error)]/90 border-transparent" onClick={() => handleDeleteMenu(menuToDelete!)}>
+              Delete Menu
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal isOpen={showTrendModal} onClose={() => setShowTrendModal(false)} title="Overall Rating Trend" maxWidth="max-w-[95vw]">
         {trendStats.length > 0 ? (
@@ -189,25 +427,34 @@ export default function AdminMessMenu() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto mt-3 lg:mt-0">
+          <Button onClick={openHistory} variant="secondary" className="flex-1 sm:flex-none whitespace-nowrap">
+            View History
+          </Button>
           <Button onClick={() => setShowTrendModal(true)} variant="secondary" className="flex-1 sm:flex-none whitespace-nowrap">
             Rating Stats
           </Button>
           <Button onClick={handleGenerateMenu} disabled={generating || totalVoters === 0} variant="secondary" className="flex-1 sm:flex-none whitespace-nowrap">
             {generating ? 'Generating...' : 'Generate New Menu'}
           </Button>
-          {menu && !menu.published && hasUnsavedChanges && (
-            <Button onClick={saveMenuEdits} variant="secondary" className="flex-1 sm:flex-none whitespace-nowrap">Save Edits</Button>
+          {menu && menu.status !== 'PUBLISHED' && hasUnsavedChanges && (
+            <Button 
+              onClick={saveMenuEdits} 
+              variant="secondary"
+              className="text-body-sm"
+            >
+              Save Edits
+            </Button>
           )}
           {menu && (
-            <Button
+            <Button 
               onClick={publishMenu}
-              disabled={publishing || menu.published}
-              variant={menu.published ? 'secondary' : 'primary'}
-              className="flex-1 sm:flex-none whitespace-nowrap"
+              disabled={publishing || menu.status === 'PUBLISHED'}
+              variant={menu.status === 'PUBLISHED' ? 'secondary' : 'primary'}
+              className="text-body-sm px-6"
             >
               {publishing
                 ? 'Publishing...'
-                : menu.published
+                : menu.status === 'PUBLISHED'
                 ? 'Published'
                 : 'Publish Menu'}
             </Button>
@@ -215,83 +462,50 @@ export default function AdminMessMenu() {
         </div>
       </div>
 
-      <Card className="overflow-hidden shadow-none border-hairline">
+      {menuVariants.length > 1 && (
+        <div className="flex flex-wrap gap-2 mb-4 animate-fade-in stagger-1">
+          {menuVariants.map((variant) => (
+            <Button 
+              key={variant._id} 
+              variant={menu?._id === variant._id ? "primary" : "secondary"}
+              onClick={() => {
+                if (hasUnsavedChanges) {
+                  if (!window.confirm('You have unsaved changes. Switch variant anyway?')) return;
+                }
+                setMenu(variant)
+                setHasUnsavedChanges(false)
+              }}
+              className="text-body-sm"
+            >
+              {variant.variantLabel || 'Variant'}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      <Card className="overflow-hidden shadow-none border-hairline animate-fade-in stagger-2">
         {!menu ? (
           <div className="p-8 text-center text-body text-muted">
             No menu generated yet. Click "Generate New Menu" to create one based on current votes.
           </div>
         ) : (
-          <div className="overflow-x-auto w-full">
-            <Table className="table-fixed min-w-[800px]">
-              <TableHeader>
-                <TableRow className="bg-surface-soft">
-                  <TableHead className="w-[100px] lg:w-[120px]">Day</TableHead>
-                  {menu.meals.map((meal: any) => (
-                    <TableHead key={meal.mealName}>
-                      <div className="flex flex-col">
-                        <span>{meal.mealName}</span>
-                        {meal.startTime && meal.endTime && <span className="text-[10px] font-normal text-muted tracking-wide">({meal.startTime} - {meal.endTime})</span>}
-                      </div>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {days.map((day, index) => (
-                  <TableRow key={day} className="transition-colors hover:bg-surface-soft">
-                    <TableCell className="font-medium text-ink">{day}</TableCell>
-                    {menu.meals.map((meal: any, mealIndex: number) => {
-                      const slot = meal.slots?.[index];
-                      if (!slot) return <TableCell key={meal.mealName} className="text-muted"><span className="opacity-30">-</span></TableCell>;
-                      
-                      const fixedNames = slot.fixedItems?.map((d: any) => d.name) || [];
-                      
-                      return (
-                        <TableCell key={meal.mealName} className="text-sm border-l border-hairline align-top py-2">
-                          {(fixedNames.length > 0 || (slot.rotatingItems && slot.rotatingItems.length > 0)) ? (
-                            <div className="flex flex-col gap-1">
-                              {slot.rotatingItems?.map((r: any, i: number) => {
-                                const name = r.item?.dishId?.name;
-                                if (!name) return null;
-                                return (
-                                  <div key={`rot-${i}`} className="flex items-start justify-between gap-1 group">
-                                    <span className="text-ink whitespace-normal text-body">{name}</span>
-                                    {!menu.published && (
-                                      <div className="flex opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                                        <button 
-                                          onClick={() => swapDish(mealIndex, index, i, 'up')}
-                                          disabled={index === 0}
-                                          className="px-1 hover:text-ink text-muted disabled:opacity-0"
-                                          title="Move Up"
-                                        >↑</button>
-                                        <button 
-                                          onClick={() => swapDish(mealIndex, index, i, 'down')}
-                                          disabled={index === 6}
-                                          className="px-1 hover:text-ink text-muted disabled:opacity-0"
-                                          title="Move Down"
-                                        >↓</button>
-                                      </div>
-                                    )}
-                                  </div>
-                                )
-                              })}
-                              {fixedNames.map((name: string, i: number) => (
-                                <span key={`fix-${i}`} className="text-body whitespace-normal text-muted opacity-80">{name}</span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="opacity-30 text-muted">-</span>
-                          )}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <MenuSlotsTable menu={menu} swapDish={swapDish} />
         )}
       </Card>
     </div>
+      {/* Frozen Save Bar */}
+      {hasUnsavedChanges && (
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-canvas/80 backdrop-blur-md border-t border-hairline flex justify-center z-50 pointer-events-none">
+          <div className="pointer-events-auto w-full max-w-sm">
+            <Button 
+              onClick={saveMenuEdits} 
+              className="w-full transition-all shadow-none bg-ink text-canvas scale-105"
+            >
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

@@ -4,7 +4,6 @@ import { ActivityLog } from '../models/ActivityLog';
 
 // Admin can suggest/add a dish directly
 export const createAdminDish = async (req: Request, res: Response) => {
-  try {
     const { name, mealType, category, tags, priceScore, healthScore, itemClass } = req.body;
     const adminId = req.user?._id;
     const hostelId = req.user?.hostelId;
@@ -45,19 +44,13 @@ export const createAdminDish = async (req: Request, res: Response) => {
 
     await ActivityLog.create({
       userId: adminId,
-      action: `ADMIN_CREATED_DISH:${dish.name}`,
-      ip: req.ip
-    });
+      action: `ADMIN_CREATED_DISH:${dish.name}`,});
 
     return res.status(201).json({ message: 'Dish created and activated successfully', dish });
-  } catch (error: any) {
-    return res.status(500).json({ message: 'Failed to create dish', error: error.message });
-  }
 };
 
 // Student can suggest a new dish 3 times per week
 export const suggestDish = async (req: Request, res: Response) => {
-  try {
     const { name, mealType, category, tags } = req.body;
     const { _id: userId, hostelId } = req.user!;
 
@@ -86,12 +79,7 @@ export const suggestDish = async (req: Request, res: Response) => {
 
     await ActivityLog.create({
       userId,
-      action: 'SUGGEST_DISH',
-      ip: req.ip
-    });
+      action: 'SUGGEST_DISH',});
 
     return res.status(201).json({ message: 'Dish suggestion submitted for review', dishId: dish._id });
-  } catch (error: any) {
-    return res.status(500).json({ message: 'Something went wrong', error: error.message });
-  }
 };

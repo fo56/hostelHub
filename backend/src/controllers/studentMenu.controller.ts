@@ -5,7 +5,6 @@ import * as MenuRetrieve from '../services/menuRetrieve.service';
  * GET CURRENT MESS MENU (latest published)
  */
 export const getCurrentMessMenu = async (req: Request, res: Response) => {
-  try {
     const hostelId = req.user!.hostelId
 
     const menu = await MenuRetrieve.getCurrentMenu(hostelId.toString())
@@ -19,19 +18,12 @@ export const getCurrentMessMenu = async (req: Request, res: Response) => {
       generatedAt: menu.generatedAt
     })
 
-  } catch (error: any) {
-    return res.status(500).json({
-      message: 'Failed to fetch mess menu',
-      error: error.message
-    })
-  }
 }
 
 /**
  * GET TODAY'S SERVED DISHES
  */
 export const getServedDishesToday = async (req: Request, res: Response) => {
-  try {
     const hostelId = req.user!.hostelId
 
     const todayMenu = await MenuRetrieve.getTodayMenu(hostelId.toString())
@@ -44,10 +36,4 @@ export const getServedDishesToday = async (req: Request, res: Response) => {
 
     return res.status(200).json(todayMenu)
 
-  } catch (error: any) {
-    return res.status(500).json({
-      message: 'Failed to fetch today’s served dishes',
-      error: error.message
-    })
-  }
 }

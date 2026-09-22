@@ -12,7 +12,6 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  try {
     const { hostelName, adminName, adminEmail, adminPassword, mealPlan } = req.body;
 
     if (!hostelName?.trim() || !adminName?.trim() || !adminEmail?.trim() || !adminPassword?.trim()) {
@@ -87,18 +86,10 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
       accessToken,
       refreshToken
     });
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    logger.error('APP', 'Admin registration error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Registration failed';
-    res.status(500).json({ message: `Registration failed: ${errorMessage}` });
-  }
 };
 
 // UNIFIED LOGIN (Email & Password)
 export const login = async (req: Request, res: Response): Promise<void> => {
-  try {
     const { username, password } = req.body;
 
     if (!username?.trim() || !password?.trim()) {
@@ -137,18 +128,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       accessToken,
       refreshToken
     });
-  } catch (error) {
-    logger.error('APP', '[AUTH] Login error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Login failed';
-    res.status(500).json({ message: `Login failed: ${errorMessage}` });
-  }
 };
 
 
 
 // REFRESH TOKEN
 export const refresh = async (req: Request, res: Response): Promise<void> => {
-  try {
     const { refreshToken } = req.body;
 
     if (!refreshToken?.trim()) {
@@ -167,24 +152,13 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
       message: 'Token refreshed',
       tokens: { accessToken, refreshToken: newRefreshToken }
     });
-  } catch (error) {
-    logger.error('APP', 'Refresh token error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Token refresh failed';
-    res.status(500).json({ message: `Token refresh failed: ${errorMessage}` });
-  }
 };
 
 // LOGOUT
 export const logout = async (req: Request, res: Response): Promise<void> => {
-  try {
     const { refreshToken } = req.body;
     if (refreshToken) {
       await revokeRefreshToken(refreshToken);
     }
     res.json({ message: 'Logged out successfully' });
-  } catch (error) {
-    logger.error('APP', 'Logout error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Logout failed';
-    res.status(500).json({ message: `Logout failed: ${errorMessage}` });
-  }
 };

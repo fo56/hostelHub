@@ -4,7 +4,6 @@ import { User } from '../models/User';
 import bcrypt from 'bcrypt';
 
 export const getMe = async (req: Request, res: Response) => {
-  try {
     const userPayload = req.user as any;
     const dbUser = await User.findById(userPayload._id);
     
@@ -21,13 +20,9 @@ export const getMe = async (req: Request, res: Response) => {
       username: dbUser.username ?? null,
       roomNo: dbUser.roomNo ?? null
     });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message || 'Failed to fetch user' });
-  }
 };
 
 export const updateProfile = async (req: Request, res: Response): Promise<void> => {
-  try {
     const userPayload = req.user as any;
     const { name, password, email } = req.body;
 
@@ -83,11 +78,4 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
         roomNo: dbUser.roomNo
       }
     });
-  } catch (error: any) {
-    if (error.code === 11000) {
-      res.status(409).json({ message: 'Email is already in use by another account' });
-      return;
-    }
-    res.status(500).json({ message: error.message || 'Failed to update profile' });
-  }
 };

@@ -36,6 +36,7 @@ const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'))
 const StudentDashboard = lazy(() => import('../pages/student/StudentDashboard'))
 const StudentVoting = lazy(() => import('../pages/student/StudentVoting'))
 const StudentIssues = lazy(() => import('../pages/student/StudentIssues'))
+const StudentStats = lazy(() => import('../pages/student/StudentStats'))
 
 // Minimalist fallback loader
 const PageLoader = () => (
@@ -84,7 +85,7 @@ export default function AppRoutes() {
           </Route>
 
           {/* ───── ADMIN ───── */}
-          <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout /></ProtectedRoute>}>
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AppLayout /></ProtectedRoute>}>
             <Route path="dashboard" element={<AdminDashboard />} /> 
             <Route path="users" element={<AdminUsers />} />
             <Route path="menu" element={<AdminMessMenu />} />
@@ -95,10 +96,11 @@ export default function AppRoutes() {
           </Route>
 
           {/* ───── STUDENT ───── */}
-          <Route path="/student" element={<ProtectedRoute allowedRoles={['student']}><AppLayout /></ProtectedRoute>}>
+          <Route path="/student" element={<ProtectedRoute allowedRoles={['STUDENT']}><AppLayout /></ProtectedRoute>}>
             <Route path="dashboard" element={<StudentDashboard />} /> 
             <Route path="voting/status" element={<StudentVoting />} />
             <Route path="issues" element={<StudentIssues />} />
+            <Route path="stats" element={<StudentStats />} />
             <Route index element={<Navigate to="dashboard" replace />} />
           </Route>
 

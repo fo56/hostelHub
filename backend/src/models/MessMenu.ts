@@ -6,7 +6,7 @@ const daySlotSchema = new mongoose.Schema(
     fixedItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Dish' }],
     rotatingItems: [{ 
       category: String,
-      item: { type: mongoose.Schema.Types.ObjectId, ref: 'MenuRecommendation' }
+      item: { type: mongoose.Schema.Types.ObjectId, ref: 'Dish' }
     }],
     timing: { start: { type: String }, end: { type: String } },
     overriddenBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -18,12 +18,14 @@ const daySlotSchema = new mongoose.Schema(
 const messMenuSchema = new mongoose.Schema(
   {
     hostelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hostel', required: true },
-    weekOf: { type: Date, required: true },
+    status: { type: String, enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'], default: 'DRAFT' },
+    variantLabel: { type: String }, 
+    effectiveFrom: { type: Date, default: null },
+    effectiveTo: { type: Date, default: null },
     meals: [{
       mealName: { type: String, required: true },
       slots: [daySlotSchema]
     }],
-    published: { type: Boolean, default: false },
     publishMethod: { type: String, enum: ['AUTO', 'MANUAL'], default: 'MANUAL' },
     solverFailures: [{ type: String }],
     generatedAt: { type: Date, default: Date.now },
@@ -32,7 +34,7 @@ const messMenuSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-messMenuSchema.index({ hostelId: 1, weekOf: 1 }, { unique: true });
-messMenuSchema.index({ hostelId: 1, published: 1 });
+messMenuSchema.index({ hostelId: 1, status: 1 });
+messMenuSchema.index({ hostelId: 1, effectiveFrom: -1 });
 
 export const MessMenu = mongoose.model('MessMenu', messMenuSchema);

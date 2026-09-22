@@ -7,17 +7,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Card } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Modal } from '../../components/ui/modal'
-import { Input } from '../../components/ui/input'
-import { Select } from '../../components/ui/select'
-import { Trash2 } from 'lucide-react'
+import { Badge } from '../../components/ui/badge'
+
+import { Pagination } from '../../components/ui/pagination'
+import { Trash2, UserX, UserCheck, Pencil } from 'lucide-react'
+import { CreateUserModal, BulkCreateModal, CsvImportModal, EditUserModal } from './components/UserModals'
 
 interface User {
   _id: string
   name: string
   username: string
+  email?: string
   role: 'STUDENT' | 'ADMIN'
   roomNo?: string
   isActive: boolean
+  isPrimaryAdmin?: boolean
+  permissions?: string[]
 }
 
 export default function AdminUsers() {
@@ -27,14 +32,13 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'STUDENT' | 'ADMIN'>('STUDENT')
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 15
 
   // Create User Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [form, setForm] = useState<any>({ role: 'STUDENT' })
-  const [creating, setCreating] = useState(false)
-  
-  // Success Modal State
-  const [createdUser, setCreatedUser] = useState<any>(null)
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -72,50 +76,66 @@ export default function AdminUsers() {
 
 
 
-  const submitCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Bulk Create Users
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
+
+  // Bulk Import CSV
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false)
+
+  // Edit User State
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+
+  const openEditModal = (user: User) => {
+    setEditingUser(user)
+  }
+
+  // Toggle User Status (Deactivate / Reactivate)
+  const toggleUserStatus = async (user: User) => {
     try {
-      setCreating(true)
-      const res = await request('/admin/users', 'POST', form)
-
-      setCreatedUser({ ...res.user, rawPassword: res.rawPassword })
-
-      setForm({ role: 'STUDENT' })
-      setIsCreateModalOpen(false)
-      fetchUsers()
+      const action = user.isActive ? 'deactivate' : 'reactivate'
+      await request(`/admin/users/${user._id}/${action}`, 'PATCH')
+      
+      toast.success(`User ${action}d successfully`)
+      setUsers(users.map(u => u._id === user._id ? { ...u, isActive: !u.isActive } : u))
     } catch (err: unknown) {
-      toast.error((err as Error).message || 'Failed to create user')
-    } finally {
-      setCreating(false)
+      toast.error((err as Error).message || 'Failed to update user status')
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end border-b border-hairline mb-6">
-        <div className="flex">
+      <div className="flex flex-col-reverse sm:flex-row justify-between items-start sm:items-end border-b border-hairline mb-6 gap-3 sm:gap-0">
+        <div className="flex overflow-x-auto w-full sm:w-auto no-scrollbar">
           <button
-            onClick={() => setActiveTab('STUDENT')}
-            className={`px-4 py-2 font-medium text-body transition-colors border-b-2 -mb-[1px] ${
-              activeTab === 'STUDENT'
+            onClick={() => { setActiveTab('STUDENT'); setCurrentPage(1); }}
+            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'STUDENT'
                 ? 'border-ink text-ink'
-                : 'border-transparent text-muted hover:text-ink'
-            }`}
+                : 'border-transparent text-muted hover:text-ink hover:border-hairline'
+              }`}
           >
             Students
           </button>
           <button
-            onClick={() => setActiveTab('ADMIN')}
-            className={`px-4 py-2 font-medium text-body transition-colors border-b-2 -mb-[1px] ${
-              activeTab === 'ADMIN'
+            onClick={() => { setActiveTab('ADMIN'); setCurrentPage(1); }}
+            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'ADMIN'
                 ? 'border-ink text-ink'
-                : 'border-transparent text-muted hover:text-ink'
-            }`}
+                : 'border-transparent text-muted hover:text-ink hover:border-hairline'
+              }`}
           >
             Admins
           </button>
         </div>
-        <div className="pb-2">
+        <div className="flex gap-2 pb-2 w-full sm:w-auto">
+          {activeTab === 'STUDENT' && (
+            <Button onClick={() => setIsCsvModalOpen(true)} variant="secondary" className="h-8 text-caption px-3">
+              Bulk Import CSV
+            </Button>
+          )}
+          {activeTab === 'STUDENT' && (
+            <Button onClick={() => setIsBulkModalOpen(true)} variant="secondary" className="h-8 text-caption px-3">
+              Generate Students
+            </Button>
+          )}
           <Button onClick={() => setIsCreateModalOpen(true)} className="h-8 text-caption px-3">
             Add User
           </Button>
@@ -128,27 +148,66 @@ export default function AdminUsers() {
         <div className="p-8 text-center text-body text-muted">No {activeTab.toLowerCase()}s found.</div>
       )}
 
-      {!loading && users.filter(u => u.role === activeTab).length > 0 && (
-        <Card className="overflow-hidden shadow-none border-hairline">
-          <div className="overflow-x-auto w-full">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-surface-soft">
-                  <TableHead className="text-center w-1/4">Name</TableHead>
-                  <TableHead className="text-center">Username</TableHead>
-                  <TableHead className="text-center">Room No</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.filter(u => u.role === activeTab).map(user => (
-                  <TableRow key={user._id} className="transition-colors hover:bg-surface-soft">
+      {!loading && users.filter(u => u.role === activeTab).length > 0 && (() => {
+        const filteredUsers = users.filter(u => u.role === activeTab)
+        const totalItems = filteredUsers.length
+        const totalPages = Math.ceil(totalItems / itemsPerPage)
+        const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+        return (
+          <Card className="overflow-hidden shadow-none border-hairline flex flex-col">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+            />
+            <div className="overflow-x-auto w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-surface-soft">
+                    <TableHead className="text-center w-[20%]">Name</TableHead>
+                    <TableHead className="text-center w-[15%]">Username</TableHead>
+                    <TableHead className="text-center w-[25%]">Email</TableHead>
+                    {activeTab === 'STUDENT' ? (
+                      <TableHead className="text-center w-[20%]">Room No</TableHead>
+                    ) : (
+                      <TableHead className="text-center w-[20%]">Permissions</TableHead>
+                    )}
+                    <TableHead className="text-center w-[10%] min-w-[100px]">Status</TableHead>
+                    <TableHead className="text-center w-[10%] min-w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedUsers.map(user => (
+                    <TableRow key={user._id} className="transition-colors hover:bg-surface-soft">
                     <TableCell className="font-medium text-ink text-center">{user.name}</TableCell>
                     <TableCell className="text-muted text-center">{user.username}</TableCell>
-                    <TableCell className="text-center text-muted">
-                      {user.role === 'STUDENT' ? `Room ${user.roomNo || 'N/A'}` : '—'}
+                    <TableCell className="text-muted text-center">
+                      {user.email || <span className="italic text-muted-foreground text-xs">Not provided</span>}
                     </TableCell>
+                    {activeTab === 'STUDENT' ? (
+                      <TableCell className="text-center text-muted">
+                        {user.roomNo ? `Room ${user.roomNo}` : 'N/A'}
+                      </TableCell>
+                    ) : (
+                      <TableCell className="text-center text-muted">
+                        {user.isPrimaryAdmin ? (
+                          <Badge variant="default" className="text-[10px]">Primary Admin</Badge>
+                        ) : (
+                          <div className="flex flex-wrap justify-center gap-1">
+                            {user.permissions && user.permissions.length > 0 ? (
+                              user.permissions.map(p => (
+                                <Badge key={p} variant="outline" className="text-[10px]">{p.replace('MANAGE_', '')}</Badge>
+                              ))
+                            ) : (
+                              <span className="text-xs italic text-muted">No permissions</span>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="text-center">
                       {user.isActive ? (
                         <span className="text-semantic-success font-medium">Active</span>
@@ -157,120 +216,70 @@ export default function AdminUsers() {
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center">
+                      <div className="flex items-center justify-center gap-2">
                         {user._id !== currentUser?.id && !(user.role === 'ADMIN' && user.username.startsWith('admin@')) && (
-                          <button
-                            onClick={() => confirmDeleteUser(user._id)}
-                            className="p-1.5 text-muted hover:text-(--color-semantic-error) hover:bg-(--color-semantic-error)/10 rounded transition-colors" 
-                            title="Delete User"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <>
+                            <button
+                              onClick={() => openEditModal(user)}
+                              className="p-1.5 rounded transition-colors text-muted hover:text-(--color-primary) hover:bg-(--color-primary)/10"
+                              title="Edit User"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => toggleUserStatus(user)}
+                              className={`p-1.5 rounded transition-colors ${user.isActive ? 'text-muted hover:text-(--color-semantic-warning) hover:bg-(--color-semantic-warning)/10' : 'text-semantic-success hover:bg-semantic-success/10'}`} 
+                              title={user.isActive ? "Deactivate User" : "Reactivate User"}
+                            >
+                              {user.isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                            </button>
+                            <button
+                              onClick={() => confirmDeleteUser(user._id)}
+                              className="p-1.5 text-muted hover:text-(--color-semantic-error) hover:bg-(--color-semantic-error)/10 rounded transition-colors" 
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
-      )}
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        )
+      })()}
 
-      {/* CREATE USER MODAL */}
-      <Modal
+      <CreateUserModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Create New User"
-      >
-        <form onSubmit={submitCreate} className="p-6 space-y-4" autoComplete="off">
-          <div>
-            <label className="block text-body-sm mb-1">Full Name</label>
-            <Input
-              required
-              autoComplete="off"
-              value={form.name || ''}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-body-sm mb-1">Role</label>
-            <Select
-              className="w-full"
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value, roomNo: '' })}
-            >
-              <option value="STUDENT">Student</option>
-              <option value="ADMIN">Admin</option>
-            </Select>
-          </div>
-          {form.role === 'STUDENT' && (
-            <div>
-              <label className="block text-body-sm mb-1">Room No</label>
-              <Input
-                required
-                value={form.roomNo || ''}
-                onChange={(e) => setForm({ ...form, roomNo: e.target.value })}
-              />
-            </div>
-          )}
-          <div>
-            <label className="block text-body-sm mb-1">Username / Login ID</label>
-            <Input
-              required
-              autoComplete="off"
-              value={form.username || ''}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-body-sm mb-1">Password</label>
-            <Input
-              type="text"
-              required
-              autoComplete="new-password"
-              value={form.password || ''}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-            />
-          </div>
-          <div className="pt-2 flex justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={creating}>
-              {creating ? 'Creating...' : 'Create User'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        onSuccess={fetchUsers}
+        currentUser={currentUser}
+      />
 
-      {/* SUCCESS MODAL */}
-      <Modal
-        isOpen={!!createdUser}
-        onClose={() => {
-          setCreatedUser(null)
+      <BulkCreateModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onSuccess={fetchUsers}
+      />
+
+      <CsvImportModal
+        isOpen={isCsvModalOpen}
+        onClose={() => setIsCsvModalOpen(false)}
+        onSuccess={fetchUsers}
+      />
+
+      <EditUserModal
+        isOpen={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        onSuccess={(updatedUser: any) => {
+          setUsers(users.map(u => (u._id === updatedUser._id ? { ...u, ...updatedUser } : u)))
         }}
-        title="User Created Successfully"
-      >
-        <div className="p-6 space-y-6">
-          <div className="text-center">
-            <p className="font-medium text-ink">{createdUser?.name}</p>
-            <p className="text-muted text-body-sm mb-4">Username: <span className="font-mono text-ink font-medium">{createdUser?.username}</span></p>
-            <p className="text-body-sm text-muted">Password: <span className="font-mono bg-surface-soft p-1 rounded text-ink">{createdUser?.rawPassword}</span></p>
-          </div>
-          
-          <div className="flex gap-3 pt-2">
-            <Button
-              className="w-full"
-              onClick={() => {
-                setCreatedUser(null)
-              }}
-            >
-              Done
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        user={editingUser}
+      />
 
       {/* DELETE CONFIRM MODAL */}
       <Modal isOpen={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} title="Delete User">

@@ -6,9 +6,11 @@ import { Button } from '../../components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
 import { Select } from '../../components/ui/select';
+import { Pagination } from '../../components/ui/pagination';
 import { Modal } from '../../components/ui/modal';
 import toast from 'react-hot-toast';
 import { CheckCircle, XCircle } from 'lucide-react';
+import { formatDate } from '../../lib/utils';
 
 interface Issue {
   _id: string;
@@ -17,7 +19,7 @@ interface Issue {
   status: string;
   description: string;
   resolverNote?: string;
-  raisedBy: string;
+  raisedBy: any; // Populated user object or string ID if not populated
   raisedByName: string;
   roomNo: string;
   createdAt: string;
@@ -34,6 +36,11 @@ export default function AdminIssues() {
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [filterPriority, setFilterPriority] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ACTIVE');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   useEffect(() => {
@@ -119,12 +126,53 @@ export default function AdminIssues() {
     return 0;
   });
 
+  const handleDownloadPdf = () => {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    let url = `${baseUrl}/issues/admin/export.pdf?status=${encodeURIComponent(filterStatus)}`;
+    if (filterCategory !== 'ALL') {
+      url += `&category=${encodeURIComponent(filterCategory)}`;
+    }
+    
+    // Retrieve token from local storage or wherever it is stored
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token'); 
+    
+    // Create a temporary link element to trigger the download, since we need to pass the Authorization header,
+    // we fetch it as a blob first.
+    fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    .then(res => {
+      if (!res.ok) throw new Error('Failed to download PDF');
+      return res.blob();
+    })
+    .then(blob => {
+      const windowUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = windowUrl;
+      a.download = `Issues_Export_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(windowUrl);
+    })
+    .catch(err => {
+      toast.error('Failed to download PDF');
+      logger.error('APP', 'Error downloading PDF:', err);
+    });
+  };
+
   return (
     <div className="space-y-6">
+      <div className="flex flex-row justify-between items-center w-full mb-2">
+        <h2 className="text-h3 font-semibold text-ink">Issues Management</h2>
+      </div>
+      
       <div className="flex flex-col-reverse md:flex-row justify-between items-start md:items-end border-b border-hairline mb-6 gap-4">
         <div className="flex overflow-x-auto w-full md:w-auto scrollbar-hide">
           <button
-            onClick={() => setFilterCategory('ALL')}
+            onClick={() => { setFilterCategory('ALL'); setCurrentPage(1); }}
             className={`whitespace-nowrap px-4 py-2 font-medium text-body transition-colors border-b-2 -mb-[1px] ${
               filterCategory === 'ALL'
                 ? 'border-ink text-ink'
@@ -136,7 +184,7 @@ export default function AdminIssues() {
           {categories.map(c => (
             <button
               key={c}
-              onClick={() => setFilterCategory(c)}
+              onClick={() => { setFilterCategory(c); setCurrentPage(1); }}
               className={`whitespace-nowrap capitalize px-4 py-2 font-medium text-body transition-colors border-b-2 -mb-[1px] ${
                 filterCategory === c
                   ? 'border-ink text-ink'
@@ -151,7 +199,7 @@ export default function AdminIssues() {
         <div className="flex items-center gap-3 pb-2 w-full md:w-auto">
           <Select
             value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
+            onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}
             className="w-[140px]"
           >
             <option value="ACTIVE">Active</option>
@@ -160,7 +208,7 @@ export default function AdminIssues() {
           </Select>
           <Select
             value={filterPriority}
-            onChange={e => setFilterPriority(e.target.value)}
+            onChange={e => { setFilterPriority(e.target.value); setCurrentPage(1); }}
             className="w-[140px]"
           >
             <option value="ALL">All Priorities</option>
@@ -169,6 +217,9 @@ export default function AdminIssues() {
             <option value="HIGH">High</option>
             <option value="URGENT">Urgent</option>
           </Select>
+          <Button onClick={handleDownloadPdf} variant="secondary" className="h-9 px-4 text-caption whitespace-nowrap">
+            Download PDF
+          </Button>
         </div>
       </div>
 
@@ -180,11 +231,23 @@ export default function AdminIssues() {
         <div className="p-8 text-center text-body text-muted">No issues found matching your filters.</div>
       )}
 
-      {!loading && filteredIssues.length > 0 && (
-      <Card className="overflow-hidden shadow-none border-hairline">
-        <div className="overflow-x-auto w-full">
-          <Table>
-              <TableHeader>
+      {!loading && filteredIssues.length > 0 && (() => {
+        const totalItems = sortedIssues.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        const paginatedIssues = sortedIssues.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+        return (
+          <Card className="overflow-hidden shadow-none border-hairline flex flex-col">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+            />
+            <div className="overflow-x-auto w-full">
+              <Table>
+                <TableHeader>
                 <TableRow className="bg-surface-soft">
                   <TableHead className="text-center cursor-pointer hover:bg-surface transition-colors" onClick={() => handleSort('category')}>
                     <div className="flex items-center justify-center gap-1">
@@ -229,7 +292,7 @@ export default function AdminIssues() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedIssues.map((issue) => (
+                {paginatedIssues.map((issue) => (
                   <TableRow key={issue._id} className="transition-colors hover:bg-surface-soft">
                     <TableCell className="text-center capitalize text-ink font-medium">
                       {issue.category}
@@ -240,13 +303,19 @@ export default function AdminIssues() {
                       </p>
                     </TableCell>
                     <TableCell className="text-center text-muted">
-                      {issue.raisedByName}
+                      {(() => {
+                        let nameToUse = issue.raisedBy && typeof issue.raisedBy === 'object' ? issue.raisedBy.name : null;
+                        if (!nameToUse && issue.raisedByName && !issue.raisedByName.includes('@')) {
+                          nameToUse = issue.raisedByName;
+                        }
+                        return nameToUse || 'No Name Set';
+                      })()}
                     </TableCell>
                     <TableCell className="text-center text-muted font-mono text-sm">
                       {issue.roomNo}
                     </TableCell>
                     <TableCell className="text-center text-muted whitespace-nowrap font-mono">
-                      {new Date(issue.createdAt).toLocaleDateString()}
+                      {formatDate(issue.createdAt)}
                     </TableCell>
                     <TableCell className="text-center">
                       <button
@@ -287,8 +356,9 @@ export default function AdminIssues() {
               </TableBody>
             </Table>
           </div>
-      </Card>
-      )}
+        </Card>
+        );
+      })()}
 
       <Modal isOpen={!!closePrompt} onClose={() => setClosePrompt(null)} title="Resolve Issue">
         <div className="p-4">

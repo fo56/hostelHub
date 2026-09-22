@@ -54,7 +54,7 @@ Conditions are JsonLogic expressions using only these variables via {"var": "...
 
 Use only these JsonLogic operators: and, or, not, ==, !=, >, <, >=, <=, in, var.
 Only reference dishes from the provided catalog by their exact "id" — never invent one; prefer "tag" over "dishId" whenever the rule is really about a category, not one specific dish.
-The admin may write in English, Hindi, or a mix — interpret either.
+The admin may write in English — interpret it.
 
 CRITICAL RULES FOR CONDITIONS:
 - A condition MUST be a valid JsonLogic object. NEVER leave it empty \`{}\`. 

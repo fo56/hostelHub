@@ -6,7 +6,6 @@ import { ActivityLog } from '../models/ActivityLog';
 import { StudentVote } from '../models/StudentVote';
 
 export const getDashboardStats = async (req: Request, res: Response) => {
-  try {
     const hostelId = req.user?.hostelId;
     if (!hostelId) {
       return res.status(400).json({ message: 'Hostel context is required' });
@@ -39,7 +38,4 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       totalVotes,
       recentActivity
     });
-  } catch (error: any) {
-    return res.status(500).json({ message: 'Failed to fetch dashboard stats', error: error.message });
-  }
 };

@@ -88,8 +88,9 @@ export interface UserData {
   name: string;
   username: string;
   email?: string;
-  role: 'admin' | 'student';
+  role: 'ADMIN' | 'STUDENT';
   hostelId?: string;
+  isPrimaryAdmin?: boolean;
 }
 
 export interface LoginResponse {

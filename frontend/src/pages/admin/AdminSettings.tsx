@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../../hooks/useApi'
+import { useAuth } from '../../hooks/useAuth'
 import { Card } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Modal } from '../../components/ui/modal'
+import { Input } from '../../components/ui/input'
 import toast from 'react-hot-toast'
 import { Trash2, Plus, Power, PowerOff, Sparkles } from 'lucide-react'
 
@@ -10,7 +12,8 @@ const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'F
 
 export default function AdminSettings() {
   const { request } = useApi()
-  const [activeTab, setActiveTab] = useState<'meals' | 'maintenance' | 'constraints'>('meals')
+  const { logout } = useAuth()
+  const [activeSection, setActiveSection] = useState<'general' | 'meals' | 'maintenance' | 'constraints' | 'danger'>('general')
   const [settings, setSettings] = useState<any>(null)
   const [initialSettings, setInitialSettings] = useState<any>(null)
   const [saving, setSaving] = useState(false)
@@ -23,7 +26,8 @@ export default function AdminSettings() {
   const [previewErrors, setPreviewErrors] = useState<string[]>([])
   const [previewing, setPreviewing] = useState(false)
 
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean, type: 'mealCat' | 'issueCat', mealIndex?: number, catIndex: number } | null>(null)
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean, type: 'mealCat' | 'issueCat', mealIndex?: number, catIndex: number, replacementCatIndex?: number } | null>(null)
+  const [categoryReassignments, setCategoryReassignments] = useState<any[]>([])
 
   const fetchSettings = () => {
     request('/admin/settings').then(res => {
@@ -40,12 +44,30 @@ export default function AdminSettings() {
     fetchSettings()
   }, [])
 
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id as any)
+        }
+      })
+    }, { rootMargin: '-20% 0px -60% 0px', threshold: 0 })
+
+    const sections = ['general', 'meals', 'maintenance', 'constraints']
+    sections.forEach(id => {
+      const el = document.getElementById(id)
+      if (el) observer.observe(el)
+    })
+
+    return () => observer.disconnect()
+  }, [settings]) // Re-run observer setup when settings load and DOM is populated
+
   const saveSettings = async () => {
     try {
       setSaving(true)
       
       // Save general settings
-      await request('/admin/settings', 'PUT', settings)
+      await request('/admin/settings', 'PUT', { ...settings, categoryReassignments })
       
       // Save constraints if changed and previewed
       if (constraintsText !== initialSettings.menuConstraintsText) {
@@ -64,6 +86,7 @@ export default function AdminSettings() {
       }
       setSettings(newSettings)
       setInitialSettings(JSON.parse(JSON.stringify(newSettings)))
+      setCategoryReassignments([])
       setPreviewedText(constraintsText)
       setPreviewText('')
     } catch (err: any) {
@@ -111,11 +134,20 @@ export default function AdminSettings() {
 
   const handleDeleteConfirm = () => {
     if (!deleteModal || !settings) return
-    const { type, mealIndex, catIndex } = deleteModal
+    const { type, mealIndex, catIndex, replacementCatIndex } = deleteModal
     
     const newSettings = { ...settings }
     
     if (type === 'mealCat' && mealIndex !== undefined) {
+      const oldCat = newSettings.mealPlan[mealIndex].categories[catIndex];
+      const newCat = replacementCatIndex !== undefined ? newSettings.mealPlan[mealIndex].categories[replacementCatIndex] : null;
+      if (newCat) {
+        setCategoryReassignments([...categoryReassignments, {
+          mealName: newSettings.mealPlan[mealIndex].mealName,
+          oldCategory: oldCat.categoryName,
+          newCategory: newCat.categoryName
+        }]);
+      }
       newSettings.mealPlan[mealIndex].categories.splice(catIndex, 1)
     } else if (type === 'issueCat') {
       newSettings.issueCategories.splice(catIndex, 1)
@@ -123,6 +155,28 @@ export default function AdminSettings() {
     
     setSettings(newSettings)
     setDeleteModal(null)
+  }
+
+  const [deleteHostelModal, setDeleteHostelModal] = useState(false)
+  const [deleteHostelConfirm, setDeleteHostelConfirm] = useState('')
+  const [deletingHostel, setDeletingHostel] = useState(false)
+
+  const handleDeleteHostel = async () => {
+    if (deleteHostelConfirm !== 'DELETE') {
+      toast.error('Please type DELETE to confirm.')
+      return
+    }
+    try {
+      setDeletingHostel(true)
+      await request('/admin/settings/hostel', 'DELETE')
+      toast.success('Hostel deleted successfully')
+      logout()
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete hostel')
+    } finally {
+      setDeletingHostel(false)
+      setDeleteHostelModal(false)
+    }
   }
 
   const toggleMealCategoryActive = (mealIndex: number, catIndex: number) => {
@@ -182,37 +236,51 @@ export default function AdminSettings() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-24 animate-in fade-in duration-300">
+    <div className="max-w-6xl mx-auto pb-24 animate-in fade-in duration-300">
       <div className="flex justify-between items-end mb-6">
         <div>
           <h1 className="text-card-title md:text-display font-medium text-ink">Hostel Settings</h1>
-          <p className="text-muted text-body-sm mt-1">Configure your mess meal plan and maintenance categories.</p>
+          <p className="text-muted text-body-sm mt-1">Configure your mess meal plan, maintenance categories, and AI rules.</p>
         </div>
       </div>
 
-      <div className="flex gap-4 border-b border-hairline mb-6">
-        <button
-          onClick={() => setActiveTab('meals')}
-          className={`pb-2 px-1 border-b-2 transition-colors ${activeTab === 'meals' ? 'border-primary text-primary font-medium' : 'border-transparent text-muted hover:text-ink'}`}
-        >
-          Mess Menu Configuration
-        </button>
-        <button
-          onClick={() => setActiveTab('maintenance')}
-          className={`pb-2 px-1 border-b-2 transition-colors ${activeTab === 'maintenance' ? 'border-primary text-primary font-medium' : 'border-transparent text-muted hover:text-ink'}`}
-        >
-          Maintenance Categories
-        </button>
-        <button
-          onClick={() => setActiveTab('constraints')}
-          className={`pb-2 px-1 border-b-2 transition-colors ${activeTab === 'constraints' ? 'border-primary text-primary font-medium' : 'border-transparent text-muted hover:text-ink'}`}
-        >
-          AI Menu Rules
-        </button>
-      </div>
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Navigation Sidebar */}
+        <div className="lg:w-64 shrink-0 hidden lg:block">
+          <div className="sticky top-24 flex flex-col gap-1 border border-hairline p-2 rounded-lg bg-canvas">
+            <a href="#general" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'general' ? 'bg-(--color-primary)/10 text-(--color-primary) font-medium' : 'text-ink hover:bg-surface-soft'}`}>General</a>
+            <a href="#meals" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'meals' ? 'bg-(--color-primary)/10 text-(--color-primary) font-medium' : 'text-ink hover:bg-surface-soft'}`}>Mess Menu Config</a>
+            <a href="#maintenance" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'maintenance' ? 'bg-(--color-primary)/10 text-(--color-primary) font-medium' : 'text-ink hover:bg-surface-soft'}`}>Maintenance</a>
+            <a href="#constraints" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'constraints' ? 'bg-(--color-primary)/10 text-(--color-primary) font-medium' : 'text-ink hover:bg-surface-soft'}`}>AI Menu Rules</a>
+            <a href="#danger" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'danger' ? 'bg-(--color-semantic-error)/10 text-(--color-semantic-error) font-medium' : 'text-(--color-semantic-error) hover:bg-surface-soft'}`}>Danger Zone</a>
+          </div>
+        </div>
 
-      {activeTab === 'meals' && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Content Area */}
+        <div className="flex-1 space-y-12">
+          {/* General Section */}
+          <section id="general" className="scroll-mt-24 space-y-6">
+          <Card className="p-5 shadow-none border-hairline">
+            <h2 className="text-card-title text-ink mb-4">User Management</h2>
+            <div className="max-w-md">
+              <label className="block text-body-sm font-medium mb-1">Default Password</label>
+              <p className="text-xs text-muted mb-3">
+                This password will be assigned to all new users created individually or in bulk if no password is provided. If left empty, a random password will be generated for each user.
+              </p>
+              <Input
+                type="text"
+                value={settings.defaultPassword || ''}
+                onChange={(e: any) => setSettings({ ...settings, defaultPassword: e.target.value })}
+                placeholder="Enter default password (e.g. welcome123)"
+              />
+            </div>
+          </Card>
+          </section>
+
+          {/* Meals Section */}
+          <section id="meals" className="scroll-mt-24">
+            <h2 className="text-card-title text-ink mb-4 pb-2 border-b border-hairline">Mess Menu Configuration</h2>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
           {settings.mealPlan.map((meal: any, mIdx: number) => (
             <Card key={meal.mealName} className={`p-5 shadow-none border-hairline transition-opacity ${meal.isActive === false ? 'opacity-70 bg-surface-soft' : ''}`}>
               <div className="flex justify-between items-start mb-4 border-b border-hairline pb-4">
@@ -288,9 +356,11 @@ export default function AdminSettings() {
             </Card>
           ))}
         </div>
-      )}
+          </section>
 
-      {activeTab === 'maintenance' && (
+          {/* Maintenance Section */}
+          <section id="maintenance" className="scroll-mt-24 space-y-6">
+            <h2 className="text-card-title text-ink mb-2 pb-2 border-b border-hairline">Maintenance Categories</h2>
         <div className="space-y-6 max-w-2xl">
           <Card className="p-6 shadow-none border-hairline">
           <div className="flex justify-between items-center mb-6">
@@ -346,10 +416,11 @@ export default function AdminSettings() {
             <p className="text-caption text-muted mt-2 normal-case tracking-normal font-normal">This note will be pre-filled when you resolve or close an issue. You can still edit it before submitting.</p>
           </div>
         </Card>
-      </div>
-      )}
+        </div>
+          </section>
 
-      {activeTab === 'constraints' && (
+          {/* Constraints Section */}
+          <section id="constraints" className="scroll-mt-24">
         <div className="space-y-6 max-w-3xl">
           <Card className="p-6 shadow-none border-hairline">
             <h2 className="text-card-title text-ink flex items-center gap-2">
@@ -405,7 +476,28 @@ export default function AdminSettings() {
             )}
           </Card>
         </div>
-      )}
+        </section>
+
+        {/* Danger Zone */}
+          <section id="danger" className="scroll-mt-24 space-y-6">
+            <Card className="p-5 shadow-none border-(--color-semantic-error) bg-(--color-semantic-error)/5">
+              <h2 className="text-card-title text-(--color-semantic-error) mb-4">Danger Zone</h2>
+              <div className="max-w-md">
+                <p className="text-body-sm text-ink mb-4">
+                  Permanently delete this hostel and all associated data, including users, dishes, menus, and issues. This action cannot be undone.
+                </p>
+                <Button 
+                  variant="primary" 
+                  className="bg-(--color-semantic-error) hover:bg-(--color-semantic-error)/90 text-white"
+                  onClick={() => setDeleteHostelModal(true)}
+                >
+                  Delete Hostel
+                </Button>
+              </div>
+            </Card>
+          </section>
+        </div>
+      </div>
 
       <Modal isOpen={!!deleteModal} onClose={() => setDeleteModal(null)} title="Confirm Deletion">
         <div className="p-4">
@@ -414,12 +506,57 @@ export default function AdminSettings() {
           </p>
           {deleteModal?.type === 'mealCat' && (
             <div className="bg-(--color-semantic-error)/10 text-(--color-semantic-error) p-3 rounded text-sm mb-4">
-              <strong>Warning:</strong> Deleting a meal category will permanently delete ALL dishes assigned to it!
+              <strong>Warning:</strong> Deleting a meal category requires reassigning existing dishes.
+              <div className="mt-3">
+                <label className="block font-medium mb-1">Reassign existing dishes to:</label>
+                <select 
+                  className="w-full p-2 border border-hairline rounded bg-surface-soft text-ink"
+                  value={deleteModal.replacementCatIndex ?? ''}
+                  onChange={e => setDeleteModal({ ...deleteModal, replacementCatIndex: e.target.value ? Number(e.target.value) : undefined })}
+                >
+                  <option value="">-- Do not reassign (Dishes will be deleted) --</option>
+                  {settings?.mealPlan[deleteModal.mealIndex!]?.categories.map((c: any, i: number) => 
+                    i !== deleteModal.catIndex ? (
+                      <option key={i} value={i}>{c.categoryName}</option>
+                    ) : null
+                  )}
+                </select>
+              </div>
             </div>
           )}
           <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setDeleteModal(null)}>Cancel</Button>
             <Button variant="primary" className="bg-(--color-semantic-error) hover:bg-(--color-semantic-error)/90 text-white" onClick={handleDeleteConfirm}>Yes, Delete</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={deleteHostelModal} onClose={() => setDeleteHostelModal(false)} title="Delete Hostel">
+        <div className="p-4">
+          <p className="text-body text-ink mb-4">
+            Are you absolutely sure you want to permanently delete this hostel? All data will be wiped out.
+          </p>
+          <div className="bg-(--color-semantic-error)/10 text-(--color-semantic-error) p-3 rounded text-sm mb-4">
+            <strong>Warning:</strong> This action is irreversible. Please type <strong>DELETE</strong> to confirm.
+            <div className="mt-3">
+              <Input
+                type="text"
+                placeholder="Type DELETE"
+                value={deleteHostelConfirm}
+                onChange={e => setDeleteHostelConfirm(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="secondary" onClick={() => setDeleteHostelModal(false)}>Cancel</Button>
+            <Button 
+              variant="primary" 
+              className="bg-(--color-semantic-error) hover:bg-(--color-semantic-error)/90 text-white" 
+              onClick={handleDeleteHostel}
+              disabled={deletingHostel || deleteHostelConfirm !== 'DELETE'}
+            >
+              {deletingHostel ? 'Deleting...' : 'Permanently Delete'}
+            </Button>
           </div>
         </div>
       </Modal>

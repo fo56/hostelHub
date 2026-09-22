@@ -9,7 +9,6 @@ const dishSchema = new mongoose.Schema(
     priceScore: { type: Number, min: 1, max: 5 },
     healthScore: { type: Number, min: 1, max: 5 },
     itemClass: { type: String, enum: ['FIXED', 'ROTATING'], default: 'ROTATING' },
-    defaultQuantity: { type: String },
     tags: [{ type: String }],
     status: { type: String, enum: ['UNDER_REVIEW', 'ACTIVE', 'INACTIVE'], default: 'UNDER_REVIEW' },
     suggestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

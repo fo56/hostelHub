@@ -116,9 +116,43 @@ export const computeMenuRecommendations = async (hostelId: string) => {
             }
           },
           {
+            $addFields: {
+              daysSince: {
+                $max: [
+                  0,
+                  {
+                    $floor: {
+                      $divide: [
+                        { $subtract: [new Date(), '$servedOn'] },
+                        1000 * 60 * 60 * 24
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            $addFields: {
+              weight: { $divide: [1, { $add: ['$daysSince', 1] }] }
+            }
+          },
+          {
             $group: {
               _id: null,
-              avgRating: { $avg: '$rating' }
+              weightedSum: { $sum: { $multiply: ['$rating', '$weight'] } },
+              totalWeight: { $sum: '$weight' }
+            }
+          },
+          {
+            $project: {
+              avgRating: {
+                $cond: [
+                  { $gt: ['$totalWeight', 0] },
+                  { $divide: ['$weightedSum', '$totalWeight'] },
+                  3
+                ]
+              }
             }
           }
         ],

@@ -5,16 +5,10 @@ import { formatMeal } from '../utils/formatMeal';
 export async function getCurrentMenu(hostelId: string) {
   const menu = await MessMenu.findOne({
     hostelId,
-    published: true
+    status: 'PUBLISHED'
   })
     .populate('meals.slots.fixedItems', 'name mealType priceScore healthScore category')
-    .populate({
-      path: 'meals.slots.rotatingItems.item',
-      populate: {
-        path: 'dishId',
-        select: 'name mealType priceScore healthScore category'
-      }
-    });
+    .populate('meals.slots.rotatingItems.item', 'name mealType priceScore healthScore category');
 
   return menu
 }
