@@ -30,15 +30,23 @@ jobs:
       working-directory: ./frontend
       run: |
         rm -rf node_modules
-        npm install --include=optional
+        npm ci --include=optional
 
-    - name: Rebuild native frontend dependencies
+    - name: Ensure Linux esbuild binary
       working-directory: ./frontend
-      run: npm rebuild
+      run: |
+        ESBUILD_VERSION=$(node -p "require('./node_modules/esbuild/package.json').version")
+        npm install --no-save --package-lock=false \
+          --include=optional \
+          "@esbuild/linux-x64@$ESBUILD_VERSION"
 
-    - name: Install esbuild Linux binary
+    - name: Ensure Linux rollup binary
       working-directory: ./frontend
-      run: node node_modules/esbuild/install.js
+      run: |
+        ROLLUP_VERSION=$(node -p "require('./node_modules/rollup/package.json').version")
+        npm install --no-save --package-lock=false \
+          --include=optional \
+          "@rollup/rollup-linux-x64-gnu@$ROLLUP_VERSION"
 
     - name: Type Check Frontend
       run: npx tsc --noEmit
@@ -56,7 +64,7 @@ jobs:
       working-directory: ./backend
       run: |
         rm -rf node_modules
-        npm install --include=optional
+        npm ci --include=optional
 
     - name: Type Check Backend
       run: npx tsc --noEmit
