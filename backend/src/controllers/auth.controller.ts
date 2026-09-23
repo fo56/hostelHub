@@ -64,6 +64,8 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
       username: generatedUsername,
       email: adminEmail,
       role: 'ADMIN',
+      isPrimaryAdmin: true,
+      permissions: ['MANAGE_USERS', 'MANAGE_MENU', 'MANAGE_ISSUES', 'MANAGE_SETTINGS'],
       passwordHash,
     });
     await user.save({ session });

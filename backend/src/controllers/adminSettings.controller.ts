@@ -7,7 +7,7 @@ import { validateConstraints } from '../services/menuConstraintValidator.service
 
 export const getSettings = async (req: Request, res: Response) => {
     const hostelId = req.user!.hostelId;
-    const hostel = await Hostel.findById(hostelId).select('mealPlan issueCategories menuConstraints menuConstraintsText');
+    const hostel = await Hostel.findById(hostelId).select('mealPlan issueCategories menuConstraints menuConstraintsText defaultPassword');
     
     if (!hostel) return res.status(404).json({ message: 'Hostel not found' });
 
@@ -27,13 +27,14 @@ export const getSettings = async (req: Request, res: Response) => {
       mealPlan: hostel.mealPlan,
       issueCategories: categories,
       menuConstraints: hostel.menuConstraints || [],
-      menuConstraintsText: hostel.menuConstraintsText || ''
+      menuConstraintsText: hostel.menuConstraintsText || '',
+      defaultPassword: hostel.defaultPassword || ''
     });
 };
 
 export const updateSettings = async (req: Request, res: Response) => {
     const hostelId = req.user!.hostelId;
-    const { mealPlan, issueCategories } = req.body;
+    const { mealPlan, issueCategories, defaultPassword } = req.body;
 
     const hostel = await Hostel.findById(hostelId);
     if (!hostel) return res.status(404).json({ message: 'Hostel not found' });
@@ -68,6 +69,14 @@ export const updateSettings = async (req: Request, res: Response) => {
 
     hostel.mealPlan = mealPlan;
     hostel.issueCategories = issueCategories;
+
+    if (defaultPassword !== undefined) {
+      if (!defaultPassword.trim()) {
+        res.status(400).json({ message: 'Default password cannot be empty' });
+        return;
+      }
+      hostel.defaultPassword = defaultPassword;
+    }
 
     await hostel.save();
 

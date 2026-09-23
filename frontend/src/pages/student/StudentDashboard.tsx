@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Card } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
-import { ChevronDown, ExternalLink } from 'lucide-react'
+import { ChevronDown, ExternalLink, Utensils } from 'lucide-react'
 import { formatDate } from '../../lib/utils'
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -39,7 +39,7 @@ export default function StudentDashboard() {
       if (menuRes) {
         setMenu(menuRes)
 
-        let dayIndex = new Date().getDay() - 1
+        let dayIndex = new Date().getUTCDay() - 1
         if (dayIndex === -1) dayIndex = 6
 
         setTodayDishes(
@@ -116,7 +116,7 @@ export default function StudentDashboard() {
     return (
       <div className="space-y-6 pb-6 w-full">
         <div className="bg-canvas sm:rounded border-y sm:border-x border-(--color-hairline) p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
-          <div className="text-4xl mb-4 opacity-80">🍽️</div>
+          <div className="mb-4 text-muted flex justify-center"><Utensils className="w-12 h-12" /></div>
           <h2 className="text-card-title md:text-headline mb-2 text-ink">No Menu Published Yet</h2>
           <p className="text-body text-muted max-w-md mx-auto">
             The mess admin hasn't published this week's menu yet. Please check back later once it's finalized!
@@ -140,8 +140,8 @@ export default function StudentDashboard() {
             onClick={() => navigate('/student/voting/status')}
             className="whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all bg-ink text-canvas hover:bg-ink/90"
           >
-            <span className="hidden sm:inline font-medium">Vote for Menu</span>
-            <span className="sm:hidden px-1 text-caption font-medium tracking-wide">VOTE</span>
+            <span className="hidden sm:inline">Vote for Menu</span>
+            <span className="sm:hidden px-1 text-caption tracking-wide">VOTE</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -159,12 +159,12 @@ export default function StudentDashboard() {
                   className="flex items-center justify-between p-4 shrink-0 cursor-pointer sm:cursor-default border-b border-hairline bg-surface-soft/50 sm:bg-transparent"
                   onClick={() => setExpandedMeal(expandedMeal === mealData.mealName ? '' : mealData.mealName)}
                 >
-                  <h3 className="text-body font-medium m-0 flex items-center gap-2 text-ink capitalize">
+                  <h3 className="text-body m-0 flex items-center gap-2 text-ink capitalize">
                     {mealData.mealName}
                     <ChevronDown className={`w-4 h-4 text-muted transition-transform sm:hidden ${expandedMeal === mealData.mealName ? 'rotate-180' : ''}`} />
                   </h3>
                   {served.status === 'CLOSED' && (
-                    <span className="text-[10px] font-medium tracking-wide bg-(--color-semantic-error)/10 text-(--color-semantic-error) px-2 py-1 rounded uppercase">CLOSED</span>
+                    <span className="text-[10px] tracking-wide bg-(--color-semantic-error)/10 text-(--color-semantic-error) px-2 py-1 rounded uppercase">CLOSED</span>
                   )}
                 </div>
 
@@ -183,10 +183,10 @@ export default function StudentDashboard() {
                               onClick={() => setExpandedDishes(prev => ({ ...prev, [dish._id]: !prev[dish._id] }))}
                               className="w-full flex justify-between items-center text-left focus:outline-none group"
                             >
-                              <p className="text-body font-medium text-ink/90 leading-tight group-hover:text-ink transition-colors">
+                              <p className="text-body text-ink leading-tight group-hover:text-ink transition-colors">
                                 {dish.name}
                               </p>
-                              <span className="text-caption font-medium tracking-wide px-2 py-1 rounded bg-surface-soft group-hover:bg-hairline transition-colors ml-2 shrink-0">
+                              <span className="text-caption tracking-wide px-2 py-1 rounded bg-surface-soft group-hover:bg-hairline transition-colors ml-2 shrink-0">
                                 {isExpanded ? 'CLOSE' : 'RATE'}
                               </span>
                             </button>
@@ -256,7 +256,7 @@ export default function StudentDashboard() {
                     <TableHead key={m.mealName}>
                       <div className="flex flex-col">
                         <span>{m.mealName}</span>
-                        {m.startTime && m.endTime && <span className="text-[10px] font-normal text-muted tracking-wide">({m.startTime} - {m.endTime})</span>}
+                        {m.startTime && m.endTime && <span className="text-[10px] text-muted tracking-wide">({m.startTime} - {m.endTime})</span>}
                       </div>
                     </TableHead>
                   ))}
@@ -265,7 +265,7 @@ export default function StudentDashboard() {
               <TableBody>
                 {days.map((day, index) => (
                   <TableRow key={day}>
-                    <TableCell className="text-body text-ink font-medium sticky left-0 bg-canvas z-10 border-r border-hairline">{day}</TableCell>
+                    <TableCell className="text-body text-ink sticky left-0 bg-canvas z-10 border-r border-hairline">{day}</TableCell>
                     {menu.meals.map((meal: any) => {
                       const item = meal.slots?.[index]
                       const rotatingNames = item?.rotatingItems?.map((r: any) => r.item?.name).filter(Boolean) || []
@@ -282,11 +282,11 @@ export default function StudentDashboard() {
                                 <span className="text-ink">, </span>
                               )}
                               {fixedNames.length > 0 && (
-                                <span className="text-muted opacity-80">{fixedNames.join(', ')}</span>
+                                <span className="text-muted">{fixedNames.join(', ')}</span>
                               )}
                             </div>
                           ) : (
-                            <span className="opacity-50 text-muted">{item?.status === 'CLOSED' ? 'Closed' : '-'}</span>
+                            <span className="text-muted">{item?.status === 'CLOSED' ? 'Closed' : '-'}</span>
                           )}
                         </TableCell>
                       )

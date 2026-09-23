@@ -76,7 +76,7 @@ export function EditDishModal({ isOpen, onClose, onSuccess, dish, mealPlan }: an
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={dish ? 'Edit Dish' : 'Add New Dish'}>
-      <div className="p-4">
+      <div className="p-6">
         <form onSubmit={handleSaveDish} className="space-y-4">
           <div>
             <label className="block text-body-sm text-muted mb-1">Dish Name</label>
@@ -85,7 +85,7 @@ export function EditDishModal({ isOpen, onClose, onSuccess, dish, mealPlan }: an
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Paneer Butter Masala"
+              placeholder="Paneer Butter Masala"
             />
           </div>
 
@@ -247,7 +247,7 @@ export function ApproveDishModal({ isOpen, onClose, onSuccess, dishId }: any) {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Approve Dish">
-      <div className="p-4">
+      <div className="p-6">
         <form onSubmit={approve} className="space-y-4">
           <p className="text-body-sm text-muted">Assign initial price and health scores for this suggested dish.</p>
           <div className="grid grid-cols-2 gap-4">
@@ -315,14 +315,14 @@ export function RejectDishModal({ isOpen, onClose, onSuccess, dishId }: any) {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Reject Dish">
-      <div className="p-4">
+      <div className="p-6">
         <form onSubmit={reject} className="space-y-4">
           <div>
             <label className="block text-body-sm text-muted mb-1">Reason for Rejection</label>
             <Input
               type="text"
               required
-              placeholder="e.g. Too expensive to prepare, unhygienic..."
+              placeholder="Too expensive to prepare, unhygienic..."
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
             />
@@ -370,7 +370,7 @@ export function ToggleStatusModal({ isOpen, onClose, onSuccess, dishId, currentS
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={currentStatus === 'ACTIVE' ? "Deactivate Dish" : "Activate Dish"}>
-      <div className="p-4">
+      <div className="p-6">
         <form onSubmit={handleToggleStatus} className="space-y-4">
           <p className="text-body text-ink">
             {currentStatus === 'ACTIVE' 
@@ -383,7 +383,7 @@ export function ToggleStatusModal({ isOpen, onClose, onSuccess, dishId, currentS
               <Input
                 type="text"
                 required
-                placeholder="e.g. Temporarily out of season, unhygienic..."
+                placeholder="Temporarily out of season, unhygienic..."
                 value={toggleNote}
                 onChange={(e) => setToggleNote(e.target.value)}
               />
@@ -415,12 +415,12 @@ export function DishReviewsModal({ isOpen, onClose, data }: any) {
               <div key={r._id} className="p-4 bg-surface-soft border border-hairline rounded flex flex-col gap-2">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="font-medium text-ink block">{r.studentId?.name || 'Unknown Student'}</span>
+                    <span className="text-ink block">{r.studentId?.name || 'Unknown Student'}</span>
                     <span className="text-caption text-muted">{formatDate(r.createdAt, true)}</span>
                   </div>
-                  <span className="text-sm font-mono text-semantic-warning bg-semantic-warning/10 px-2 py-1 rounded font-bold">★ {r.rating}</span>
+                  <span className="text-body-sm font-mono text-semantic-warning bg-semantic-warning/10 px-2 py-1 rounded">★ {r.rating}</span>
                 </div>
-                {r.comment && <p className="text-body-sm text-ink/90 mt-1 italic leading-relaxed">"{r.comment}"</p>}
+                {r.comment && <p className="text-body-sm text-ink mt-1 italic leading-relaxed">"{r.comment}"</p>}
               </div>
             ))}
           </div>

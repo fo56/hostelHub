@@ -65,7 +65,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                   key={opt.value}
                   className={`px-3 py-2 text-body-sm rounded cursor-pointer transition-colors ${
                     opt.value === value
-                      ? "bg-ink text-canvas font-medium"
+                      ? "bg-ink text-canvas "
                       : "text-ink hover:bg-surface-soft"
                   }`}
                   onClick={() => handleSelect(opt.value)}

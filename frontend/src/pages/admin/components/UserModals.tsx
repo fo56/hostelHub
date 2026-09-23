@@ -33,7 +33,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess, currentUser }: any
       <Modal isOpen={isOpen && !createdUser} onClose={onClose} title="Create New User">
         <form onSubmit={submitCreate} className="p-6 space-y-4" autoComplete="off">
           <div>
-            <label className="block text-body-sm mb-1">Full Name <span className="text-muted font-normal">(Optional)</span></label>
+            <label className="block text-body-sm mb-1">Full Name <span className="text-muted">(Optional)</span></label>
             <Input
               autoComplete="off"
               value={form.name || ''}
@@ -85,7 +85,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess, currentUser }: any
             </div>
           )}
           <div>
-            <label className="block text-body-sm mb-1">Username / Login ID <span className="text-muted font-normal">(Optional)</span></label>
+            <label className="block text-body-sm mb-1">Username / Login ID <span className="text-muted">(Optional)</span></label>
             <Input
               autoComplete="off"
               value={form.username || ''}
@@ -94,7 +94,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess, currentUser }: any
             />
           </div>
           <div>
-            <label className="block text-body-sm mb-1">Password <span className="text-muted font-normal">(Optional)</span></label>
+            <label className="block text-body-sm mb-1">Password <span className="text-muted">(Optional)</span></label>
             <Input
               type="text"
               autoComplete="new-password"
@@ -117,8 +117,8 @@ export function CreateUserModal({ isOpen, onClose, onSuccess, currentUser }: any
       <Modal isOpen={!!createdUser} onClose={() => { setCreatedUser(null); onClose(); }} title="User Created Successfully">
         <div className="p-6 space-y-6">
           <div className="text-center">
-            <p className="font-medium text-ink">{createdUser?.name}</p>
-            <p className="text-muted text-body-sm mb-4">Username: <span className="font-mono text-ink font-medium">{createdUser?.username}</span></p>
+            <p className="text-ink">{createdUser?.name}</p>
+            <p className="text-muted text-body-sm mb-4">Username: <span className="font-mono text-ink">{createdUser?.username}</span></p>
             <p className="text-body-sm text-muted">Password: <span className="font-mono bg-surface-soft p-1 rounded text-ink">{createdUser?.rawPassword}</span></p>
           </div>
           
@@ -172,7 +172,6 @@ export function BulkCreateModal({ isOpen, onClose, onSuccess }: any) {
       })
 
       const usersToCreate = expandedRooms.map(room => ({
-        name: `Student (Room ${room})`,
         roomNo: room,
         role: 'STUDENT'
       }))
@@ -194,13 +193,18 @@ export function BulkCreateModal({ isOpen, onClose, onSuccess }: any) {
       <form onSubmit={submitBulkCreate} className="p-6 space-y-4">
         <div>
           <label className="block text-body-sm mb-1">
-            Enter room numbers (comma or newline separated)
+            Enter room numbers
           </label>
-          <p className="text-xs text-muted mb-2">You can use ranges like <code>f1-f50</code>. Passwords and usernames will be auto-generated based on room numbers.</p>
+          <div className="text-body-xs text-muted mb-3 space-y-1">
+            <p>• <strong>Format:</strong> Comma-separated (101, 102), newlines, or ranges (A1-A20).</p>
+            <p>• <strong>Usernames:</strong> Auto-generated based on the room number.</p>
+            <p>• <strong>Password:</strong> The default password will be used.</p>
+            <p>• <strong>Name/Email:</strong> Left blank by default. Students can update these later.</p>
+          </div>
           <Textarea
             required
-            className="h-40"
-            placeholder="101, 102, 103&#10;104-110&#10;f1-f50"
+            className="h-32"
+            placeholder="101, 102, 103&#10;104-110&#10;A1-A50"
             value={bulkInput}
             onChange={(e) => setBulkInput(e.target.value)}
           />
@@ -255,7 +259,7 @@ export function CsvImportModal({ isOpen, onClose, onSuccess }: any) {
           <label className="block text-body-sm mb-1">
             Enter users (one per line, format: <code>Name, RoomNo, Role</code>)
           </label>
-          <p className="text-xs text-muted mb-2">Role defaults to STUDENT. Passwords and usernames are auto-generated if omitted.</p>
+          <p className="text-body-xs text-muted mb-2">Role defaults to STUDENT. Usernames are auto-generated if omitted. The default password is used if omitted.</p>
           <Textarea
             required
             className="h-40"

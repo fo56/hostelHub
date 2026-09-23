@@ -1,6 +1,6 @@
 import * as React from "react"
 
-export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'icon' | 'icon-inverse'
+export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'icon' | 'icon-inverse' | 'danger'
 
 const Button = React.forwardRef<
   HTMLButtonElement,
@@ -12,6 +12,7 @@ const Button = React.forwardRef<
   
   const variants = {
     primary: 'bg-(--color-primary) text-(--color-on-primary) text-body-sm rounded px-3 py-1.5 min-h-[36px]',
+    danger: 'bg-(--color-semantic-error) text-white text-body-sm rounded px-3 py-1.5 min-h-[36px]',
     secondary: 'bg-(--color-canvas) text-(--color-ink) border border-(--color-hairline) text-body-sm rounded px-3 py-1.5 min-h-[36px]',
     tertiary: 'bg-(--color-canvas) text-(--color-ink) text-body-sm underline rounded px-2 py-1.5 min-h-[36px]',
     icon: 'bg-(--color-surface-soft) text-(--color-ink) rounded-full w-9 h-9 min-h-[36px]',

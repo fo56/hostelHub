@@ -194,7 +194,7 @@ export default function StudentIssuesPage() {
         ) : issues.length === 0 ? (
           <div className="py-16 px-4 text-center bg-canvas sm:bg-surface/30 border border-hairline rounded-xl flex flex-col items-center justify-center">
             <div className="w-16 h-16 rounded-full bg-surface-soft flex items-center justify-center mb-4 text-muted">
-              <MessageSquare className="w-8 h-8 opacity-50" />
+              <MessageSquare className="w-8 h-8" />
             </div>
             <h3 className="text-card-title text-ink mb-2">No Issues Found</h3>
             <p className="text-body text-muted max-w-md mx-auto mb-6">You haven't reported any issues yet. If you face any problems with the mess or hostel facilities, let us know.</p>
@@ -210,7 +210,7 @@ export default function StudentIssuesPage() {
               <div key={issue._id} className="bg-canvas sm:bg-surface/30 border border-hairline rounded-xl overflow-hidden transition-all hover:border-ink/20 flex flex-col">
                 <div className="flex items-center justify-between p-4 border-b border-hairline bg-surface-soft/40">
                   <div className="flex items-center gap-3">
-                    <h3 className={`text-body font-medium capitalize ${isClosed ? 'text-ink/60 line-through decoration-ink/30' : 'text-ink'}`}>
+                    <h3 className={`text-body  capitalize ${isClosed ? 'text-muted line-through decoration-ink/30' : 'text-ink'}`}>
                       {issue.category}
                     </h3>
                     <div className="flex gap-2">
@@ -222,14 +222,14 @@ export default function StudentIssuesPage() {
                       </Badge>
                     </div>
                   </div>
-                  <div className="text-[11px] font-mono text-muted tracking-wide flex items-center gap-1.5 opacity-70">
+                  <div className="text-[11px] font-mono text-muted tracking-wide flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5" />
                     {formatDate(issue.createdAt)}
                   </div>
                 </div>
 
                 <div className="p-5 flex-grow">
-                  <p className={`text-body leading-relaxed whitespace-pre-wrap ${isClosed ? 'text-muted' : 'text-ink/90'}`}>
+                  <p className={`text-body leading-relaxed whitespace-pre-wrap ${isClosed ? 'text-muted' : 'text-ink'}`}>
                     {issue.description}
                   </p>
 
@@ -239,8 +239,8 @@ export default function StudentIssuesPage() {
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-(--color-semantic-success) rounded-l-lg" />
                       <CheckCircle2 className="w-5 h-5 text-(--color-semantic-success) shrink-0" />
                       <div>
-                        <h4 className="text-[11px] font-semibold text-ink/70 uppercase tracking-widest mb-1.5">Admin Response</h4>
-                        <p className="text-body-sm text-ink/90 italic leading-relaxed">"{issue.resolverNote}"</p>
+                        <h4 className="text-[11px] text-muted uppercase tracking-widest mb-1.5">Admin Response</h4>
+                        <p className="text-body-sm text-ink italic leading-relaxed">"{issue.resolverNote}"</p>
                       </div>
                     </div>
                   )}

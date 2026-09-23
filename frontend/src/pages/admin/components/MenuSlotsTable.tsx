@@ -18,7 +18,7 @@ export function MenuSlotsTable({ menu, swapDish }: any) {
         <TableBody>
           {localDays.map((day, dayIndex) => (
             <TableRow key={day}>
-              <TableCell className="font-medium text-ink sticky left-0 bg-surface z-10 border-r border-hairline text-center">
+              <TableCell className="text-ink sticky left-0 bg-surface z-10 border-r border-hairline text-center">
                 {day}
               </TableCell>
               {menu.meals.map((meal: any, mealIndex: number) => {
@@ -54,11 +54,11 @@ export function MenuSlotsTable({ menu, swapDish }: any) {
                           )
                         })}
                         {fixedNames.map((name: string, i: number) => (
-                          <span key={`fix-${i}`} className="text-body whitespace-normal text-ink opacity-60">{name}</span>
+                          <span key={`fix-${i}`} className="text-body whitespace-normal text-ink">{name}</span>
                         ))}
                       </div>
                     ) : (
-                      <span className="opacity-30 text-muted">-</span>
+                      <span className="text-muted">-</span>
                     )}
                   </TableCell>
                 );

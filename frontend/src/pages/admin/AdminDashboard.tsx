@@ -17,7 +17,7 @@ export default function AdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const data = await request('/admin/dashboard');
+      const data = await request('/admin/dashboard', 'GET', undefined, { skipCache: true });
       setStats(data);
     } catch (err: unknown) {
       toast.error((err as Error).message || 'Failed to fetch dashboard data');
@@ -27,17 +27,16 @@ export default function AdminDashboard() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-muted font-medium">Loading Dashboard Data...</div>;
+    return <div className="p-8 text-center text-muted">Loading Dashboard Data...</div>;
   }
 
   if (!stats) {
-    return <div className="p-8 text-center text-semantic-error font-medium">Failed to load dashboard.</div>;
+    return <div className="p-8 text-center text-semantic-error">Failed to load dashboard.</div>;
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto sm:p-4 space-y-6 pb-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-card-title">Admin Dashboard</h1>
+    <div className="w-full mx-auto sm:p-4 space-y-6 pb-6">
+      <div className="flex justify-end items-center mb-2">
         <Button variant="secondary" 
           onClick={fetchDashboardData}
           className="px-4 py-2 bg-surface hover:bg-surface-soft border rounded text-body-sm"
@@ -84,7 +83,7 @@ export default function AdminDashboard() {
       {/* Activity Log Section */}
       <div className="bg-canvas sm:rounded border-y sm:border-x border-hairline flex flex-col">
         <div className="p-4 border-b border-hairline bg-surface-soft rounded-t flex justify-between items-center">
-          <h2 className="font-bold">Recent Hostel Activity</h2>
+          <h2 className="">Recent Hostel Activity</h2>
           <span className="text-caption bg-canvas text-ink px-2 py-1 rounded border border-hairline">
             Live Feed
           </span>
@@ -95,25 +94,25 @@ export default function AdminDashboard() {
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-canvas">
                   <TableRow>
-                    <TableHead className="py-2 h-auto text-xs">User</TableHead>
-                    <TableHead className="py-2 h-auto text-xs">Role</TableHead>
-                    <TableHead className="py-2 h-auto text-xs">Action</TableHead>
-                    <TableHead className="py-2 h-auto text-xs">Time</TableHead>
+                    <TableHead className="py-2 h-auto text-body-xs">User</TableHead>
+                    <TableHead className="py-2 h-auto text-body-xs">Role</TableHead>
+                    <TableHead className="py-2 h-auto text-body-xs">Action</TableHead>
+                    <TableHead className="py-2 h-auto text-body-xs">Time</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {stats.recentActivity.map((log: any) => (
                     <TableRow key={log._id}>
-                      <TableCell className="text-ink py-2 text-sm">
+                      <TableCell className="text-ink py-2 text-body-sm">
                         {log.userId?.username || 'Unknown User'}
                       </TableCell>
-                      <TableCell className="text-muted py-2 text-sm">
+                      <TableCell className="text-muted py-2 text-body-sm">
                         {log.userId?.role || 'UNKNOWN'}
                       </TableCell>
-                      <TableCell className="text-muted py-2 text-sm">
+                      <TableCell className="text-muted py-2 text-body-sm">
                         {log.action}
                       </TableCell>
-                      <TableCell className="text-muted font-mono text-xs whitespace-nowrap py-2">
+                      <TableCell className="text-muted font-mono text-body-xs whitespace-nowrap py-2">
                         {formatDate(log.createdAt, true)}
                       </TableCell>
                     </TableRow>

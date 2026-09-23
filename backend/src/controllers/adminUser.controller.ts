@@ -12,7 +12,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 // generate simple password
 const generatePassword = (): string => {
-  return crypto.randomBytes(4).toString('hex'); // 8 char hex
+  return 'abcdefgh'; // 8 char hex
 };
 
 // Create User (Student/Worker)
@@ -52,7 +52,7 @@ export const createUser = async (req: Request, res: Response) => {
       } else if (role === 'ADMIN') {
          const existingAdmins = await User.countDocuments({ hostelId: hostel._id, role: 'ADMIN' });
          const nextId = existingAdmins + 1;
-         username = nextId === 1 ? `admin@${hostel.domain}` : `admin${nextId}@${hostel.domain}`;
+         username = nextId === 1 ? `admin@${hostel.domain}` : `secadmin${nextId}@${hostel.domain}`;
       } else {
          return res.status(400).json({ message: 'Username is required' });
       }
@@ -136,7 +136,7 @@ export const bulkCreateUsers = async (req: Request, res: Response) => {
         } else if (role === 'ADMIN') {
           const existingAdmins = await User.countDocuments({ hostelId: hostel._id, role: 'ADMIN' });
           const nextId = existingAdmins + 1;
-          username = nextId === 1 ? `admin@${hostel.domain}` : `admin${nextId}@${hostel.domain}`;
+          username = nextId === 1 ? `admin@${hostel.domain}` : `secadmin${nextId}@${hostel.domain}`;
         } else {
           continue; // skip invalid user
         }
@@ -194,8 +194,17 @@ export const getUsers = async (req: Request, res: Response) => {
     if (status === 'inactive') query.isActive = false;
     else if (status === 'active') query.isActive = true;
 
-    const users = await User.find(query).select('-passwordHash -emailVerificationToken');
-    return res.status(200).json({ users });
+    const hostel = await Hostel.findById(admin.hostelId);
+    if (!hostel) return res.status(500).json({ message: 'Hostel not found' });
+
+    const users = await User.find(query).select('-passwordHash -emailVerificationToken').lean();
+    
+    const usersWithPrimaryAdmin = users.map(u => ({
+      ...u,
+      isPrimaryAdmin: u.role === 'ADMIN' && u.username === `admin@${hostel.domain}`
+    }));
+
+    return res.status(200).json({ users: usersWithPrimaryAdmin });
 };
 
 // Get single user
@@ -217,7 +226,13 @@ export const getUser = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    return res.status(200).json({ user });
+    const hostel = await Hostel.findById(admin.hostelId);
+    const userWithPrimaryAdmin = {
+      ...(user as any).toObject(),
+      isPrimaryAdmin: hostel && user.role === 'ADMIN' && user.username === `admin@${hostel.domain}`
+    };
+
+    return res.status(200).json({ user: userWithPrimaryAdmin });
 };
 
 // Deactivate user

@@ -54,7 +54,7 @@ function SuggestDishModal({ isOpen, onClose, mealPlan }: { isOpen: boolean, onCl
         <div>
           <label className="block text-body-sm mb-1">Dish Name</label>
           <Input
-            placeholder="e.g. Paneer Tikka"
+            placeholder="Paneer Tikka"
             value={name}
             onChange={e => setName(e.target.value)}
           />
@@ -92,7 +92,7 @@ function SuggestDishModal({ isOpen, onClose, mealPlan }: { isOpen: boolean, onCl
         <div>
           <label className="block text-body-sm mb-1">Tags (comma separated)</label>
           <Input
-            placeholder="e.g. spicy, dry, special"
+            placeholder="spicy, dry, special"
             value={tags}
             onChange={e => setTags(e.target.value)}
           />
@@ -281,7 +281,7 @@ export default function StudentVoting() {
             <button
               type="button"
               onClick={handleToggleClick}
-              className={`px-3 py-1.5 min-h-[36px] rounded text-body-sm font-medium transition-all border flex items-center justify-center gap-2 whitespace-nowrap w-auto ${wantsNewMenu
+              className={`px-3 py-1.5 min-h-[36px] rounded text-body-sm  transition-all border flex items-center justify-center gap-2 whitespace-nowrap w-auto ${wantsNewMenu
                 ? 'bg-(--color-semantic-error)/10 border-(--color-semantic-error)/30 text-(--color-semantic-error) shadow-sm'
                 : 'bg-surface border-hairline text-ink hover:border-ink/30'
                 }`}
@@ -307,11 +307,11 @@ export default function StudentVoting() {
                 className="flex items-center justify-between p-4 shrink-0 cursor-pointer md:cursor-default border-b border-hairline group bg-surface-soft/50 sm:bg-transparent hover:bg-surface-soft/80 transition-colors"
                 onClick={() => setExpandedMeal(meal.mealName === expandedMeal ? '' : meal.mealName)}
               >
-                <h2 className="text-body font-medium m-0 flex items-center gap-2 text-ink">
+                <h2 className="text-body m-0 flex items-center gap-2 text-ink">
                   {meal.mealName}
                   <ChevronDown className={`w-4 h-4 text-muted transition-transform md:hidden ${expandedMeal === meal.mealName ? 'rotate-180' : ''}`} />
                 </h2>
-                <span className={`text-caption transition-colors ${mealSelectedCount > 0 ? 'text-ink font-medium bg-ink/10 px-2 py-1 rounded-md' : 'text-muted'}`}>
+                <span className={`text-caption transition-colors ${mealSelectedCount > 0 ? 'text-ink  bg-ink/10 px-2 py-1 rounded-md' : 'text-muted'}`}>
                   {mealSelectedCount} SELECTED
                 </span>
               </div>
@@ -327,7 +327,7 @@ export default function StudentVoting() {
                   return (
                     <div key={key} className="shrink-0 mb-6 last:mb-0">
                       <div className="flex justify-between items-center px-4 py-3 bg-surface/50 sticky top-0 z-10 backdrop-blur-sm border-b border-hairline/50">
-                        <h3 className="text-[11px] font-medium text-muted uppercase tracking-widest">{cat.categoryName}</h3>
+                        <h3 className="text-[11px] text-muted uppercase tracking-widest">{cat.categoryName}</h3>
                         {selectedCount > 0 && <span className="text-[11px] text-muted">{selectedCount} picked</span>}
                       </div>
 
@@ -352,7 +352,7 @@ export default function StudentVoting() {
                             >
                               {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-ink rounded-l-lg" />}
                               <div className="flex justify-between w-full items-start gap-2">
-                                <span className={`leading-tight text-body whitespace-normal transition-colors ${isSelected ? 'font-medium text-ink' : 'font-normal text-ink/90 group-hover:text-ink'}`}>
+                                <span className={`leading-tight text-body whitespace-normal transition-colors ${isSelected ? ' text-ink' : ' text-ink group-hover:text-ink'}`}>
                                   {dish.name}
                                 </span>
                                 {isSelected && (
@@ -363,14 +363,14 @@ export default function StudentVoting() {
                               </div>
 
                               {(dish.healthScore !== undefined) && (
-                                <div className="flex items-center gap-1.5 w-full mt-1.5 opacity-80">
+                                <div className="flex items-center gap-1.5 w-full mt-1.5">
                                   <div
                                     className={`w-1.5 h-1.5 rounded-full ${dish.healthScore >= 4 ? 'bg-(--color-semantic-success)' :
                                       dish.healthScore >= 2.5 ? 'bg-(--color-semantic-warning)' :
                                         'bg-(--color-semantic-error)'
                                       }`}
                                   />
-                                  <span className="text-[10px] text-muted font-medium tracking-wide">
+                                  <span className="text-[10px] text-muted tracking-wide">
                                     HEALTH {dish.healthScore}/5
                                   </span>
                                 </div>
@@ -381,20 +381,20 @@ export default function StudentVoting() {
 
                         {inactiveDishes.filter(d => d.mealType === meal.mealName && d.category === cat.categoryName).length > 0 && (
                           <div className="mt-4 border-t border-hairline/50 pt-3">
-                            <h4 className="text-[10px] uppercase font-semibold tracking-wider text-muted mb-2 px-1">Deactivated / Rejected</h4>
+                            <h4 className="text-[10px] uppercase tracking-wider text-muted mb-2 px-1">Deactivated / Rejected</h4>
                             <div className="flex flex-col gap-2">
                               {inactiveDishes
                                 .filter(d => d.mealType === meal.mealName && d.category === cat.categoryName)
                                 .map(dish => (
-                                  <div key={dish._id} className="w-full px-4 py-3 text-left bg-surface/30 border border-hairline/50 rounded-lg opacity-75">
+                                  <div key={dish._id} className="w-full px-4 py-3 text-left bg-surface/30 border border-hairline/50 rounded-lg">
                                     <div className="flex justify-between w-full items-start gap-2">
-                                      <span className="leading-tight text-body whitespace-normal font-normal text-muted line-through">
+                                      <span className="leading-tight text-body whitespace-normal text-muted line-through">
                                         {dish.name}
                                       </span>
-                                      <Ban className="w-4 h-4 text-muted/50 shrink-0" />
+                                      <Ban className="w-4 h-4 text-muted shrink-0" />
                                     </div>
                                     {dish.rejectionReason && (
-                                      <div className="mt-2 text-xs text-(--color-semantic-warning)">
+                                      <div className="mt-2 text-body-xs text-(--color-semantic-warning)">
                                         Reason: {dish.rejectionReason}
                                       </div>
                                     )}
@@ -429,7 +429,7 @@ export default function StudentVoting() {
         <Button
           onClick={handleSavePreferences}
           disabled={submitting || !hasChanges}
-          className="w-full sm:w-auto sm:min-w-[200px] text-body font-medium shadow-sm"
+          className="w-full sm:w-auto sm:min-w-[200px] text-body shadow-sm"
         >
           {submitting ? 'Saving...' : 'Save Choices'}
         </Button>

@@ -10,7 +10,7 @@ import { Modal } from '../../components/ui/modal'
 import { Badge } from '../../components/ui/badge'
 
 import { Pagination } from '../../components/ui/pagination'
-import { Trash2, UserX, UserCheck, Pencil } from 'lucide-react'
+import { Trash2, Ban, CheckCircle, Pencil } from 'lucide-react'
 import { CreateUserModal, BulkCreateModal, CsvImportModal, EditUserModal } from './components/UserModals'
 
 interface User {
@@ -40,11 +40,25 @@ export default function AdminUsers() {
   // Create User Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
+  // Sorting State
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null)
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc'
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+  }
+
   const fetchUsers = async () => {
     setLoading(true)
-    const res = await request('/admin/users')
-    setUsers(res.users)
-    setLoading(false)
+    try {
+      const res = await request('/admin/users')
+      setUsers(res.users)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -108,7 +122,7 @@ export default function AdminUsers() {
         <div className="flex overflow-x-auto w-full sm:w-auto no-scrollbar">
           <button
             onClick={() => { setActiveTab('STUDENT'); setCurrentPage(1); }}
-            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'STUDENT'
+            className={`py-3 px-4 border-b-2  text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'STUDENT'
                 ? 'border-ink text-ink'
                 : 'border-transparent text-muted hover:text-ink hover:border-hairline'
               }`}
@@ -117,7 +131,7 @@ export default function AdminUsers() {
           </button>
           <button
             onClick={() => { setActiveTab('ADMIN'); setCurrentPage(1); }}
-            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'ADMIN'
+            className={`py-3 px-4 border-b-2  text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'ADMIN'
                 ? 'border-ink text-ink'
                 : 'border-transparent text-muted hover:text-ink hover:border-hairline'
               }`}
@@ -150,9 +164,26 @@ export default function AdminUsers() {
 
       {!loading && users.filter(u => u.role === activeTab).length > 0 && (() => {
         const filteredUsers = users.filter(u => u.role === activeTab)
-        const totalItems = filteredUsers.length
+        
+        const sortedUsers = [...filteredUsers].sort((a: any, b: any) => {
+          if (!sortConfig) return 0
+          const { key, direction } = sortConfig
+          let valA = a[key]
+          let valB = b[key]
+          if (valA == null) valA = ''
+          if (valB == null) valB = ''
+          
+          if (typeof valA === 'string' && typeof valB === 'string') {
+            return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
+          }
+          if (valA < valB) return direction === 'asc' ? -1 : 1
+          if (valA > valB) return direction === 'asc' ? 1 : -1
+          return 0
+        })
+
+        const totalItems = sortedUsers.length
         const totalPages = Math.ceil(totalItems / itemsPerPage)
-        const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+        const paginatedUsers = sortedUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
         return (
           <Card className="overflow-hidden shadow-none border-hairline flex flex-col">
@@ -167,25 +198,35 @@ export default function AdminUsers() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-surface-soft">
-                    <TableHead className="text-center w-[20%]">Name</TableHead>
-                    <TableHead className="text-center w-[15%]">Username</TableHead>
-                    <TableHead className="text-center w-[25%]">Email</TableHead>
+                    <TableHead className="text-center w-[20%] cursor-pointer hover:bg-hairline/20 transition-colors" onClick={() => handleSort('name')}>
+                      Name <span className="w-3 inline-block text-center">{sortConfig?.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                    </TableHead>
+                    <TableHead className="text-center w-[15%] cursor-pointer hover:bg-hairline/20 transition-colors" onClick={() => handleSort('username')}>
+                      Username <span className="w-3 inline-block text-center">{sortConfig?.key === 'username' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                    </TableHead>
+                    <TableHead className="text-center w-[25%] cursor-pointer hover:bg-hairline/20 transition-colors" onClick={() => handleSort('email')}>
+                      Email <span className="w-3 inline-block text-center">{sortConfig?.key === 'email' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                    </TableHead>
                     {activeTab === 'STUDENT' ? (
-                      <TableHead className="text-center w-[20%]">Room No</TableHead>
+                      <TableHead className="text-center w-[20%] cursor-pointer hover:bg-hairline/20 transition-colors" onClick={() => handleSort('roomNo')}>
+                        Room No <span className="w-3 inline-block text-center">{sortConfig?.key === 'roomNo' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                      </TableHead>
                     ) : (
                       <TableHead className="text-center w-[20%]">Permissions</TableHead>
                     )}
-                    <TableHead className="text-center w-[10%] min-w-[100px]">Status</TableHead>
+                    <TableHead className="text-center w-[10%] min-w-[100px] cursor-pointer hover:bg-hairline/20 transition-colors" onClick={() => handleSort('isActive')}>
+                      Status <span className="w-3 inline-block text-center">{sortConfig?.key === 'isActive' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</span>
+                    </TableHead>
                     <TableHead className="text-center w-[10%] min-w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedUsers.map(user => (
                     <TableRow key={user._id} className="transition-colors hover:bg-surface-soft">
-                    <TableCell className="font-medium text-ink text-center">{user.name}</TableCell>
+                    <TableCell className="text-ink text-center">{user.name}</TableCell>
                     <TableCell className="text-muted text-center">{user.username}</TableCell>
                     <TableCell className="text-muted text-center">
-                      {user.email || <span className="italic text-muted-foreground text-xs">Not provided</span>}
+                      {user.email || <span className="italic text-muted-foreground text-body-xs">Not provided</span>}
                     </TableCell>
                     {activeTab === 'STUDENT' ? (
                       <TableCell className="text-center text-muted">
@@ -202,7 +243,7 @@ export default function AdminUsers() {
                                 <Badge key={p} variant="outline" className="text-[10px]">{p.replace('MANAGE_', '')}</Badge>
                               ))
                             ) : (
-                              <span className="text-xs italic text-muted">No permissions</span>
+                              <span className="text-body-xs italic text-muted">No permissions</span>
                             )}
                           </div>
                         )}
@@ -210,7 +251,7 @@ export default function AdminUsers() {
                     )}
                     <TableCell className="text-center">
                       {user.isActive ? (
-                        <span className="text-semantic-success font-medium">Active</span>
+                        <span className="text-semantic-success">Active</span>
                       ) : (
                         <span className="text-muted">Inactive</span>
                       )}
@@ -231,7 +272,7 @@ export default function AdminUsers() {
                               className={`p-1.5 rounded transition-colors ${user.isActive ? 'text-muted hover:text-(--color-semantic-warning) hover:bg-(--color-semantic-warning)/10' : 'text-semantic-success hover:bg-semantic-success/10'}`} 
                               title={user.isActive ? "Deactivate User" : "Reactivate User"}
                             >
-                              {user.isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                              {user.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
                             </button>
                             <button
                               onClick={() => confirmDeleteUser(user._id)}

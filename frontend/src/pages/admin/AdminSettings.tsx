@@ -5,8 +5,10 @@ import { Card } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Modal } from '../../components/ui/modal'
 import { Input } from '../../components/ui/input'
+import { Select } from '../../components/ui/select'
+import { Textarea } from '../../components/ui/textarea'
 import toast from 'react-hot-toast'
-import { Trash2, Plus, Power, PowerOff, Sparkles } from 'lucide-react'
+import { Trash2, Plus, Ban, CheckCircle, Sparkles } from 'lucide-react'
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -63,6 +65,11 @@ export default function AdminSettings() {
   }, [settings]) // Re-run observer setup when settings load and DOM is populated
 
   const saveSettings = async () => {
+    if (!settings.defaultPassword || !settings.defaultPassword.trim()) {
+      toast.error('Default password cannot be empty')
+      return
+    }
+
     try {
       setSaving(true)
       
@@ -194,7 +201,7 @@ export default function AdminSettings() {
   }
 
   const addMealCategory = (mealIndex: number) => {
-    const name = window.prompt("Enter new meal category name (e.g. Dessert, Main):")
+    const name = window.prompt("Enter new meal category name (Dessert, Main, etc):")
     if (!name?.trim()) return
     const newSettings = { ...settings }
     newSettings.mealPlan[mealIndex].categories.push({ categoryName: name.trim(), isActive: true })
@@ -220,7 +227,7 @@ export default function AdminSettings() {
   }
 
   const addIssueCategory = () => {
-    const name = window.prompt("Enter new maintenance category (e.g. IT, Cleaning):")
+    const name = window.prompt("Enter new maintenance category (IT, Cleaning, etc):")
     if (!name?.trim()) return
     const newSettings = { ...settings }
     newSettings.issueCategories.push({ name: name.trim(), isActive: true })
@@ -236,23 +243,17 @@ export default function AdminSettings() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto pb-24 animate-in fade-in duration-300">
-      <div className="flex justify-between items-end mb-6">
-        <div>
-          <h1 className="text-card-title md:text-display font-medium text-ink">Hostel Settings</h1>
-          <p className="text-muted text-body-sm mt-1">Configure your mess meal plan, maintenance categories, and AI rules.</p>
-        </div>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-8">
+    <>
+    <div className="w-full mx-auto pb-24 animate-in fade-in duration-300">
+      <div className="flex flex-col lg:flex-row gap-8 mt-2">
         {/* Navigation Sidebar */}
         <div className="lg:w-64 shrink-0 hidden lg:block">
           <div className="sticky top-24 flex flex-col gap-1 border border-hairline p-2 rounded-lg bg-canvas">
-            <a href="#general" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'general' ? 'bg-(--color-primary)/10 text-(--color-primary) font-medium' : 'text-ink hover:bg-surface-soft'}`}>General</a>
-            <a href="#meals" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'meals' ? 'bg-(--color-primary)/10 text-(--color-primary) font-medium' : 'text-ink hover:bg-surface-soft'}`}>Mess Menu Config</a>
-            <a href="#maintenance" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'maintenance' ? 'bg-(--color-primary)/10 text-(--color-primary) font-medium' : 'text-ink hover:bg-surface-soft'}`}>Maintenance</a>
-            <a href="#constraints" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'constraints' ? 'bg-(--color-primary)/10 text-(--color-primary) font-medium' : 'text-ink hover:bg-surface-soft'}`}>AI Menu Rules</a>
-            <a href="#danger" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'danger' ? 'bg-(--color-semantic-error)/10 text-(--color-semantic-error) font-medium' : 'text-(--color-semantic-error) hover:bg-surface-soft'}`}>Danger Zone</a>
+            <a href="#general" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'general' ? 'bg-(--color-primary)/10 text-(--color-primary) ' : 'text-ink hover:bg-surface-soft'}`}>General</a>
+            <a href="#meals" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'meals' ? 'bg-(--color-primary)/10 text-(--color-primary) ' : 'text-ink hover:bg-surface-soft'}`}>Mess Menu Config</a>
+            <a href="#maintenance" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'maintenance' ? 'bg-(--color-primary)/10 text-(--color-primary) ' : 'text-ink hover:bg-surface-soft'}`}>Maintenance</a>
+            <a href="#constraints" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'constraints' ? 'bg-(--color-primary)/10 text-(--color-primary) ' : 'text-ink hover:bg-surface-soft'}`}>AI Menu Rules</a>
+            <a href="#danger" className={`px-3 py-2 text-body rounded transition-colors ${activeSection === 'danger' ? 'bg-(--color-semantic-error)/10 text-(--color-semantic-error) ' : 'text-(--color-semantic-error) hover:bg-surface-soft'}`}>Danger Zone</a>
           </div>
         </div>
 
@@ -260,19 +261,20 @@ export default function AdminSettings() {
         <div className="flex-1 space-y-12">
           {/* General Section */}
           <section id="general" className="scroll-mt-24 space-y-6">
-          <Card className="p-5 shadow-none border-hairline">
-            <h2 className="text-card-title text-ink mb-4">User Management</h2>
-            <div className="max-w-md">
-              <label className="block text-body-sm font-medium mb-1">Default Password</label>
-              <p className="text-xs text-muted mb-3">
+          <Card className="p-6 shadow-none border-hairline">
+            <h2 className="text-card-title text-ink mb-1">Default User Password</h2>
+            <div className="w-full">
+              <p className="text-body-xs text-muted mb-4">
                 This password will be assigned to all new users created individually or in bulk if no password is provided. If left empty, a random password will be generated for each user.
               </p>
-              <Input
-                type="text"
-                value={settings.defaultPassword || ''}
-                onChange={(e: any) => setSettings({ ...settings, defaultPassword: e.target.value })}
-                placeholder="Enter default password (e.g. welcome123)"
-              />
+              <div className="max-w-md">
+                <Input
+                  type="text"
+                  value={settings.defaultPassword || ''}
+                  onChange={(e: any) => setSettings({ ...settings, defaultPassword: e.target.value })}
+                  placeholder="Enter default password"
+                />
+              </div>
             </div>
           </Card>
           </section>
@@ -293,13 +295,13 @@ export default function AdminSettings() {
                   className={`p-2 rounded transition-colors ${meal.isActive !== false ? 'text-(--color-semantic-warning) hover:bg-canvas' : 'text-(--color-semantic-success) hover:bg-surface-hover bg-canvas border border-hairline'}`}
                   title={meal.isActive !== false ? "Deactivate Meal" : "Activate Meal"}
                 >
-                  {meal.isActive !== false ? <PowerOff size={20} /> : <Power size={20} />}
+                  {meal.isActive !== false ? <Ban size={20} /> : <CheckCircle size={20} />}
                 </button>
               </div>
               
               <div className={`transition-all ${meal.isActive === false ? 'pointer-events-none opacity-50' : ''}`}>
                 <div className="mb-6">
-                  <h3 className="text-body font-medium text-muted mb-2">Off-Days (No meal served)</h3>
+                  <h3 className="text-body text-muted mb-2">Off-Days (No meal served)</h3>
                 <div className="flex flex-wrap gap-2">
                   {DAYS_OF_WEEK.map((day, dIdx) => {
                     const isOff = meal.offDays.includes(dIdx)
@@ -307,7 +309,7 @@ export default function AdminSettings() {
                       <button
                         key={day}
                         onClick={() => toggleOffDay(mIdx, dIdx)}
-                        className={`px-3 py-1 text-sm rounded-full border transition-colors ${
+                        className={`px-3 py-1 text-body-sm rounded-full border transition-colors ${
                           isOff 
                             ? 'bg-(--color-semantic-error) text-white border-transparent' 
                             : 'bg-surface-soft text-muted border-hairline hover:bg-surface-hover hover:text-ink'
@@ -322,8 +324,8 @@ export default function AdminSettings() {
 
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-body font-medium text-muted">Categories</h3>
-                  <button onClick={() => addMealCategory(mIdx)} className="text-primary text-sm hover:underline flex items-center gap-1">
+                  <h3 className="text-body text-muted">Categories</h3>
+                  <button onClick={() => addMealCategory(mIdx)} className="text-primary text-body-sm hover:underline flex items-center gap-1">
                     <Plus size={14} /> Add Category
                   </button>
                 </div>
@@ -337,7 +339,7 @@ export default function AdminSettings() {
                           className={`p-1.5 rounded transition-colors ${cat.isActive ? 'text-(--color-semantic-warning) hover:bg-canvas' : 'text-(--color-semantic-success) hover:bg-surface-hover'}`}
                           title={cat.isActive ? "Deactivate" : "Activate"}
                         >
-                          {cat.isActive ? <PowerOff size={16} /> : <Power size={16} />}
+                          {cat.isActive ? <Ban size={16} /> : <CheckCircle size={16} />}
                         </button>
                         <button 
                           onClick={() => setDeleteModal({ isOpen: true, type: 'mealCat', mealIndex: mIdx, catIndex: cIdx })}
@@ -349,7 +351,7 @@ export default function AdminSettings() {
                       </div>
                     </div>
                   ))}
-                  {meal.categories.length === 0 && <p className="text-sm text-muted">No categories defined.</p>}
+                  {meal.categories.length === 0 && <p className="text-body-sm text-muted">No categories defined.</p>}
                 </div>
               </div>
               </div>
@@ -361,7 +363,7 @@ export default function AdminSettings() {
           {/* Maintenance Section */}
           <section id="maintenance" className="scroll-mt-24 space-y-6">
             <h2 className="text-card-title text-ink mb-2 pb-2 border-b border-hairline">Maintenance Categories</h2>
-        <div className="space-y-6 max-w-2xl">
+        <div className="space-y-6">
           <Card className="p-6 shadow-none border-hairline">
           <div className="flex justify-between items-center mb-6">
             <div>
@@ -378,13 +380,13 @@ export default function AdminSettings() {
               <div key={cIdx} className={`flex items-center justify-between p-3 rounded border ${cat.isActive ? 'bg-surface-soft border-hairline' : 'bg-canvas border-hairline opacity-60'}`}>
                 <span className={`text-body ${cat.isActive ? 'text-ink' : 'text-muted line-through'}`}>{cat.name}</span>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted uppercase font-medium">{cat.isActive ? 'Active' : 'Inactive'}</span>
+                  <span className="text-body-xs text-muted uppercase">{cat.isActive ? 'Active' : 'Inactive'}</span>
                   <button 
                     onClick={() => toggleIssueCategoryActive(cIdx)}
                     className={`p-1.5 rounded transition-colors ${cat.isActive ? 'text-(--color-semantic-warning) hover:bg-canvas' : 'text-(--color-semantic-success) hover:bg-surface-hover'}`}
                     title={cat.isActive ? "Deactivate" : "Activate"}
                   >
-                    {cat.isActive ? <PowerOff size={18} /> : <Power size={18} />}
+                    {cat.isActive ? <Ban size={18} /> : <CheckCircle size={18} />}
                   </button>
                   <button 
                     onClick={() => setDeleteModal({ isOpen: true, type: 'issueCat', catIndex: cIdx })}
@@ -396,7 +398,7 @@ export default function AdminSettings() {
                 </div>
               </div>
             ))}
-            {settings.issueCategories.length === 0 && <p className="text-sm text-muted">No categories defined.</p>}
+            {settings.issueCategories.length === 0 && <p className="text-body-sm text-muted">No categories defined.</p>}
           </div>
         </Card>
 
@@ -405,15 +407,15 @@ export default function AdminSettings() {
           <p className="text-body-sm text-muted mt-1 mb-6">Configure default behaviors for handling student issues.</p>
           
           <div>
-            <label className="block text-body-sm font-medium text-ink mb-2">Default Closure Remark</label>
-            <textarea
+            <label className="block text-body-sm text-ink mb-2">Default Closure Remark</label>
+            <Textarea
               value={settings.defaultResolverNote || ''}
               onChange={(e) => setSettings({...settings, defaultResolverNote: e.target.value})}
-              className="w-full bg-surface-soft border border-hairline rounded p-3 text-body text-ink focus:outline-none focus:border-ink transition-colors"
+              className="w-full"
               rows={3}
-              placeholder="e.g. Fixed the issue as requested."
+              placeholder="Fixed the issue as requested."
             />
-            <p className="text-caption text-muted mt-2 normal-case tracking-normal font-normal">This note will be pre-filled when you resolve or close an issue. You can still edit it before submitting.</p>
+            <p className="text-caption text-muted mt-2 normal-case tracking-normal">This note will be pre-filled when you resolve or close an issue. You can still edit it before submitting.</p>
           </div>
         </Card>
         </div>
@@ -421,21 +423,20 @@ export default function AdminSettings() {
 
           {/* Constraints Section */}
           <section id="constraints" className="scroll-mt-24">
-        <div className="space-y-6 max-w-3xl">
+        <div className="space-y-6">
           <Card className="p-6 shadow-none border-hairline">
             <h2 className="text-card-title text-ink flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-(--color-primary)" />
               Menu Constraints 
             </h2>
             <p className="text-body-sm text-muted mt-1 mb-6">
-              Write plain English rules for the menu generator. The AI will parse them into strict constraints.
-              For example: "Require paneer on Monday for dinner", "Close the mess on Sunday breakfast", "Limit desserts to 2 per week".
+              Write plain English rules for the menu generator. The AI will parse them into strict constraints. Examples include: "Require paneer on Monday for dinner", "Close the mess on Sunday breakfast", "Limit desserts to 2 per week".
             </p>
 
-            <textarea
+            <Textarea
               value={constraintsText}
               onChange={(e) => setConstraintsText(e.target.value)}
-              className="w-full h-40 bg-surface-soft border border-hairline rounded p-4 text-body text-ink focus:outline-none focus:border-ink transition-colors font-mono text-sm"
+              className="w-full h-40 font-mono text-body-sm"
               placeholder="Enter your menu rules here..."
             />
 
@@ -447,13 +448,13 @@ export default function AdminSettings() {
 
             {previewText && (
               <div className="mt-8 p-5 bg-surface-soft/50 border border-hairline rounded-lg">
-                <h3 className="text-body font-medium text-ink mb-2">AI Interpretation</h3>
-                <p className="text-body-sm text-ink/80 italic">{previewText}</p>
+                <h3 className="text-body text-ink mb-2">AI Interpretation</h3>
+                <p className="text-body-sm text-muted italic">{previewText}</p>
                 
                 {previewErrors.length > 0 && (
                   <div className="mt-4 p-3 bg-(--color-semantic-error)/10 border border-(--color-semantic-error)/20 rounded-md">
-                    <h4 className="text-caption font-semibold text-(--color-semantic-error) mb-1 uppercase tracking-wider">Conflicts Detected</h4>
-                    <ul className="list-disc list-inside text-sm text-(--color-semantic-error)/90 space-y-1">
+                    <h4 className="text-caption text-(--color-semantic-error) mb-1 uppercase tracking-wider">Conflicts Detected</h4>
+                    <ul className="list-disc list-inside text-body-sm text-(--color-semantic-error)/90 space-y-1">
                       {previewErrors.map((err, i) => <li key={i}>{err}</li>)}
                     </ul>
                   </div>
@@ -463,12 +464,12 @@ export default function AdminSettings() {
             
             {settings.menuConstraints?.length > 0 && !previewText && (
               <div className="mt-8">
-                <h3 className="text-body font-medium text-ink mb-3">Active Rules</h3>
+                <h3 className="text-body text-ink mb-3">Active Rules</h3>
                 <div className="space-y-2">
                   {settings.menuConstraints.map((c: any, i: number) => (
                     <div key={i} className="p-3 bg-canvas border border-hairline rounded flex items-start gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-(--color-primary) mt-1.5 shrink-0" />
-                      <span className="text-body-sm text-ink/90">{c.sourcePhrase}</span>
+                      <span className="text-body-sm text-ink">{c.sourcePhrase}</span>
                     </div>
                   ))}
                 </div>
@@ -480,15 +481,14 @@ export default function AdminSettings() {
 
         {/* Danger Zone */}
           <section id="danger" className="scroll-mt-24 space-y-6">
-            <Card className="p-5 shadow-none border-(--color-semantic-error) bg-(--color-semantic-error)/5">
+            <Card className="p-6 shadow-none border-(--color-semantic-error) bg-(--color-semantic-error)/5">
               <h2 className="text-card-title text-(--color-semantic-error) mb-4">Danger Zone</h2>
-              <div className="max-w-md">
-                <p className="text-body-sm text-ink mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <p className="text-body-sm text-ink max-w-2xl">
                   Permanently delete this hostel and all associated data, including users, dishes, menus, and issues. This action cannot be undone.
                 </p>
                 <Button 
-                  variant="primary" 
-                  className="bg-(--color-semantic-error) hover:bg-(--color-semantic-error)/90 text-white"
+                  variant="danger"
                   onClick={() => setDeleteHostelModal(true)}
                 >
                   Delete Hostel
@@ -500,17 +500,17 @@ export default function AdminSettings() {
       </div>
 
       <Modal isOpen={!!deleteModal} onClose={() => setDeleteModal(null)} title="Confirm Deletion">
-        <div className="p-4">
+        <div className="p-6">
           <p className="text-body text-ink mb-4">
             Are you sure you want to permanently delete this category?
           </p>
           {deleteModal?.type === 'mealCat' && (
-            <div className="bg-(--color-semantic-error)/10 text-(--color-semantic-error) p-3 rounded text-sm mb-4">
+            <div className="bg-(--color-semantic-error)/10 text-(--color-semantic-error) p-3 rounded text-body-sm mb-4">
               <strong>Warning:</strong> Deleting a meal category requires reassigning existing dishes.
               <div className="mt-3">
-                <label className="block font-medium mb-1">Reassign existing dishes to:</label>
-                <select 
-                  className="w-full p-2 border border-hairline rounded bg-surface-soft text-ink"
+                <label className="block mb-1">Reassign existing dishes to:</label>
+                <Select 
+                  className="w-full"
                   value={deleteModal.replacementCatIndex ?? ''}
                   onChange={e => setDeleteModal({ ...deleteModal, replacementCatIndex: e.target.value ? Number(e.target.value) : undefined })}
                 >
@@ -520,23 +520,23 @@ export default function AdminSettings() {
                       <option key={i} value={i}>{c.categoryName}</option>
                     ) : null
                   )}
-                </select>
+                </Select>
               </div>
             </div>
           )}
           <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setDeleteModal(null)}>Cancel</Button>
-            <Button variant="primary" className="bg-(--color-semantic-error) hover:bg-(--color-semantic-error)/90 text-white" onClick={handleDeleteConfirm}>Yes, Delete</Button>
+            <Button variant="danger" onClick={handleDeleteConfirm}>Yes, Delete</Button>
           </div>
         </div>
       </Modal>
 
       <Modal isOpen={deleteHostelModal} onClose={() => setDeleteHostelModal(false)} title="Delete Hostel">
-        <div className="p-4">
+        <div className="p-6">
           <p className="text-body text-ink mb-4">
             Are you absolutely sure you want to permanently delete this hostel? All data will be wiped out.
           </p>
-          <div className="bg-(--color-semantic-error)/10 text-(--color-semantic-error) p-3 rounded text-sm mb-4">
+          <div className="bg-(--color-semantic-error)/10 text-(--color-semantic-error) p-3 rounded text-body-sm mb-4">
             <strong>Warning:</strong> This action is irreversible. Please type <strong>DELETE</strong> to confirm.
             <div className="mt-3">
               <Input
@@ -550,8 +550,7 @@ export default function AdminSettings() {
           <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setDeleteHostelModal(false)}>Cancel</Button>
             <Button 
-              variant="primary" 
-              className="bg-(--color-semantic-error) hover:bg-(--color-semantic-error)/90 text-white" 
+              variant="danger" 
               onClick={handleDeleteHostel}
               disabled={deletingHostel || deleteHostelConfirm !== 'DELETE'}
             >
@@ -560,6 +559,8 @@ export default function AdminSettings() {
           </div>
         </div>
       </Modal>
+
+    </div>
 
       {/* Frozen Save Bar */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-canvas/80 backdrop-blur-md border-t border-hairline flex justify-center z-50 pointer-events-none">
@@ -573,7 +574,6 @@ export default function AdminSettings() {
           </Button>
         </div>
       </div>
-
-    </div>
+    </>
   )
 }

@@ -42,8 +42,7 @@ export default function AdminDishManagement() {
     tags: '',
     priceScore: 3,
     healthScore: 3,
-    itemClass: 'ROTATING',
-    defaultQuantity: ''
+    itemClass: 'ROTATING'
   })
 
 
@@ -194,8 +193,7 @@ export default function AdminDishManagement() {
       tags: dish.tags ? dish.tags.join(', ') : '',
       priceScore: dish.priceScore || 3,
       healthScore: dish.healthScore || 3,
-      itemClass: dish.itemClass || 'ROTATING',
-      defaultQuantity: dish.defaultQuantity || ''
+      itemClass: dish.itemClass || 'ROTATING'
     })
     setEditingDishId(dish._id)
     setShowModal(true)
@@ -252,8 +250,7 @@ export default function AdminDishManagement() {
         tags: '',
         priceScore: 3,
         healthScore: 3,
-        itemClass: 'ROTATING',
-        defaultQuantity: ''
+        itemClass: 'ROTATING'
       })
       loadDishes()
     } catch (err: unknown) {
@@ -325,7 +322,7 @@ export default function AdminDishManagement() {
         <div className="flex overflow-x-auto w-full sm:w-auto no-scrollbar">
           <button
             onClick={() => setActiveTab('ACTIVE')}
-            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'ACTIVE'
+            className={`py-3 px-4 border-b-2  text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'ACTIVE'
                 ? 'border-ink text-ink'
                 : 'border-transparent text-muted hover:text-ink hover:border-hairline'
               }`}
@@ -334,7 +331,7 @@ export default function AdminDishManagement() {
           </button>
           <button
             onClick={() => setActiveTab('UNDER_REVIEW')}
-            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'UNDER_REVIEW'
+            className={`py-3 px-4 border-b-2  text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'UNDER_REVIEW'
                 ? 'border-ink text-ink'
                 : 'border-transparent text-muted hover:text-ink hover:border-hairline'
               }`}
@@ -343,7 +340,7 @@ export default function AdminDishManagement() {
           </button>
           <button
             onClick={() => setActiveTab('INACTIVE')}
-            className={`py-3 px-4 border-b-2 font-medium text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'INACTIVE'
+            className={`py-3 px-4 border-b-2  text-body whitespace-nowrap transition-colors -mb-[1px] ${activeTab === 'INACTIVE'
                 ? 'border-ink text-ink'
                 : 'border-transparent text-muted hover:text-ink hover:border-hairline'
               }`}
@@ -362,8 +359,7 @@ export default function AdminDishManagement() {
                 tags: '',
                 priceScore: 3,
                 healthScore: 3,
-                itemClass: 'ROTATING',
-                defaultQuantity: ''
+                itemClass: 'ROTATING'
               })
               setShowModal(true)
             }}
@@ -453,10 +449,10 @@ export default function AdminDishManagement() {
                     className={`transition-colors hover:bg-surface-soft ${activeTab === 'ACTIVE' ? 'cursor-pointer' : ''}`}
                     onClick={() => { if (activeTab === 'ACTIVE') openReviewsModal(d) }}
                   >
-                    <TableCell className="font-medium text-ink text-center whitespace-nowrap sticky left-0 z-10 bg-canvas group-hover:bg-surface-soft shadow-[1px_0_0_0_var(--color-hairline)]">{d.name}</TableCell>
+                    <TableCell className="text-ink text-center whitespace-nowrap sticky left-0 z-10 bg-canvas group-hover:bg-surface-soft shadow-[1px_0_0_0_var(--color-hairline)]">{d.name}</TableCell>
                     <TableCell className="text-muted text-center whitespace-nowrap">{d.mealType}</TableCell>
                     <TableCell className="text-muted text-center">
-                      <span className={`inline-flex px-2 py-1 rounded text-caption uppercase font-bold tracking-wider border ${d.itemClass === 'FIXED' ? 'bg-ink border-ink text-canvas' : 'bg-transparent border-hairline text-muted'
+                      <span className={`inline-flex px-2 py-1 rounded text-caption uppercase  tracking-wider border ${d.itemClass === 'FIXED' ? 'bg-ink border-ink text-canvas' : 'bg-transparent border-hairline text-muted'
                         }`}>
                         {d.itemClass || 'ROTATING'}
                       </span>
@@ -497,11 +493,11 @@ export default function AdminDishManagement() {
                             </div>
                           ) : <span className="text-muted">No ratings</span>}
                         </TableCell>
-                        <TableCell className="text-center font-medium">
+                        <TableCell className="text-center">
                           <span className={d.totalVotes > 0 ? "text-ink" : "text-muted"}>
                             {d.totalVotes || 0}
                           </span>
-                          <span className="text-muted text-body-sm font-normal"> / {totalVoters}</span>
+                          <span className="text-muted text-body-sm"> / {totalVoters}</span>
                         </TableCell>
                         <TableCell className="text-center text-muted">
                           {dishStats.find(s => s._id === d._id)?.totalReviews || 0}
@@ -560,129 +556,119 @@ export default function AdminDishManagement() {
       )}
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingDishId ? 'Edit Dish' : 'Add New Dish'}>
-        <div className="p-4">
-          <form onSubmit={handleSaveDish} className="space-y-4">
+        <form onSubmit={handleSaveDish} className="p-6 space-y-5">
+          <div>
+            <label className="block text-body-sm mb-1.5">Dish Name</label>
+            <Input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g. Paneer Butter Masala"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="block text-body-sm text-muted mb-1">Dish Name</label>
+              <label className="block text-body-sm mb-1.5">Meal Type</label>
+              <Select
+                value={formData.mealType}
+                onChange={(e) => {
+                  const newMeal = e.target.value;
+                  const mealData = mealPlan.find(m => m.mealName === newMeal);
+                  const firstCat = mealData?.categories?.[0]?.categoryName || '';
+                  setFormData({ ...formData, mealType: newMeal, category: firstCat })
+                }}
+                className="w-full"
+              >
+                {mealPlan.map((m: any) => (
+                  <option key={m.mealName} value={m.mealName}>{m.mealName}</option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-body-sm mb-1.5">Category</label>
+              <Select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full"
+              >
+                {mealPlan.find(m => m.mealName === formData.mealType)?.categories?.map((cat: any) => (
+                  <option key={cat.categoryName} value={cat.categoryName}>{cat.categoryName}</option>
+                )) || <option value="">Select Meal Type</option>}
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div>
+              <label className="block text-body-sm mb-1.5">Schedule Type</label>
+              <Select
+                value={formData.itemClass}
+                onChange={(e) => setFormData({ ...formData, itemClass: e.target.value })}
+                className="w-full"
+              >
+                <option value="FIXED">Fixed Daily</option>
+                <option value="ROTATING">Rotating (Occasional)</option>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-body-sm mb-1.5">Tags <span className="text-muted text-body-xs ml-1">(Comma separated)</span></label>
               <Input
                 type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Paneer Butter Masala"
+                value={formData.tags}
+                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                placeholder="e.g. spicy, vegan, sweet"
               />
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-body-sm text-muted mb-1">Meal Type</label>
-                <Select
-                  value={formData.mealType}
-                  onChange={(e) => {
-                    const newMeal = e.target.value;
-                    const mealData = mealPlan.find(m => m.mealName === newMeal);
-                    const firstCat = mealData?.categories?.[0]?.categoryName || '';
-                    setFormData({ ...formData, mealType: newMeal, category: firstCat })
-                  }}
-                  className="w-full"
-                >
-                  {mealPlan.map((m: any) => (
-                    <option key={m.mealName} value={m.mealName}>{m.mealName}</option>
-                  ))}
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-body-sm text-muted mb-1">Fixed</label>
-                <Select
-                  value={formData.itemClass}
-                  onChange={(e) => setFormData({ ...formData, itemClass: e.target.value })}
-                  className="w-full"
-                >
-                  <option value="FIXED">Fixed</option>
-                  <option value="ROTATING">Rotating</option>
-                </Select>
-              </div>
+          <div className="grid grid-cols-2 gap-5">
+            <div>
+              <label className="block text-body-sm mb-1.5 flex items-center justify-between">
+                <span>Price Score</span>
+                <span className="text-muted text-body-xs bg-surface px-1.5 py-0.5 rounded">1-5</span>
+              </label>
+              <Input
+                type="number"
+                min="1"
+                max="5"
+                value={formData.priceScore}
+                onChange={(e) => setFormData({ ...formData, priceScore: Number(e.target.value) })}
+              />
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-body-sm text-muted mb-1">Category</label>
-                <Select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full"
-                >
-                  {mealPlan.find(m => m.mealName === formData.mealType)?.categories?.map((cat: any) => (
-                    <option key={cat.categoryName} value={cat.categoryName}>{cat.categoryName}</option>
-                  )) || <option value="">Select Meal Type</option>}
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-body-sm text-muted mb-1">Tags (comma separated)</label>
-                <Input
-                  type="text"
-                  value={formData.tags}
-                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  placeholder="spicy, North Indian"
-                />
-              </div>
+            <div>
+              <label className="block text-body-sm mb-1.5 flex items-center justify-between">
+                <span>Health Score</span>
+                <span className="text-muted text-body-xs bg-surface px-1.5 py-0.5 rounded">1-5</span>
+              </label>
+              <Input
+                type="number"
+                min="1"
+                max="5"
+                value={formData.healthScore}
+                onChange={(e) => setFormData({ ...formData, healthScore: Number(e.target.value) })}
+              />
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-body-sm text-muted mb-1">Default Quantity</label>
-                <Input
-                  type="text"
-                  value={formData.defaultQuantity}
-                  onChange={(e) => setFormData({ ...formData, defaultQuantity: e.target.value })}
-                  placeholder="e.g. 1 bowl, 2 pieces"
-                />
-              </div>
-              <div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-body-sm text-muted mb-1">Price Score (1–5)</label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={formData.priceScore}
-                  onChange={(e) => setFormData({ ...formData, priceScore: Number(e.target.value) })}
-                />
-              </div>
-              <div>
-                <label className="block text-body-sm text-muted mb-1">Health Score (1–5)</label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={formData.healthScore}
-                  onChange={(e) => setFormData({ ...formData, healthScore: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-2 pt-4 border-t border-hairline mt-6">
-              <Button variant="secondary"
-                type="button"
-                onClick={() => {
-                  setShowModal(false)
-                  setEditingDishId(null)
-                }}
-              >
-                Cancel
-              </Button>
-              <Button variant="primary" type="submit">
-                {editingDishId ? 'Update Dish' : 'Save Dish'}
-              </Button>
-            </div>
-          </form>
-        </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="secondary"
+              type="button"
+              onClick={() => {
+                setShowModal(false)
+                setEditingDishId(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit">
+              {editingDishId ? 'Save Changes' : 'Create Dish'}
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       {/* DELETE CONFIRM MODAL */}
@@ -698,7 +684,7 @@ export default function AdminDishManagement() {
 
       {/* APPROVE DISH MODAL */}
       <Modal isOpen={!!approveConfirmId} onClose={() => setApproveConfirmId(null)} title="Approve Dish">
-        <div className="p-4">
+        <div className="p-6">
           <form onSubmit={approve} className="space-y-4">
             <p className="text-body-sm text-muted">Assign initial price and health scores for this suggested dish.</p>
             <div className="grid grid-cols-2 gap-4">
@@ -735,14 +721,14 @@ export default function AdminDishManagement() {
 
       {/* REJECT DISH MODAL */}
       <Modal isOpen={!!rejectConfirmId} onClose={() => setRejectConfirmId(null)} title="Reject Dish">
-        <div className="p-4">
+        <div className="p-6">
           <form onSubmit={reject} className="space-y-4">
             <div>
               <label className="block text-body-sm text-muted mb-1">Reason for Rejection</label>
               <Input
                 type="text"
                 required
-                placeholder="e.g. Too expensive to prepare, unhygienic..."
+                placeholder="Too expensive to prepare, unhygienic..."
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
               />
@@ -757,14 +743,14 @@ export default function AdminDishManagement() {
 
       {/* DEACTIVATE DISH MODAL */}
       <Modal isOpen={!!deactivateConfirmId} onClose={() => { setDeactivateConfirmId(null); setDeactivateReason(''); }} title="Deactivate Dish">
-        <div className="p-4">
+        <div className="p-6">
           <form onSubmit={deactivate} className="space-y-4">
             <div>
               <label className="block text-body-sm text-muted mb-1">Reason for Deactivation (Visible to Students)</label>
               <Input
                 type="text"
                 required
-                placeholder="e.g. Out of season, temporarily unavailable..."
+                placeholder="Out of season, temporarily unavailable..."
                 value={deactivateReason}
                 onChange={(e) => setDeactivateReason(e.target.value)}
               />
@@ -790,12 +776,12 @@ export default function AdminDishManagement() {
                 <div key={r._id} className="p-4 bg-surface-soft border border-hairline rounded flex flex-col gap-2">
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className="font-medium text-ink block">{r.studentId?.name || 'Unknown Student'}</span>
+                      <span className="text-ink block">{r.studentId?.name || 'Unknown Student'}</span>
                       <span className="text-caption text-muted">{new Date(r.createdAt).toLocaleString()}</span>
                     </div>
-                    <span className="text-sm font-mono text-semantic-warning bg-semantic-warning/10 px-2 py-1 rounded font-bold">★ {r.rating}</span>
+                    <span className="text-body-sm font-mono text-semantic-warning bg-semantic-warning/10 px-2 py-1 rounded">★ {r.rating}</span>
                   </div>
-                  {r.comment && <p className="text-body-sm text-ink/90 mt-1 italic leading-relaxed">"{r.comment}"</p>}
+                  {r.comment && <p className="text-body-sm text-ink mt-1 italic leading-relaxed">"{r.comment}"</p>}
                 </div>
               ))}
             </div>

@@ -245,7 +245,7 @@ export const buildMessMenu = async (hostelId: string, variantLabel: string = 'St
   function getDaysAgoForDayIndex(dayIndex: number, from: Date, to: Date): number | null {
      let d = new Date(to);
      while (d >= from) {
-         if ((d.getDay() === 0 ? 6 : d.getDay() - 1) === dayIndex) {
+         if ((d.getUTCDay() === 0 ? 6 : d.getUTCDay() - 1) === dayIndex) {
              return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
          }
          d = new Date(d.getTime() - 24 * 60 * 60 * 1000);

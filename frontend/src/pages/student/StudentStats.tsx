@@ -141,11 +141,11 @@ export default function StudentStats() {
                 <div className="flex flex-col gap-4">
                   <div className="flex justify-between items-center border-b border-hairline pb-2">
                     <span className="text-body text-muted">Total Students</span>
-                    <span className="text-xl font-bold text-ink">{stats.totalStudents}</span>
+                    <span className="text-headline text-ink">{stats.totalStudents}</span>
                   </div>
                   <div className="flex justify-between items-center pb-2">
                     <span className="text-body text-muted flex items-center gap-2"><Activity className="w-4 h-4" /> Active Voters</span>
-                    <span className="text-xl font-bold text-ink">{stats.activeVotingStudents}</span>
+                    <span className="text-headline text-ink">{stats.activeVotingStudents}</span>
                   </div>
                 </div>
               </CardContent>
@@ -169,7 +169,7 @@ export default function StudentStats() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-6 text-muted text-sm">No active rules.</div>
+                  <div className="text-center py-6 text-muted text-body-sm">No active rules.</div>
                 )}
               </CardContent>
             </Card>
@@ -278,7 +278,7 @@ export default function StudentStats() {
                                 className="transition-colors hover:bg-surface-soft cursor-pointer"
                                 onClick={() => openReviewsModal(dish)}
                               >
-                                <TableCell className="font-medium text-ink text-center whitespace-nowrap sticky left-0 z-10 bg-canvas group-hover:bg-surface-soft shadow-[1px_0_0_0_var(--color-hairline)]">
+                                <TableCell className="text-ink text-center whitespace-nowrap sticky left-0 z-10 bg-canvas group-hover:bg-surface-soft shadow-[1px_0_0_0_var(--color-hairline)]">
                                   {dish.name}
                                 </TableCell>
                                 <TableCell className="text-muted text-center whitespace-nowrap">
@@ -289,7 +289,7 @@ export default function StudentStats() {
                                 </TableCell>
                                 <TableCell className="text-muted text-center">
                                   <span
-                                    className={`inline-flex px-2 py-1 rounded text-caption uppercase font-bold tracking-wider border ${dish.type === "FIXED" ? "bg-ink border-ink text-canvas" : "bg-transparent border-hairline text-muted"}`}
+                                    className={`inline-flex px-2 py-1 rounded text-caption uppercase  tracking-wider border ${dish.type === "FIXED" ? "bg-ink border-ink text-canvas" : "bg-transparent border-hairline text-muted"}`}
                                   >
                                     {dish.type || "ROTATING"}
                                   </span>
@@ -361,7 +361,7 @@ export default function StudentStats() {
                                     {dish.status}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-center font-medium">
+                                <TableCell className="text-center">
                                   <span
                                     className={
                                       dish.totalVotes > 0
@@ -371,7 +371,7 @@ export default function StudentStats() {
                                   >
                                     {dish.totalVotes || 0}
                                   </span>
-                                  <span className="text-muted text-body-sm font-normal">
+                                  <span className="text-muted text-body-sm">
                                     {" "}
                                     / {stats.activeVotingStudents}
                                   </span>
@@ -425,12 +425,12 @@ export default function StudentStats() {
                   className="p-3 bg-surface border border-hairline rounded-md"
                 >
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-ink">
+                    <span className="text-body-sm text-ink">
                       {r.studentId?.name ||
                         r.studentId?.username ||
                         "Unknown Student"}
                     </span>
-                    <span className="text-sm font-mono text-semantic-warning bg-semantic-warning/10 px-2 py-1 rounded font-bold">
+                    <span className="text-body-sm font-mono text-semantic-warning bg-semantic-warning/10 px-2 py-1 rounded">
                       ★ {r.rating}
                     </span>
                   </div>

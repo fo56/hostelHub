@@ -38,9 +38,9 @@ export function Pagination({ currentPage, totalPages, onPageChange, totalItems, 
       <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
         <div>
           <p className="text-body-sm text-muted">
-            Showing <span className="font-medium text-ink">{totalItems === 0 ? 0 : startItem}</span> to{' '}
-            <span className="font-medium text-ink">{endItem}</span> of{' '}
-            <span className="font-medium text-ink">{totalItems}</span> results
+            Showing <span className="text-ink">{totalItems === 0 ? 0 : startItem}</span> to{' '}
+            <span className="text-ink">{endItem}</span> of{' '}
+            <span className="text-ink">{totalItems}</span> results
           </p>
         </div>
         <div>
@@ -54,7 +54,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, totalItems, 
               <span className="sr-only">Previous</span>
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
-            <div className="px-4 py-2 border-y border-hairline text-body-sm font-medium text-ink bg-canvas flex items-center h-9">
+            <div className="px-4 py-2 border-y border-hairline text-body-sm text-ink bg-canvas flex items-center h-9">
               Page {currentPage} of {Math.max(1, totalPages)}
             </div>
             <Button

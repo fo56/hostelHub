@@ -244,7 +244,7 @@ export default function AdminMessMenu() {
                         <TableHead key={meal.mealName}>
                           <div className="flex flex-col">
                             <span>{meal.mealName}</span>
-                            {meal.startTime && meal.endTime && <span className="text-[10px] font-normal text-muted tracking-wide">({meal.startTime} - {meal.endTime})</span>}
+                            {meal.startTime && meal.endTime && <span className="text-[10px] text-muted tracking-wide">({meal.startTime} - {meal.endTime})</span>}
                           </div>
                         </TableHead>
                       ))}
@@ -253,15 +253,15 @@ export default function AdminMessMenu() {
                   <TableBody>
                     {days.map((day, index) => (
                       <TableRow key={day} className="transition-colors hover:bg-surface-soft">
-                        <TableCell className="font-medium text-ink">{day}</TableCell>
+                        <TableCell className="text-ink">{day}</TableCell>
                         {viewingPastMenu.meals.map((meal: any) => {
                           const slot = meal.slots?.[index];
-                          if (!slot) return <TableCell key={meal.mealName} className="text-muted"><span className="opacity-30">-</span></TableCell>;
+                          if (!slot) return <TableCell key={meal.mealName} className="text-muted"><span className="">-</span></TableCell>;
                           
                           const fixedNames = slot.fixedItems?.map((d: any) => d.name) || [];
                           
                           return (
-                            <TableCell key={meal.mealName} className="text-sm border-l border-hairline align-top py-2">
+                            <TableCell key={meal.mealName} className="text-body-sm border-l border-hairline align-top py-2">
                               {(fixedNames.length > 0 || (slot.rotatingItems && slot.rotatingItems.length > 0)) ? (
                                 <div className="flex flex-col gap-1">
                                   {slot.rotatingItems?.map((r: any, i: number) => {
@@ -270,11 +270,11 @@ export default function AdminMessMenu() {
                                     return <span key={`rot-${i}`} className="text-ink whitespace-normal text-body opacity-100">{name}</span>
                                   })}
                                   {fixedNames.map((name: string, i: number) => (
-                                    <span key={`fix-${i}`} className="text-body whitespace-normal text-ink opacity-60">{name}</span>
+                                    <span key={`fix-${i}`} className="text-body whitespace-normal text-ink">{name}</span>
                                   ))}
                                 </div>
                               ) : (
-                                <span className="opacity-30 text-muted">-</span>
+                                <span className="text-muted">-</span>
                               )}
                             </TableCell>
                           );
@@ -313,7 +313,7 @@ export default function AdminMessMenu() {
                                   setViewingPastMenu(hMenu);
                                 }}
                               >
-                                <TableCell className="font-medium text-ink whitespace-nowrap">
+                                <TableCell className="text-ink whitespace-nowrap">
                                   <div className="text-caption text-muted flex items-center gap-2">
                                     <span className="bg-canvas px-1.5 py-0.5 rounded border border-hairline">
                                       {hMenu.effectiveFrom ? formatDate(hMenu.effectiveFrom) : 'N/A'}
@@ -324,11 +324,11 @@ export default function AdminMessMenu() {
                                     </span>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-muted text-sm">
+                                <TableCell className="text-muted text-body-sm">
                                   {hMenu.variantLabel || 'Standard Menu'}
                                 </TableCell>
                                 <TableCell className="text-center">
-                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px]  border ${
                                     hMenu.status === 'PUBLISHED' ? 'border-[var(--color-semantic-success)] text-[var(--color-semantic-success)] bg-[var(--color-semantic-success)]/10' :
                                     'border-muted text-muted bg-surface-soft'
                                   }`}>
@@ -423,7 +423,7 @@ export default function AdminMessMenu() {
         <div>
           <h2 className="text-card-title text-ink">Menu Preview</h2>
           <p className="text-body-sm mt-1 text-(--color-semantic-warning)">
-            <strong className="font-medium">{totalVoters}/{totalStudents}</strong> have voted. <strong className="font-medium">{requestsNewMenu}</strong> users request for a new menu.
+            <strong className="">{totalVoters}/{totalStudents}</strong> have voted. <strong className="">{requestsNewMenu}</strong> users request for a new menu.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto mt-3 lg:mt-0">

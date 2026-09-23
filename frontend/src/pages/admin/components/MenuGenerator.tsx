@@ -7,13 +7,13 @@ export function MenuGenerator({ totalVoters, totalStudents, requestsNewMenu, gen
     <Card className="flex flex-col animate-fade-in stagger-2">
       <CardContent className="p-6 flex flex-col items-center justify-center flex-1 space-y-6">
         <div className="text-center">
-          <p className="text-2xl font-bold text-ink">
+          <p className="text-headline text-ink">
             {totalVoters} / {totalStudents}
           </p>
           <p className="text-body-sm text-muted">Students Voted</p>
         </div>
         <div className="text-center">
-          <p className="text-xl font-bold text-semantic-warning">
+          <p className="text-headline text-semantic-warning">
             {requestsNewMenu}
           </p>
           <p className="text-body-sm text-muted">Requesting New Menu</p>

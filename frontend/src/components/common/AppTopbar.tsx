@@ -57,7 +57,7 @@ export default function AppTopbar() {
       key={link.to}
       to={link.to}
       className={({ isActive }) =>
-        `px-2 sm:px-3 py-1.5 text-body-sm sm:text-body whitespace-nowrap font-medium rounded transition-colors ${
+        `px-2 sm:px-3 py-1.5 text-body-sm sm:text-body whitespace-nowrap  rounded transition-colors ${
           isActive 
             ? 'bg-ink text-canvas' 
             : 'text-muted hover:text-ink hover:bg-surface'
@@ -144,7 +144,7 @@ export default function AppTopbar() {
               to={link.to}
               onClick={() => setIsMobileMenuOpen(false)}
               className={({ isActive }) =>
-                `px-4 py-3 text-body font-medium rounded transition-colors ${
+                `px-4 py-3 text-body  rounded transition-colors ${
                   isActive 
                     ? 'bg-ink text-canvas' 
                     : 'text-muted hover:text-ink hover:bg-surface-soft'

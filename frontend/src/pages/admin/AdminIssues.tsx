@@ -8,6 +8,7 @@ import { Badge } from '../../components/ui/badge';
 import { Select } from '../../components/ui/select';
 import { Pagination } from '../../components/ui/pagination';
 import { Modal } from '../../components/ui/modal';
+import { Textarea } from '../../components/ui/textarea';
 import toast from 'react-hot-toast';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { formatDate } from '../../lib/utils';
@@ -165,18 +166,14 @@ export default function AdminIssues() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-row justify-between items-center w-full mb-2">
-        <h2 className="text-h3 font-semibold text-ink">Issues Management</h2>
-      </div>
-      
-      <div className="flex flex-col-reverse md:flex-row justify-between items-start md:items-end border-b border-hairline mb-6 gap-4">
-        <div className="flex overflow-x-auto w-full md:w-auto scrollbar-hide">
+      <div className="flex flex-col-reverse sm:flex-row justify-between items-start sm:items-end border-b border-hairline mb-6 gap-3 sm:gap-0">
+        <div className="flex overflow-x-auto w-full sm:w-auto no-scrollbar">
           <button
             onClick={() => { setFilterCategory('ALL'); setCurrentPage(1); }}
-            className={`whitespace-nowrap px-4 py-2 font-medium text-body transition-colors border-b-2 -mb-[1px] ${
+            className={`py-3 px-4 border-b-2  text-body whitespace-nowrap transition-colors -mb-[1px] ${
               filterCategory === 'ALL'
                 ? 'border-ink text-ink'
-                : 'border-transparent text-muted hover:text-ink'
+                : 'border-transparent text-muted hover:text-ink hover:border-hairline'
             }`}
           >
             All
@@ -185,10 +182,10 @@ export default function AdminIssues() {
             <button
               key={c}
               onClick={() => { setFilterCategory(c); setCurrentPage(1); }}
-              className={`whitespace-nowrap capitalize px-4 py-2 font-medium text-body transition-colors border-b-2 -mb-[1px] ${
+              className={`py-3 px-4 border-b-2  text-body whitespace-nowrap capitalize transition-colors -mb-[1px] ${
                 filterCategory === c
                   ? 'border-ink text-ink'
-                  : 'border-transparent text-muted hover:text-ink'
+                  : 'border-transparent text-muted hover:text-ink hover:border-hairline'
               }`}
             >
               {c}
@@ -294,7 +291,7 @@ export default function AdminIssues() {
               <TableBody>
                 {paginatedIssues.map((issue) => (
                   <TableRow key={issue._id} className="transition-colors hover:bg-surface-soft">
-                    <TableCell className="text-center capitalize text-ink font-medium">
+                    <TableCell className="text-center capitalize text-ink">
                       {issue.category}
                     </TableCell>
                     <TableCell className="max-w-[300px] leading-tight">
@@ -311,7 +308,7 @@ export default function AdminIssues() {
                         return nameToUse || 'No Name Set';
                       })()}
                     </TableCell>
-                    <TableCell className="text-center text-muted font-mono text-sm">
+                    <TableCell className="text-center text-muted font-mono text-body-sm">
                       {issue.roomNo}
                     </TableCell>
                     <TableCell className="text-center text-muted whitespace-nowrap font-mono">
@@ -361,12 +358,12 @@ export default function AdminIssues() {
       })()}
 
       <Modal isOpen={!!closePrompt} onClose={() => setClosePrompt(null)} title="Resolve Issue">
-        <div className="p-4">
+        <div className="p-6">
           <p className="text-body text-ink mb-4">Please provide a closing remark for the student.</p>
-          <textarea
+          <Textarea
             value={closePrompt?.note || ''}
             onChange={(e) => closePrompt && setClosePrompt({ ...closePrompt, note: e.target.value })}
-            className="w-full bg-surface-soft border border-hairline rounded p-3 text-body text-ink focus:outline-none focus:border-ink transition-colors"
+            className="w-full"
             rows={3}
           />
           <div className="flex justify-end gap-3 mt-6">

@@ -18,7 +18,7 @@ export async function getTodayMenu(hostelId: string) {
   const menu = await getCurrentMenu(hostelId)
   if (!menu) return null
 
-  const jsDay = new Date().getDay()
+  const jsDay = new Date().getUTCDay()
   const dayIndex = jsDay === 0 ? 6 : jsDay - 1
 
   const todayMeals = menu.meals.map(meal => ({

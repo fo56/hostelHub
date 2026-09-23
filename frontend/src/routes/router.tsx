@@ -11,7 +11,7 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
     }
   }
   render() {
-    if (this.state.hasError) return <div className="p-8 text-center text-muted">Failed to load page content. Please <button onClick={() => window.location.reload()} className="underline text-ink hover:text-ink/80 transition-colors">refresh</button>.</div>;
+    if (this.state.hasError) return <div className="p-8 text-center text-muted">Failed to load page content. Please <button onClick={() => window.location.reload()} className="underline text-ink hover:text-muted transition-colors">refresh</button>.</div>;
     return this.props.children;
   }
 }
