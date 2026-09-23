@@ -12,7 +12,7 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [22.x]
 
     steps:
     - uses: actions/checkout@v4
@@ -32,21 +32,7 @@ jobs:
         rm -rf node_modules
         npm ci --include=optional
 
-    - name: Ensure Linux esbuild binary
-      working-directory: ./frontend
-      run: |
-        ESBUILD_VERSION=$(node -p "require('./node_modules/esbuild/package.json').version")
-        npm install --no-save --package-lock=false \
-          --include=optional \
-          "@esbuild/linux-x64@$ESBUILD_VERSION"
 
-    - name: Ensure Linux rollup binary
-      working-directory: ./frontend
-      run: |
-        ROLLUP_VERSION=$(node -p "require('./node_modules/rollup/package.json').version")
-        npm install --no-save --package-lock=false \
-          --include=optional \
-          "@rollup/rollup-linux-x64-gnu@$ROLLUP_VERSION"
 
     - name: Type Check Frontend
       run: npx tsc --noEmit
