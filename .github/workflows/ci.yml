@@ -27,8 +27,8 @@ jobs:
           backend/package-lock.json
 
     - name: Install Frontend Dependencies
-      # Uses strictly your package-lock.json so nothing is uninstalled
-      run: npm ci
+      # Use npm install instead of npm ci to workaround the npm optional dependencies bug on cross-platform (Windows -> Linux)
+      run: npm install
       working-directory: ./frontend
 
     - name: Force esbuild Linux binary download
@@ -49,7 +49,7 @@ jobs:
       working-directory: ./frontend
 
     - name: Install Backend Dependencies
-      run: npm ci
+      run: npm install
       working-directory: ./backend
 
     - name: Type Check Backend
