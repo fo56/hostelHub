@@ -27,14 +27,18 @@ jobs:
           backend/package-lock.json
 
     - name: Install Frontend Dependencies
-      # Use npm install instead of npm ci to workaround the npm optional dependencies bug on cross-platform (Windows -> Linux)
-      run: npm install
       working-directory: ./frontend
+      run: |
+        rm -rf node_modules
+        npm install --include=optional
 
-    - name: Force esbuild Linux binary download
-      # Manually runs esbuild's fallback downloader to get the missing Linux file
-      run: node node_modules/esbuild/install.js
+    - name: Rebuild native frontend dependencies
       working-directory: ./frontend
+      run: npm rebuild
+
+    - name: Install esbuild Linux binary
+      working-directory: ./frontend
+      run: node node_modules/esbuild/install.js
 
     - name: Type Check Frontend
       run: npx tsc --noEmit
@@ -49,8 +53,10 @@ jobs:
       working-directory: ./frontend
 
     - name: Install Backend Dependencies
-      run: npm install
       working-directory: ./backend
+      run: |
+        rm -rf node_modules
+        npm install --include=optional
 
     - name: Type Check Backend
       run: npx tsc --noEmit
