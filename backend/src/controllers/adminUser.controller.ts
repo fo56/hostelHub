@@ -18,7 +18,7 @@ const generatePassword = (): string => {
 // Create User (Student/Worker)
 export const createUser = async (req: Request, res: Response) => {
     const adminId = (req as any).user?._id;
-    let { username, password, name, role, roomNo } = req.body;
+    let { username, password, name, role, roomNo, permissions } = req.body;
 
     if (!role) {
       return res.status(400).json({ message: 'Role is required' });
@@ -73,6 +73,7 @@ export const createUser = async (req: Request, res: Response) => {
       username,
       role,
       roomNo,
+      permissions: role === 'ADMIN' ? permissions : [],
       passwordHash
     });
 
@@ -119,7 +120,7 @@ export const bulkCreateUsers = async (req: Request, res: Response) => {
     const bcrypt = require('bcrypt');
 
     for (const u of users) {
-      let { username, password, name, role, roomNo } = u;
+      let { username, password, name, role, roomNo, permissions } = u;
       
       // Generate or format username
       if (username) {
@@ -153,6 +154,7 @@ export const bulkCreateUsers = async (req: Request, res: Response) => {
         username,
         role: role || 'STUDENT',
         roomNo,
+        permissions: role === 'ADMIN' ? permissions : [],
         passwordHash
       });
 

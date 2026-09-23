@@ -10,7 +10,7 @@ const RULE_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          action: { type: 'string', enum: ['ALLOW_IF', 'REQUIRE_IF', 'LIMIT', 'CLOSE_SLOT_IF'] },
+          action: { type: 'string', enum: ['ALLOW_IF', 'REQUIRE_IF', 'LIMIT'] },
           appliesTo: {
             type: 'object',
             properties: {
@@ -42,7 +42,7 @@ Each rule has exactly one action:
 - ALLOW_IF: the dish/tag may only be placed when the condition is true. DO NOT use ALLOW_IF for spacing/gap rules.
 - REQUIRE_IF: the dish/tag must be placed when the condition is true
 - LIMIT: caps how many times a tag may appear. Use "max" to set the limit. If it's a spacing/gap rule within the week (e.g. "alternate days", "at least 3 days between", "no continuous", "max 2 per week"), you MUST use LIMIT with "max" and "windowSize". For example, "alternate days" = windowSize: 2, max: 1.
-- CLOSE_SLOT_IF: closes an entire meal slot when the condition is true (no dishId/tag needed)
+
 
 Conditions are JsonLogic expressions using only these variables via {"var": "..."}:
 - day (0=Monday..6=Sunday)

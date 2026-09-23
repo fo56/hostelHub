@@ -8,7 +8,7 @@ const issueSchema = new mongoose.Schema(
     roomNo: { type: String, required: true },
     category: { type: String, required: true },
     priority: { type: String, enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'], required: true },
-    status: { type: String, enum: ['OPEN', 'CLOSED'], default: 'OPEN' },
+    status: { type: String, enum: ['OPEN', 'RESOLVED', 'CLOSED'], default: 'OPEN' },
     description: { type: String, required: true },
     resolverNote: { type: String },
   },

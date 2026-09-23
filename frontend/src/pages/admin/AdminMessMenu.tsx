@@ -25,7 +25,7 @@ export default function AdminMessMenu() {
   const [menuVariants, setMenuVariants] = useState<any[]>([])
   const [menu, setMenu] = useState<any>(null)
   const [publishing, setPublishing] = useState(false)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [showTrendModal, setShowTrendModal] = useState(false)
   
   // Voting stats state
@@ -66,7 +66,7 @@ export default function AdminMessMenu() {
            setTimeout(() => toast.error(`Solver Warnings:\n${res.solverFailures.join('\n')}`, { duration: 6000 }), 500);
         }
       }
-      setHasUnsavedChanges(false)
+      // setHasUnsavedChanges(false)
     }).catch((err: any) => {
       toast.error(err.message || 'Failed to fetch menu')
     })
@@ -89,7 +89,7 @@ export default function AdminMessMenu() {
     }).catch(() => {})
   }, [request])
 
-  const saveMenuEdits = async () => {
+  /* const saveMenuEdits = async () => {
     try {
       await request('/admin/menu/update', 'PUT', { meals: menu.meals })
       setHasUnsavedChanges(false)
@@ -97,15 +97,15 @@ export default function AdminMessMenu() {
     } catch (err: any) {
       toast.error(err.message || 'Failed to save menu edits')
     }
-  }
+  } */
 
   const publishMenu = async () => {
     try {
       setPublishing(true)
-      if (hasUnsavedChanges) {
+      /* if (hasUnsavedChanges) {
         await request('/admin/menu/update', 'PUT', { menuId: menu._id, meals: menu.meals })
         setHasUnsavedChanges(false)
-      }
+      } */
       await request('/admin/menu/publish', 'POST', { menuId: menu._id })
       setMenu((prev: any) => ({ ...prev, status: 'PUBLISHED' }))
       toast.success('Menu published successfully!')
@@ -138,8 +138,8 @@ export default function AdminMessMenu() {
       return;
     }
     
-    setMenu((prev: any) => {
-      const newMenu = JSON.parse(JSON.stringify(prev));
+    const newMenu = JSON.parse(JSON.stringify(menu));
+    // const newMenu = JSON.parse(JSON.stringify(prev));
       const newSlots = newMenu.meals[mealIndex].slots;
       
       const currentItem = newSlots[dayIndex].rotatingItems[itemIndex];
@@ -148,9 +148,9 @@ export default function AdminMessMenu() {
       newSlots[dayIndex].rotatingItems[itemIndex] = targetItem;
       newSlots[targetDayIndex].rotatingItems[itemIndex] = currentItem;
       
-      return newMenu;
-    });
-    setHasUnsavedChanges(true);
+    setMenu(newMenu);
+    // Auto-save
+    request('/admin/menu/update', 'PUT', { meals: newMenu.meals }).then(() => { toast.success('Menu auto-saved'); }).catch((e: any) => { toast.error(e.message || 'Auto-save failed'); });
   }
 
   const handleGenerateMenu = async () => {
@@ -267,10 +267,10 @@ export default function AdminMessMenu() {
                                   {slot.rotatingItems?.map((r: any, i: number) => {
                                     const name = r.item?.name || r.item?.dishId?.name;
                                     if (!name) return null;
-                                    return <span key={`rot-${i}`} className="text-ink whitespace-normal text-body">{name}</span>
+                                    return <span key={`rot-${i}`} className="text-ink whitespace-normal text-body opacity-100">{name}</span>
                                   })}
                                   {fixedNames.map((name: string, i: number) => (
-                                    <span key={`fix-${i}`} className="text-body whitespace-normal text-muted opacity-80">{name}</span>
+                                    <span key={`fix-${i}`} className="text-body whitespace-normal text-ink opacity-60">{name}</span>
                                   ))}
                                 </div>
                               ) : (
@@ -436,7 +436,7 @@ export default function AdminMessMenu() {
           <Button onClick={handleGenerateMenu} disabled={generating || totalVoters === 0} variant="secondary" className="flex-1 sm:flex-none whitespace-nowrap">
             {generating ? 'Generating...' : 'Generate New Menu'}
           </Button>
-          {menu && menu.status !== 'PUBLISHED' && hasUnsavedChanges && (
+          {/*
             <Button 
               onClick={saveMenuEdits} 
               variant="secondary"
@@ -444,7 +444,7 @@ export default function AdminMessMenu() {
             >
               Save Edits
             </Button>
-          )}
+          */}
           {menu && (
             <Button 
               onClick={publishMenu}
@@ -469,11 +469,11 @@ export default function AdminMessMenu() {
               key={variant._id} 
               variant={menu?._id === variant._id ? "primary" : "secondary"}
               onClick={() => {
-                if (hasUnsavedChanges) {
+                /*
                   if (!window.confirm('You have unsaved changes. Switch variant anyway?')) return;
-                }
+                */
                 setMenu(variant)
-                setHasUnsavedChanges(false)
+                setMenu(variant)
               }}
               className="text-body-sm"
             >
@@ -493,19 +493,6 @@ export default function AdminMessMenu() {
         )}
       </Card>
     </div>
-      {/* Frozen Save Bar */}
-      {hasUnsavedChanges && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-canvas/80 backdrop-blur-md border-t border-hairline flex justify-center z-50 pointer-events-none">
-          <div className="pointer-events-auto w-full max-w-sm">
-            <Button 
-              onClick={saveMenuEdits} 
-              className="w-full transition-all shadow-none bg-ink text-canvas scale-105"
-            >
-              Save Changes
-            </Button>
-          </div>
-        </div>
-      )}
     </>
   )
 }

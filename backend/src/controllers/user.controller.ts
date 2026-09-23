@@ -18,7 +18,9 @@ export const getMe = async (req: Request, res: Response) => {
       name: dbUser.name ?? null,
       email: dbUser.email ?? null,
       username: dbUser.username ?? null,
-      roomNo: dbUser.roomNo ?? null
+      roomNo: dbUser.roomNo ?? null,
+      isPrimaryAdmin: dbUser.isPrimaryAdmin,
+      permissions: dbUser.permissions
     });
 };
 

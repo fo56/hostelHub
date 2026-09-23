@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom'; // Ensure DOM matchers like toHaveTextContent work
@@ -48,7 +47,7 @@ describe('AuthContext', () => {
 
     (globalThis.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ user: { _id: '1', username: 'john_doe', role: 'STUDENT' } })
+      json: async () => ({ id: '1', username: 'john_doe', role: 'STUDENT' })
     });
 
     render(
@@ -66,7 +65,7 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('john_doe');
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/auth/me'),
+      expect.stringContaining('/users/me'),
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: 'Bearer mock-valid-token'

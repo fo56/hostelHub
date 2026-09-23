@@ -19,7 +19,7 @@ describe('StudentStats Controller - getStudentStats', () => {
 
   beforeEach(() => {
     req = {
-      user: { _id: 'user123', hostelId: 'hostel123', role: 'STUDENT', username: 'testuser', isActive: true, name: 'Test User' } as any
+      user: { _id: 'user123', hostelId: '64f1a2b3c4d5e6f7a8b9c0d1', role: 'STUDENT', username: 'testuser', isActive: true, name: 'Test User' } as any
     };
     res = {
       status: vi.fn().mockReturnThis(),

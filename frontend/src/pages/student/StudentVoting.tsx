@@ -6,7 +6,7 @@ import { logger } from '../../lib/logger'
 import type { MealType, Dish } from '../../lib/types'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { Plus, ChevronDown } from 'lucide-react'
+import { Plus, ChevronDown, Ban } from 'lucide-react'
 import { Modal } from '../../components/ui/modal'
 import { Select } from '../../components/ui/select'
 
@@ -113,6 +113,7 @@ export default function StudentVoting() {
 
   const [mealPlan, setMealPlan] = useState<any[]>([])
   const [dishes, setDishes] = useState<Dish[]>([])
+  const [inactiveDishes, setInactiveDishes] = useState<any[]>([])
   const [selections, setSelections] = useState<Record<string, string[]>>({})
   const [initialSelections, setInitialSelections] = useState<Record<string, string[]>>({})
   const [wantsNewMenu, setWantsNewMenu] = useState(false)
@@ -135,6 +136,7 @@ export default function StudentVoting() {
 
         setMealPlan(data.mealPlan || [])
         setDishes(data.availableDishes || [])
+        setInactiveDishes(data.inactiveDishes || [])
 
         const initialSelectionsObj: Record<string, string[]> = {}
         if (data.votes) {
@@ -376,6 +378,31 @@ export default function StudentVoting() {
                             </button>
                           )
                         })}
+
+                        {inactiveDishes.filter(d => d.mealType === meal.mealName && d.category === cat.categoryName).length > 0 && (
+                          <div className="mt-4 border-t border-hairline/50 pt-3">
+                            <h4 className="text-[10px] uppercase font-semibold tracking-wider text-muted mb-2 px-1">Deactivated / Rejected</h4>
+                            <div className="flex flex-col gap-2">
+                              {inactiveDishes
+                                .filter(d => d.mealType === meal.mealName && d.category === cat.categoryName)
+                                .map(dish => (
+                                  <div key={dish._id} className="w-full px-4 py-3 text-left bg-surface/30 border border-hairline/50 rounded-lg opacity-75">
+                                    <div className="flex justify-between w-full items-start gap-2">
+                                      <span className="leading-tight text-body whitespace-normal font-normal text-muted line-through">
+                                        {dish.name}
+                                      </span>
+                                      <Ban className="w-4 h-4 text-muted/50 shrink-0" />
+                                    </div>
+                                    {dish.rejectionReason && (
+                                      <div className="mt-2 text-xs text-(--color-semantic-warning)">
+                                        Reason: {dish.rejectionReason}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
 
                         {/* empty check removed as we now hide the category entirely */}
                       </div>

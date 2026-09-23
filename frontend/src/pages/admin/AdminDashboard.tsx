@@ -105,7 +105,7 @@ export default function AdminDashboard() {
                   {stats.recentActivity.map((log: any) => (
                     <TableRow key={log._id}>
                       <TableCell className="text-ink py-2 text-sm">
-                        {log.userId?.name ? `${log.userId.name} (${log.userId.username})` : (log.userId?.username || 'Unknown User')}
+                        {log.userId?.username || 'Unknown User'}
                       </TableCell>
                       <TableCell className="text-muted py-2 text-sm">
                         {log.userId?.role || 'UNKNOWN'}

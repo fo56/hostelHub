@@ -28,7 +28,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const recentActivity = await ActivityLog.find({ hostelId })
       .sort({ timestamp: -1 })
       .limit(15)
-      .populate('userId', 'name role')
+      .populate('userId', 'username role')
       .lean();
 
     return res.status(200).json({

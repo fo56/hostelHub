@@ -34,9 +34,18 @@ export const getStudentVotes = async (req: Request, res: Response) => {
       .populate('votes.dishes', '_id name mealType category healthScore priceScore')
       .lean();
 
+    // 3. Fetch all INACTIVE/Rejected dishes
+    const inactiveDishes = await Dish.find({
+      hostelId,
+      status: 'INACTIVE'
+    })
+      .select('_id name mealType category rejectionReason')
+      .lean();
+
     return res.status(200).json({
       mealPlan: hostel.mealPlan,
       availableDishes,
+      inactiveDishes,
       votes: voteRecord?.votes || [],
       wantsNewMenu: voteRecord?.wantsNewMenu || false
     });

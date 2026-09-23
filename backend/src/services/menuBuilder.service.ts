@@ -89,7 +89,7 @@ function extractAssignment(result: any, openDays: number[]): Map<number, string>
  * @param variantLabel - Menu generation variant (e.g., 'Standard', 'Low Repetition') to tweak score weights.
  * @returns Map of day index to chosen dishId.
  */
-function solveMealAssignment(
+export function solveMealAssignment(
   candidates: { dishId: string; finalScore: number; tags: string[]; name: string; _id: string }[],
   openDays: number[],
   mealType: string,
@@ -154,6 +154,13 @@ function solveMealAssignment(
       };
       model.ints[varKey] = 1;
 
+      // Default variety constraint: prevent the same dish from being served every day
+      const dishLimitKey = `limit_default_${c.dishId}`;
+      const defaultLimit = Math.max(2, Math.ceil(openDays.length / (candidates.length || 1)) + 1);
+      model.constraints[dishLimitKey] = model.constraints[dishLimitKey] ?? { max: defaultLimit };
+      model.variables[varKey][dishLimitKey] = 1;
+
+
       // Handle LIMIT
       const limitRules = rules.filter(r => r.action === 'LIMIT' && ruleApplies(r, ctx));
       for (const limitRule of limitRules) {
@@ -172,27 +179,29 @@ function solveMealAssignment(
       }
 
       // Handle REQUIRE_IF
-      const reqRules = rules.filter(r => r.action === 'REQUIRE_IF' && ruleApplies(r, ctx));
-      for (const req of reqRules) {
-          try {
-            if (jsonLogic.apply(req.condition, ctx)) {
-              // Instead of pinning exactly this dish, we add it to a requirement group
-              // The MILP solver will ensure at least ONE dish from this group is selected today
-              const groupId = `req_${(req as any)._id || Math.random()}_${day}`;
-              if (!requireGroups.has(groupId)) requireGroups.set(groupId, []);
-              
-              requireGroups.get(groupId)!.push(varKey);
-            }
-          } catch(e) {}
+      for (let rIdx = 0; rIdx < rules.length; rIdx++) {
+         const req = rules[rIdx];
+         if (req.action === 'REQUIRE_IF' && ruleApplies(req, ctx)) {
+           try {
+             if (jsonLogic.apply(req.condition, ctx)) {
+               // The MILP solver will ensure at least ONE dish from this group is selected today
+               const groupId = `req_rule_${rIdx}_${day}`;
+               if (!requireGroups.has(groupId)) requireGroups.set(groupId, []);
+               
+               requireGroups.get(groupId)!.push(varKey);
+             }
+           } catch(e) {}
+         }
       }
     }
   }
 
-  // Enforce REQUIRE_IF groups by massive score boost to prevent infeasibility crashes
+  // Enforce REQUIRE_IF groups by adding a hard MILP constraint (min 1)
   for (const [groupId, varKeys] of requireGroups) {
+    model.constraints[groupId] = { min: 1 };
     for (const varKey of varKeys) {
        if (model.variables[varKey]) {
-          model.variables[varKey].score += 10000;
+          model.variables[varKey][groupId] = 1;
        }
     }
   }
@@ -249,11 +258,16 @@ export const buildMessMenu = async (hostelId: string, variantLabel: string = 'St
       const from = menu.effectiveFrom!;
       const to = menu.effectiveTo || now;
       
+      const daysAgoMap: (number | null)[] = [];
+      for (let d = 0; d < 7; d++) {
+          daysAgoMap[d] = getDaysAgoForDayIndex(d, from, to);
+      }
+
       for (const meal of menu.meals) {
           for (let d = 0; d < 7; d++) {
              const slot = meal.slots[d];
              if (slot && slot.status === 'SCHEDULED' && slot.rotatingItems) {
-                const daysAgo = getDaysAgoForDayIndex(d, from, to);
+                const daysAgo = daysAgoMap[d];
                 if (daysAgo !== null) {
                     for (const ri of slot.rotatingItems) {
                        // After populate, ri.item IS the Dish doc — read _id directly

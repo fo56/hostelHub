@@ -43,6 +43,7 @@ export const createAdminDish = async (req: Request, res: Response) => {
     });
 
     await ActivityLog.create({
+      hostelId,
       userId: adminId,
       action: `ADMIN_CREATED_DISH:${dish.name}`,});
 
@@ -78,6 +79,7 @@ export const suggestDish = async (req: Request, res: Response) => {
     });
 
     await ActivityLog.create({
+      hostelId,
       userId,
       action: 'SUGGEST_DISH',});
 

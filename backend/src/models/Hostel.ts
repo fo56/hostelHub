@@ -23,7 +23,7 @@ const hostelSchema = new mongoose.Schema(
     menuConstraints: [{
       action: {
         type: String,
-        enum: ['ALLOW_IF', 'REQUIRE_IF', 'LIMIT', 'CLOSE_SLOT_IF'],
+        enum: ['ALLOW_IF', 'REQUIRE_IF', 'LIMIT'],
         required: true,
       },
       appliesTo: {

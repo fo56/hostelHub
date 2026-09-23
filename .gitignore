@@ -13,3 +13,5 @@ build/
 docs/
 .agents/
 backend/seed.ts
+archive/
+backend/src/scripts/

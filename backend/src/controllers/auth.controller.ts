@@ -10,7 +10,8 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken, refreshA
 // ADMIN REGISTRATION
 export const registerAdmin = async (req: Request, res: Response): Promise<void> => {
   const session = await mongoose.startSession();
-  session.startTransaction();
+  try {
+    session.startTransaction();
 
     const { hostelName, adminName, adminEmail, adminPassword, mealPlan } = req.body;
 
@@ -68,8 +69,7 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
     await user.save({ session });
 
     await session.commitTransaction();
-    session.endSession();
-
+    
     const accessToken = generateAccessToken({
       userId: user._id.toString(),
       username: user.username,
@@ -82,10 +82,17 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
     res.status(201).json({
       message: 'Admin registered successfully',
       hostel: { id: hostel._id, name: hostel.name, domain: hostel.domain },
-      user: { id: user._id, name: user.name, username: user.username, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, username: user.username, email: user.email, role: user.role, isPrimaryAdmin: user.isPrimaryAdmin, permissions: user.permissions },
       accessToken,
       refreshToken
     });
+  } catch (error) {
+    await session.abortTransaction();
+    logger.error('AUTH', `Admin registration error: ${(error as Error).message}`);
+    res.status(500).json({ message: 'Internal server error during registration' });
+  } finally {
+    session.endSession();
+  }
 };
 
 // UNIFIED LOGIN (Email & Password)
@@ -122,9 +129,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
     const refreshToken = await generateRefreshToken(user._id.toString());
 
-    res.json({
+    res.status(200).json({
       message: 'Login successful',
-      user: { id: user._id, name: user.name, username: user.username, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, username: user.username, email: user.email, role: user.role, isPrimaryAdmin: user.isPrimaryAdmin, permissions: user.permissions },
       accessToken,
       refreshToken
     });

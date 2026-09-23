@@ -348,6 +348,9 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: any) {
             </div>
           </div>
         )}
+        <div className="bg-surface-soft p-3 rounded border border-hairline text-body-sm text-muted">
+          <p><strong>Note:</strong> Usernames and Login IDs are permanent and cannot be changed.</p>
+        </div>
         <div className="pt-2 flex justify-end gap-3">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

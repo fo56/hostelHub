@@ -9,23 +9,23 @@ export function MenuSlotsTable({ menu, swapDish }: any) {
       <Table>
         <TableHeader className="bg-surface-soft">
           <TableRow>
-            <TableHead className="w-32 sticky left-0 bg-surface-soft z-10 text-center">Meal</TableHead>
-            {localDays.map(day => (
-              <TableHead key={day} className="min-w-[140px] text-center">{day}</TableHead>
+            <TableHead className="w-32 sticky left-0 bg-surface-soft z-10 text-center border-r border-hairline">Day</TableHead>
+            {menu.meals.map((meal: any) => (
+              <TableHead key={meal.mealName} className="min-w-[140px] text-center">{meal.mealName}</TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {menu.meals.map((meal: any, mealIndex: number) => (
-            <TableRow key={meal.mealName}>
+          {localDays.map((day, dayIndex) => (
+            <TableRow key={day}>
               <TableCell className="font-medium text-ink sticky left-0 bg-surface z-10 border-r border-hairline text-center">
-                {meal.mealName}
+                {day}
               </TableCell>
-              {localDays.map((_day, index) => {
-                const slot = meal.slots[index];
+              {menu.meals.map((meal: any, mealIndex: number) => {
+                const slot = meal.slots[dayIndex];
                 const fixedNames = slot?.fixedItems?.map((f: any) => f.name) || [];
                 return (
-                  <TableCell key={index} className="align-top">
+                  <TableCell key={meal.mealName} className="align-top">
                     {slot && slot.status === 'SCHEDULED' ? (
                       <div className="flex flex-col gap-1">
                         {slot.rotatingItems?.map((r: any, i: number) => {
@@ -33,18 +33,18 @@ export function MenuSlotsTable({ menu, swapDish }: any) {
                           if (!name) return null;
                           return (
                             <div key={`rot-${i}`} className="flex items-start justify-between gap-1 group">
-                              <span className="text-ink whitespace-normal text-body">{name}</span>
+                              <span className="text-ink whitespace-normal text-body opacity-100">{name}</span>
                               {menu.status !== 'PUBLISHED' && (
-                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <div className="flex transition-opacity shrink-0">
                                   <button 
-                                    onClick={() => swapDish(mealIndex, index, i, 'up')}
-                                    disabled={index === 0}
+                                    onClick={() => swapDish(mealIndex, dayIndex, i, 'up')}
+                                    disabled={dayIndex === 0}
                                     className="px-1 hover:text-ink text-muted disabled:opacity-0"
                                     title="Move Up"
                                   >↑</button>
                                   <button 
-                                    onClick={() => swapDish(mealIndex, index, i, 'down')}
-                                    disabled={index === 6}
+                                    onClick={() => swapDish(mealIndex, dayIndex, i, 'down')}
+                                    disabled={dayIndex === 6}
                                     className="px-1 hover:text-ink text-muted disabled:opacity-0"
                                     title="Move Down"
                                   >↓</button>
@@ -54,7 +54,7 @@ export function MenuSlotsTable({ menu, swapDish }: any) {
                           )
                         })}
                         {fixedNames.map((name: string, i: number) => (
-                          <span key={`fix-${i}`} className="text-body whitespace-normal text-muted opacity-80">{name}</span>
+                          <span key={`fix-${i}`} className="text-body whitespace-normal text-ink opacity-60">{name}</span>
                         ))}
                       </div>
                     ) : (

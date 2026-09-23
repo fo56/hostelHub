@@ -7,7 +7,7 @@ import { Card } from '../../components/ui/card'
 import { Modal } from '../../components/ui/modal'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
-import { Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react'
+import { Pencil, Trash2, CheckCircle, XCircle, Ban } from 'lucide-react'
 
 type TabType = 'ACTIVE' | 'UNDER_REVIEW' | 'INACTIVE'
 
@@ -31,6 +31,10 @@ export default function AdminDishManagement() {
 
   const [rejectConfirmId, setRejectConfirmId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+
+  const [deactivateConfirmId, setDeactivateConfirmId] = useState<string | null>(null)
+  const [deactivateReason, setDeactivateReason] = useState('')
+
   const [formData, setFormData] = useState({
     name: '',
     mealType: 'Lunch',
@@ -41,6 +45,29 @@ export default function AdminDishManagement() {
     itemClass: 'ROTATING',
     defaultQuantity: ''
   })
+
+
+
+  const deactivate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!deactivateConfirmId) return
+
+    if (!deactivateReason || !deactivateReason.trim()) {
+      toast.error('Deactivation reason is required.')
+      return
+    }
+
+    try {
+      await request(`/admin/dishes/${deactivateConfirmId}/toggle-status`, 'PATCH', { status: 'INACTIVE', note: deactivateReason })
+      loadDishes()
+      toast.success('Dish deactivated successfully!')
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to deactivate dish')
+    } finally {
+      setDeactivateConfirmId(null)
+      setDeactivateReason('')
+    }
+  }
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -116,19 +143,23 @@ export default function AdminDishManagement() {
   }
 
   const sortedDishes = [...dishes].sort((a, b) => {
-    if (!sortConfig) {
-      // Default grouping logic: MealType then itemClass
+    // Helper for default grouping logic
+    const defaultSort = (dishA: any, dishB: any) => {
       const mealOrder: Record<string, number> = { Breakfast: 1, Lunch: 2, Snack: 3, Dinner: 4 };
-      const m1 = mealOrder[a.mealType] || 99;
-      const m2 = mealOrder[b.mealType] || 99;
+      const m1 = mealOrder[dishA.mealType] || 99;
+      const m2 = mealOrder[dishB.mealType] || 99;
       if (m1 !== m2) return m1 - m2;
 
       const classOrder: Record<string, number> = { FIXED: 1, ROTATING: 2 };
-      const c1 = classOrder[a.itemClass] || 99;
-      const c2 = classOrder[b.itemClass] || 99;
+      const c1 = classOrder[dishA.itemClass] || 99;
+      const c2 = classOrder[dishB.itemClass] || 99;
       if (c1 !== c2) return c1 - c2;
 
-      return (a.name || '').localeCompare(b.name || '');
+      return (dishA.name || '').localeCompare(dishB.name || '');
+    }
+
+    if (!sortConfig) {
+      return defaultSort(a, b);
     }
 
     const { key, direction } = sortConfig
@@ -139,13 +170,20 @@ export default function AdminDishManagement() {
     if (valA == null) valA = ''
     if (valB == null) valB = ''
 
+    let comparison = 0;
     if (typeof valA === 'string' && typeof valB === 'string') {
-      return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
+      comparison = valA.localeCompare(valB)
+    } else {
+      if (valA < valB) comparison = -1
+      else if (valA > valB) comparison = 1
     }
 
-    if (valA < valB) return direction === 'asc' ? -1 : 1
-    if (valA > valB) return direction === 'asc' ? 1 : -1
-    return 0
+    if (comparison !== 0) {
+      return direction === 'asc' ? comparison : -comparison
+    }
+
+    // Fallback to default sub-sorting when primary sort values are identical
+    return defaultSort(a, b);
   })
 
   const handleEditClick = (dish: any) => {
@@ -268,6 +306,16 @@ export default function AdminDishManagement() {
     } finally {
       setRejectConfirmId(null)
       setRejectReason('')
+    }
+  }
+
+  const toggleDishStatus = async (dishId: string, newStatus: string) => {
+    try {
+      await request(`/admin/dishes/${dishId}/toggle-status`, 'PATCH', { status: newStatus, note: newStatus === 'INACTIVE' ? 'Deactivated by admin' : '' })
+      toast.success(newStatus === 'ACTIVE' ? 'Dish reactivated!' : 'Dish deactivated!')
+      loadDishes()
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to change dish status')
     }
   }
 
@@ -460,6 +508,9 @@ export default function AdminDishManagement() {
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-1">
+                            <button onClick={(e) => { e.stopPropagation(); setDeactivateConfirmId(d._id) }} className="p-1.5 text-muted hover:text-(--color-semantic-warning) hover:bg-(--color-semantic-warning)/10 rounded transition-colors" title="Deactivate">
+                              <Ban className="w-4 h-4" />
+                            </button>
                             <button onClick={(e) => { e.stopPropagation(); handleEditClick(d) }} className="p-1.5 text-muted hover:text-ink hover:bg-surface rounded transition-colors" title="Edit">
                               <Pencil className="w-4 h-4" />
                             </button>
@@ -490,6 +541,9 @@ export default function AdminDishManagement() {
                         <TableCell className="text-muted py-2 text-center truncate max-w-[150px]" title={d.rejectionReason}>{d.rejectionReason || '—'}</TableCell>
                         <TableCell className="text-center py-2">
                           <div className="flex items-center justify-center gap-1">
+                            <button onClick={(e) => { e.stopPropagation(); toggleDishStatus(d._id, 'ACTIVE') }} className="p-1.5 text-muted hover:text-(--color-semantic-success) hover:bg-(--color-semantic-success)/10 rounded transition-colors" title="Reactivate">
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
                             <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(d._id) }} className="p-1.5 text-muted hover:text-(--color-semantic-error) hover:bg-(--color-semantic-error)/10 rounded transition-colors" title="Delete Permanently">
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -696,6 +750,28 @@ export default function AdminDishManagement() {
             <div className="flex justify-end space-x-2 pt-4 border-t border-hairline mt-6">
               <Button variant="secondary" type="button" onClick={() => setRejectConfirmId(null)}>Cancel</Button>
               <Button variant="primary" type="submit" className="bg-(--color-semantic-error) hover:bg-(--color-semantic-error)/90 border-(--color-semantic-error)">Reject</Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      {/* DEACTIVATE DISH MODAL */}
+      <Modal isOpen={!!deactivateConfirmId} onClose={() => { setDeactivateConfirmId(null); setDeactivateReason(''); }} title="Deactivate Dish">
+        <div className="p-4">
+          <form onSubmit={deactivate} className="space-y-4">
+            <div>
+              <label className="block text-body-sm text-muted mb-1">Reason for Deactivation (Visible to Students)</label>
+              <Input
+                type="text"
+                required
+                placeholder="e.g. Out of season, temporarily unavailable..."
+                value={deactivateReason}
+                onChange={(e) => setDeactivateReason(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end space-x-2 pt-4 border-t border-hairline mt-6">
+              <Button variant="secondary" type="button" onClick={() => { setDeactivateConfirmId(null); setDeactivateReason(''); }}>Cancel</Button>
+              <Button variant="primary" type="submit" className="bg-(--color-semantic-warning) hover:bg-(--color-semantic-warning)/90 border-(--color-semantic-warning)">Deactivate</Button>
             </div>
           </form>
         </div>

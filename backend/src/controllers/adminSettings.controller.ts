@@ -51,12 +51,18 @@ export const updateSettings = async (req: Request, res: Response) => {
           const catExists = newMeal.categories.find((c: any) => c.categoryName === oldCat.categoryName);
           if (!catExists) {
             // Category was permanently deleted
-            await Dish.deleteMany({ hostelId, mealType: oldMeal.mealName, category: oldCat.categoryName });
+            const dishesToDelete = await Dish.find({ hostelId, mealType: oldMeal.mealName, category: oldCat.categoryName });
+            for (const d of dishesToDelete) {
+              await Dish.findOneAndDelete({ _id: d._id });
+            }
           }
         }
       } else {
          // Entire meal was deleted (unlikely but possible)
-         await Dish.deleteMany({ hostelId, mealType: oldMeal.mealName });
+         const dishesToDelete = await Dish.find({ hostelId, mealType: oldMeal.mealName });
+         for (const d of dishesToDelete) {
+           await Dish.findOneAndDelete({ _id: d._id });
+         }
       }
     }
 

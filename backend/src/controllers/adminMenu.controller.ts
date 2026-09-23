@@ -29,15 +29,17 @@ export const generateFinalMenu = async (req: Request, res: Response) => {
     const hostelId = req.user!.hostelId;
 
     // Compute recommendations based on active student preference pool
+    await MessMenu.deleteMany({ hostelId, status: 'DRAFT' });
     await ComputationService.computeMenuRecommendations(hostelId.toString());
 
-    // Build menu (saved as draft by default)
-    const menu = await BuilderService.buildMessMenu(hostelId.toString(), 'Standard', 'MANUAL');
+    // Build multiple menu variants (saved as draft by default)
+    const menuStandard = await BuilderService.buildMessMenu(hostelId.toString(), 'Standard', 'MANUAL');
+    const menuLowRep = await BuilderService.buildMessMenu(hostelId.toString(), 'Low Repetition', 'MANUAL');
 
 
     return res.status(200).json({
-      message: 'Mess menu generated successfully based on active votes',
-      menuId: menu._id
+      message: 'Mess menu variants generated successfully',
+      menuIds: [menuStandard._id, menuLowRep._id]
     });
 };
 
@@ -46,19 +48,25 @@ export const generateFinalMenu = async (req: Request, res: Response) => {
  */
 export const getMenuPreview = async (req: Request, res: Response) => {
     const hostelId = req.user!.hostelId;
-    const menu = await MessMenu.findOne({ hostelId })
+    const draftMenus = await MessMenu.find({ hostelId, status: 'DRAFT' })
       .sort({ createdAt: -1 })
       .populate('meals.slots.fixedItems')
-      .populate({ 
-        path: 'meals.slots.rotatingItems.item', 
-        populate: { path: 'dishId' } 
-      });
+      .populate('meals.slots.rotatingItems.item');
 
-    if (!menu) {
+    if (draftMenus && draftMenus.length > 0) {
+      return res.status(200).json(draftMenus);
+    }
+
+    const latestMenu = await MessMenu.findOne({ hostelId })
+      .sort({ createdAt: -1 })
+      .populate('meals.slots.fixedItems')
+      .populate('meals.slots.rotatingItems.item');
+
+    if (!latestMenu) {
       return res.status(200).json(null);
     }
 
-    return res.status(200).json(menu);
+    return res.status(200).json([latestMenu]);
 };
 
 /**
@@ -84,20 +92,35 @@ export const updateMenu = async (req: Request, res: Response) => {
     return res.status(200).json({ message: 'Menu updated successfully' });
 };
 export const getMenuHistory = async (req: Request, res: Response) => {
-    return res.status(200).json([]);
+    const hostelId = req.user!.hostelId;
+    const history = await MessMenu.find({ hostelId, status: { $in: ['PUBLISHED', 'ARCHIVED'] } })
+      .sort({ createdAt: -1 })
+      .populate('meals.slots.fixedItems')
+      .populate('meals.slots.rotatingItems.item');
+    return res.status(200).json(history);
 };
 
 export const deleteMenu = async (req: Request, res: Response) => {
+    const hostelId = req.user!.hostelId;
+    await MessMenu.deleteOne({ _id: req.params.id, hostelId });
     return res.status(200).json({ message: 'Menu deleted' });
 };
 
 export const publishMenu = async (req: Request, res: Response) => {
     const hostelId = req.user!.hostelId;
-    const menu = await MessMenu.findOne({ hostelId }).sort({ weekOf: -1 });
+    const { menuId } = req.body;
+    const menu = await MessMenu.findOne({ _id: menuId, hostelId });
     if (!menu) return res.status(404).json({ message: 'No menu found' });
     menu.status = 'PUBLISHED';
     menu.publishedAt = new Date();
     await menu.save();
-    await StudentVote.updateMany({ hostelId }, { wantsNewMenu: false });
+    
+    // Archive other drafts
+    await MessMenu.updateMany(
+        { hostelId, status: 'DRAFT', _id: { $ne: menuId } },
+        { $set: { status: 'ARCHIVED' } }
+    );
+    
+    await StudentVote.updateMany({ hostelId }, { $set: { wantsNewMenu: false } });
     return res.status(200).json({ message: 'Published' });
 };
