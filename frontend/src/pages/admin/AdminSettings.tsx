@@ -260,7 +260,7 @@ export default function AdminSettings() {
         {/* Content Area */}
         <div className="flex-1 space-y-12">
           {/* General Section */}
-          <section id="general" className="scroll-mt-24 space-y-6">
+          <section id="general" className="scroll-mt-24">
           <Card className="p-6 shadow-none border-hairline">
             <h2 className="text-card-title text-ink mb-1">Default User Password</h2>
             <div className="w-full">
@@ -281,7 +281,6 @@ export default function AdminSettings() {
 
           {/* Meals Section */}
           <section id="meals" className="scroll-mt-24">
-            <h2 className="text-card-title text-ink mb-4 pb-2 border-b border-hairline">Mess Menu Configuration</h2>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
           {settings.mealPlan.map((meal: any, mIdx: number) => (
             <Card key={meal.mealName} className={`p-5 shadow-none border-hairline transition-opacity ${meal.isActive === false ? 'opacity-70 bg-surface-soft' : ''}`}>
@@ -361,8 +360,7 @@ export default function AdminSettings() {
           </section>
 
           {/* Maintenance Section */}
-          <section id="maintenance" className="scroll-mt-24 space-y-6">
-            <h2 className="text-card-title text-ink mb-2 pb-2 border-b border-hairline">Maintenance Categories</h2>
+          <section id="maintenance" className="scroll-mt-24">
         <div className="space-y-6">
           <Card className="p-6 shadow-none border-hairline">
           <div className="flex justify-between items-center mb-6">
@@ -423,7 +421,6 @@ export default function AdminSettings() {
 
           {/* Constraints Section */}
           <section id="constraints" className="scroll-mt-24">
-        <div className="space-y-6">
           <Card className="p-6 shadow-none border-hairline">
             <h2 className="text-card-title text-ink flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-(--color-primary)" />
@@ -476,11 +473,10 @@ export default function AdminSettings() {
               </div>
             )}
           </Card>
-        </div>
         </section>
 
         {/* Danger Zone */}
-          <section id="danger" className="scroll-mt-24 space-y-6">
+          <section id="danger" className="scroll-mt-24">
             <Card className="p-6 shadow-none border-(--color-semantic-error) bg-(--color-semantic-error)/5">
               <h2 className="text-card-title text-(--color-semantic-error) mb-4">Danger Zone</h2>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

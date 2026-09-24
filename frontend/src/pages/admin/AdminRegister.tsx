@@ -27,7 +27,7 @@ export default function AdminRegister() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { setSession } = useAuth()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -55,7 +55,7 @@ export default function AdminRegister() {
       });
       
       // Auto-login the user after registration
-      login(res.accessToken, res.user);
+      setSession(res.user);
       
       navigate('/admin');
     } catch (err) {

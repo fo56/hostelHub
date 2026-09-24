@@ -12,6 +12,7 @@ export interface AuthContextType {
   error: string | null
   login: (credentials: { email: string; password: string }) => Promise<UserData>
   logout: () => Promise<void>
+  setSession: (user: UserData) => void
   updateUser: (updates: Partial<UserData>) => void
   isAuthenticated: boolean
 }
@@ -92,12 +93,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser((prev: UserData | null) => prev ? { ...prev, ...updates } : null)
   }, [])
 
+  const setSession = useCallback((userData: UserData) => {
+    setUser(userData)
+  }, [])
+
   const value = {
     user,
     isLoading: isLoading || isInitializing,
     error,
     login,
     logout,
+    setSession,
     updateUser,
     isAuthenticated: !!user
   }
