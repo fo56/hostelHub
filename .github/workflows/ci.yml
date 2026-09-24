@@ -74,7 +74,7 @@ jobs:
         PORT: 8000
       run: |
         npm run dev & 
-        npx wait-on http://localhost:8000
+        npx --yes wait-on -t 30000 http-get://localhost:8000
         npx tsx e2e-test.ts
 
     - name: Build Backend
