@@ -69,7 +69,7 @@ jobs:
     - name: Run E2E Integration Tests
       working-directory: ./backend
       env:
-        MONGODB_URI: mongodb://localhost:27017/hostelhub_test
+        MONGODB_URI: mongodb://localhost:27017/hostelhub_test?retryWrites=false
         JWT_SECRET: ci_secret_key_123
         PORT: 8000
       run: |
