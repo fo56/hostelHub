@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import { Issue } from '../models/Issue';
 import { User } from '../models/User';
 import { Hostel } from '../models/Hostel';
+import { ActivityLog } from '../models/ActivityLog';
 
 interface AuthRequest extends Request {
   userId?: string;
@@ -95,7 +96,7 @@ export const updateIssueStatus = async (req: AuthRequest, res: Response): Promis
     const { status, resolverNote } = req.body;
     const userId = req.user?._id;
 
-    if (!['OPEN', 'RESOLVED', 'CLOSED'].includes(status?.toUpperCase())) {
+    if (!['OPEN', 'CLOSED'].includes(status?.toUpperCase())) {
       res.status(400).json({ message: 'Invalid status' });
       return;
     }
@@ -129,6 +130,12 @@ export const updateIssueStatus = async (req: AuthRequest, res: Response): Promis
       issue.resolverNote = resolverNote;
     }
     await issue.save();
+    
+    await ActivityLog.create({
+      hostelId: issue.hostelId,
+      userId,
+      action: `UPDATED_ISSUE_STATUS:${issue.category} -> ${issue.status}`,
+    });
 
     res.status(200).json({
       message: 'Issue updated successfully',
@@ -167,6 +174,13 @@ export const deleteIssue = async (req: AuthRequest, res: Response): Promise<void
     }
 
     await Issue.findByIdAndDelete(issueId);
+    if (isAdmin) {
+      await ActivityLog.create({
+        hostelId: issue.hostelId,
+        userId,
+        action: `DELETED_ISSUE:${issue.category}`,
+      });
+    }
 
     res.status(200).json({ message: 'Issue deleted successfully' });
 };

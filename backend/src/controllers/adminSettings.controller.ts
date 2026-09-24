@@ -2,6 +2,13 @@ import { Request, Response } from 'express';
 import { Hostel } from '../models/Hostel';
 import { Dish } from '../models/Dish';
 import { ActivityLog } from '../models/ActivityLog';
+import { User } from '../models/User';
+import { Issue } from '../models/Issue';
+import { MessMenu } from '../models/MessMenu';
+import { StudentVote } from '../models/StudentVote';
+import { MealReview } from '../models/MealReview';
+import { MenuRecommendation } from '../models/MenuRecommendation';
+import { RefreshToken } from '../models/RefreshToken';
 import { parseMenuConstraints } from '../services/menuConstraintParser.service';
 import { validateConstraints } from '../services/menuConstraintValidator.service';
 
@@ -132,5 +139,25 @@ export const confirmMenuConstraints = async (req: Request, res: Response) => {
 };
 
 export const deleteHostel = async (req: Request, res: Response) => {
+    const hostelId = req.user!.hostelId;
+    
+    // Find all users in this hostel
+    const users = await User.find({ hostelId }).select('_id');
+    const userIds = users.map(u => u._id);
+
+    // Cascade delete
+    await Promise.all([
+        RefreshToken.deleteMany({ userId: { $in: userIds } }),
+        User.deleteMany({ hostelId }),
+        Issue.deleteMany({ hostelId }),
+        MessMenu.deleteMany({ hostelId }),
+        StudentVote.deleteMany({ hostelId }),
+        MealReview.deleteMany({ hostelId }),
+        MenuRecommendation.deleteMany({ hostelId }),
+        ActivityLog.deleteMany({ hostelId }),
+        Dish.deleteMany({ hostelId }),
+        Hostel.findByIdAndDelete(hostelId)
+    ]);
+
     return res.status(200).json({ message: 'Hostel deleted' });
 };

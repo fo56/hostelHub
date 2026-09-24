@@ -145,7 +145,7 @@ export const bulkCreateUsers = async (req: Request, res: Response) => {
       const existingUser = await User.findOne({ username });
       if (existingUser) continue; // skip duplicates
 
-      const rawPassword = password || generatePassword();
+      const rawPassword = password || hostel.defaultPassword || generatePassword();
       const passwordHash = await bcrypt.hash(rawPassword, 10);
 
       const newUser = new User({
@@ -324,7 +324,7 @@ export const deleteUser = async (req: Request, res: Response) => {
 // TOKEN REGENERATION ROUTES DELETED
 
 export const updateUser = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.userId || req.params.id;
     const { name, roomNo, permissions } = req.body;
     const userToUpdate = await User.findById(id);
     if (!userToUpdate) return res.status(404).json({ message: 'User not found' });

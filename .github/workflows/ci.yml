@@ -14,6 +14,12 @@ jobs:
       matrix:
         node-version: [22.x]
 
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
+
     steps:
     - uses: actions/checkout@v4
     
@@ -59,6 +65,17 @@ jobs:
     - name: Test Backend
       run: npm run test
       working-directory: ./backend
+
+    - name: Run E2E Integration Tests
+      working-directory: ./backend
+      env:
+        MONGODB_URI: mongodb://localhost:27017/hostelhub_test
+        JWT_SECRET: ci_secret_key_123
+        PORT: 8000
+      run: |
+        npm run dev & 
+        npx wait-on http://localhost:8000
+        npx tsx e2e-test.ts
 
     - name: Build Backend
       run: npm run build

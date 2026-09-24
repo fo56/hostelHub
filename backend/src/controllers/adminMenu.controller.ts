@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { MessMenu } from '../models/MessMenu';
 import { StudentVote } from '../models/StudentVote';
 import { User } from '../models/User';
+import { ActivityLog } from '../models/ActivityLog';
 import * as ComputationService from '../services/menuComputation.service';
 import * as BuilderService from '../services/menuBuilder.service';
 
@@ -36,6 +37,12 @@ export const generateFinalMenu = async (req: Request, res: Response) => {
     const menuStandard = await BuilderService.buildMessMenu(hostelId.toString(), 'Standard', 'MANUAL');
     const menuLowRep = await BuilderService.buildMessMenu(hostelId.toString(), 'Low Repetition', 'MANUAL');
 
+
+    await ActivityLog.create({
+      hostelId,
+      userId: req.user!._id,
+      action: `GENERATED_MENU_VARIANTS`,
+    });
 
     return res.status(200).json({
       message: 'Mess menu variants generated successfully',
@@ -88,6 +95,12 @@ export const updateMenu = async (req: Request, res: Response) => {
 
     menu.meals = meals;
     await menu.save();
+    
+    await ActivityLog.create({
+      hostelId,
+      userId: req.user!._id,
+      action: `UPDATED_MENU:${menu.variantLabel || 'Current'}`,
+    });
 
     return res.status(200).json({ message: 'Menu updated successfully' });
 };
@@ -103,6 +116,12 @@ export const getMenuHistory = async (req: Request, res: Response) => {
 export const deleteMenu = async (req: Request, res: Response) => {
     const hostelId = req.user!.hostelId;
     await MessMenu.deleteOne({ _id: req.params.id, hostelId });
+    
+    await ActivityLog.create({
+      hostelId,
+      userId: req.user!._id,
+      action: `DELETED_MENU:${req.params.id}`,
+    });
     return res.status(200).json({ message: 'Menu deleted' });
 };
 
@@ -122,5 +141,12 @@ export const publishMenu = async (req: Request, res: Response) => {
     );
     
     await StudentVote.updateMany({ hostelId }, { $set: { wantsNewMenu: false } });
+
+    await ActivityLog.create({
+      hostelId,
+      userId: req.user!._id,
+      action: `PUBLISHED_MENU:${menu.variantLabel || 'Current'}`,
+    });
+
     return res.status(200).json({ message: 'Published' });
 };

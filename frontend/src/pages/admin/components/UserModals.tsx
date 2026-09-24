@@ -195,11 +195,17 @@ export function BulkCreateModal({ isOpen, onClose, onSuccess }: any) {
           <label className="block text-body-sm mb-1">
             Enter room numbers
           </label>
-          <div className="text-body-xs text-muted mb-3 space-y-1">
-            <p>• <strong>Format:</strong> Comma-separated (101, 102), newlines, or ranges (A1-A20).</p>
-            <p>• <strong>Usernames:</strong> Auto-generated based on the room number.</p>
-            <p>• <strong>Password:</strong> The default password will be used.</p>
-            <p>• <strong>Name/Email:</strong> Left blank by default. Students can update these later.</p>
+          <div className="bg-surface/50 border border-border/50 rounded-lg p-4 mb-4 text-body-sm text-muted">
+            <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+              How generation works
+            </h4>
+            <ul className="space-y-2 list-disc list-inside marker:text-border">
+              <li><strong>Format:</strong> Enter room numbers separated by commas or newlines (e.g. <code className="bg-background px-1 py-0.5 rounded text-xs">101, 102</code>). Ranges are supported (e.g. <code className="bg-background px-1 py-0.5 rounded text-xs">A1-A20</code>).</li>
+              <li><strong>Usernames:</strong> Automatically generated as <code className="bg-background px-1 py-0.5 rounded text-xs">room.index@domain</code> (e.g. <code className="bg-background px-1 py-0.5 rounded text-xs">101.1@hostel</code>).</li>
+              <li><strong>Passwords:</strong> Uses your hostel's Default Password (configurable in Settings).</li>
+              <li><strong>Profiles:</strong> Name and Email are left blank. Students can fill these in upon first login.</li>
+            </ul>
           </div>
           <Textarea
             required
